@@ -188,10 +188,10 @@ export const sepolia = defineChain({
   shortName: 'Sepolia',
   icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
   nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
-  rpcUrl: 'https://rpc.sepolia.org',
+  rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
   rpcUrls: {
-    default: { http: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'] },
-    public: { http: ['https://rpc.sepolia.org'] },
+    default: { http: ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.ankr.com/eth_sepolia', 'https://sepolia.gateway.tenderly.co'] },
+    public: { http: ['https://ethereum-sepolia-rpc.publicnode.com'] },
   },
   blockExplorerUrl: 'https://sepolia.etherscan.io',
   blockExplorers: {

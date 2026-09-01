@@ -77,7 +77,6 @@ export const CHAIN_RPC_FALLBACKS: Record<number, string[]> = {
     'https://rpc.ankr.com/avalanche',
   ],
   11155111: [
-    'https://rpc.sepolia.org',
     'https://ethereum-sepolia-rpc.publicnode.com',
     'https://sepolia.gateway.tenderly.co',
   ],

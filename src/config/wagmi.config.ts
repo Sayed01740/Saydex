@@ -88,7 +88,6 @@ export const wagmiConfig = createConfig({
       http('https://rpc.ankr.com/avalanche'),
     ]),
     [sepolia.id]: fallback([
-      http('https://rpc.sepolia.org'),
       http('https://ethereum-sepolia-rpc.publicnode.com'),
       http('https://sepolia.gateway.tenderly.co'),
     ]),
