@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  /* Default Light Theme */
+  --bg-app: #F8FAFC;
+  --bg-subtle: #F1F5F9;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-hover: #F8FAFC;
+  --bg-surface-active: #F1F5F9;
+  --bg-input: #F1F5F9;
+  
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-disabled: #CBD5E1;
+  
+  --border-app: #E2E8F0;
+  --border-subtle: #F1F5F9;
+  --border-strong: #CBD5E1;
+  
+  --primary: #009E87;
+  --primary-hover: #008774;
+  --primary-active: #007060;
+  --primary-subtle: rgba(0, 158, 135, 0.10);
+  --primary-glow: rgba(0, 158, 135, 0.18);
+  
+  --success: #059669;
+  --success-subtle: rgba(5, 150, 105, 0.10);
+  --warning: #D97706;
+  --warning-subtle: rgba(217, 119, 6, 0.10);
+  --error: #E11D48;
+  --error-subtle: rgba(225, 29, 72, 0.10);
+  --info: #0284C7;
+  --info-subtle: rgba(2, 132, 199, 0.10);
+  
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 20px 40px -8px rgba(0, 0, 0, 0.12);
+}
+
+.dark, [data-theme="dark"] {
+  /* Premium Dark Layered Neutrals (Default DeFi Experience) */
+  --bg-app: #090B0E;
+  --bg-subtle: #0E1217;
+  --bg-surface: #13171F;
+  --bg-surface-elevated: #181E29;
+  --bg-surface-hover: #1F2736;
+  --bg-surface-active: #252F42;
+  --bg-input: #0E1217;
+  
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
+  --text-disabled: #475569;
+  
+  --border-app: #1E2638;
+  --border-subtle: #151C2A;
+  --border-strong: #2D3A54;
+  
+  --primary: #00D2B4;
+  --primary-hover: #00E8C7;
+  --primary-active: #00BFA3;
+  --primary-subtle: rgba(0, 210, 180, 0.12);
+  --primary-glow: rgba(0, 210, 180, 0.25);
+  
+  --success: #10B981;
+  --success-subtle: rgba(16, 185, 129, 0.12);
+  --warning: #F59E0B;
+  --warning-subtle: rgba(245, 158, 11, 0.12);
+  --error: #F43F5E;
+  --error-subtle: rgba(244, 63, 94, 0.12);
+  --info: #38BDF8;
+  --info-subtle: rgba(56, 189, 248, 0.12);
+  
+  --shadow-card: 0 8px 32px -4px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.75);
+}
+
+body {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-app);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Subtle animation keyframes */
+@keyframes ambientPulse {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.04); }
+}
+
+.animate-ambient-flow {
+  animation: ambientPulse 12s ease-in-out infinite;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
