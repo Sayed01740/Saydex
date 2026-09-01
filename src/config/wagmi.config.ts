@@ -18,6 +18,34 @@ import {
 } from 'wagmi/connectors';
 
 /**
+ * Blocked RPC domains that require paid plans or are unreliable.
+ * Any RPC URL matching these patterns gets rewritten to our verified free endpoints.
+ */
+const BLOCKED_RPC_PATTERNS = ['drpc.org', 'drpc.io'];
+const SEPOLIA_FREE_RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
+
+/**
+ * Intercept fetch calls to rewrite blocked RPC URLs.
+ * This ensures drpc.org is never used even if viem/wallet tries to use it.
+ */
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (BLOCKED_RPC_PATTERNS.some((p) => url.includes(p))) {
+      console.warn(`[RPC-INTERCEPT] Blocked ${url} — rewriting to ${SEPOLIA_FREE_RPC}`);
+      if (typeof input === 'string') {
+        input = url.replace(/https?:\/\/[^/]+/, SEPOLIA_FREE_RPC);
+      } else if (input instanceof URL) {
+        const rewritten = new URL(SEPOLIA_FREE_RPC);
+        input = rewritten;
+      }
+    }
+    return originalFetch.call(window, input, init);
+  };
+}
+
+/**
  * Single authoritative Wagmi configuration.
  * ONE createConfig() call — referenced by WagmiProvider in main.tsx.
  * Do NOT create additional createConfig() instances inside components.
