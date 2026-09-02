@@ -180,24 +180,28 @@ class PoolService {
         const sym0 = parts[0] || 'TOKEN0';
         const sym1 = name.split('/')[1]?.trim().split(' ')[0] || 'TOKEN1';
 
-        const tok0 = chainTokens.find((t) => t.symbol.toUpperCase() === sym0.toUpperCase()) || {
+        const tok0: Token = chainTokens.find((t) => t.symbol.toUpperCase() === sym0.toUpperCase()) || {
           address: item.relationships?.base_token?.data?.id?.split('_')[1] || '0x0000000000000000000000000000000000000000',
           chainId,
           symbol: sym0,
           name: sym0,
           decimals: 18,
           priceUSD: parseFloat(attrs.base_token_price_usd) || 1.0,
+          change24h: 0,
           icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+          isVerified: true,
         };
 
-        const tok1 = chainTokens.find((t) => t.symbol.toUpperCase() === sym1.toUpperCase()) || {
+        const tok1: Token = chainTokens.find((t) => t.symbol.toUpperCase() === sym1.toUpperCase()) || {
           address: item.relationships?.quote_token?.data?.id?.split('_')[1] || '0x0000000000000000000000000000000000000000',
           chainId,
           symbol: sym1,
           name: sym1,
           decimals: 18,
           priceUSD: parseFloat(attrs.quote_token_price_usd) || 1.0,
+          change24h: 0,
           icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+          isVerified: true,
         };
 
         const tvlUSD = parseFloat(attrs.reserve_in_usd) || 1000000;
@@ -242,22 +246,28 @@ class PoolService {
     const pools: LiquidityPool[] = [];
 
     for (const tpl of templates) {
-      const tok0 = chainTokens.find((t) => t.symbol.toUpperCase() === tpl.token0Symbol.toUpperCase()) || {
+      const tok0: Token = chainTokens.find((t) => t.symbol.toUpperCase() === tpl.token0Symbol.toUpperCase()) || {
         address: '0x0000000000000000000000000000000000000000',
         chainId,
         symbol: tpl.token0Symbol,
         name: tpl.token0Symbol,
         decimals: 18,
         priceUSD: tpl.token0Symbol === 'WBTC' ? 92450 : tpl.token0Symbol === 'ETH' || tpl.token0Symbol === 'WETH' ? 3482.5 : tpl.token0Symbol === 'SAYDEX' ? 14.8 : 1.0,
+        change24h: 0,
+        icon: '',
+        isVerified: true,
       };
 
-      const tok1 = chainTokens.find((t) => t.symbol.toUpperCase() === tpl.token1Symbol.toUpperCase()) || {
+      const tok1: Token = chainTokens.find((t) => t.symbol.toUpperCase() === tpl.token1Symbol.toUpperCase()) || {
         address: '0x0000000000000000000000000000000000000000',
         chainId,
         symbol: tpl.token1Symbol,
         name: tpl.token1Symbol,
         decimals: 18,
         priceUSD: tpl.token1Symbol === 'USDC' || tpl.token1Symbol === 'USDT' ? 1.0 : 3482.5,
+        change24h: 0,
+        icon: '',
+        isVerified: true,
       };
 
       const feePercent = tpl.feeTier / 10000;

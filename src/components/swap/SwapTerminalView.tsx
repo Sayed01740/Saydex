@@ -23,6 +23,7 @@ import {
   Info,
   ChevronRight,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const SwapTerminalView: React.FC = () => {
   const { tokens, settings, targetTradeToken } = useProtocol();
