@@ -7,14 +7,7 @@ import { ToastContainer } from './components/common/ToastContainer';
 import { SwapTerminalView } from './components/swap/SwapTerminalView';
 import { ExploreView } from './components/explore/ExploreView';
 import { PoolsView } from './components/pools/PoolsView';
-import { PositionsView } from './components/positions/PositionsView';
 import { PortfolioView } from './components/portfolio/PortfolioView';
-import { LaunchpadView } from './components/launchpad/LaunchpadView';
-import { AnalyticsView } from './components/analytics/AnalyticsView';
-import { ProtocolFeesView } from './components/fees/ProtocolFeesView';
-import { UniversalRouterView } from './components/universal-router/UniversalRouterView';
-import { UniswapEcosystemView } from './components/ecosystem/UniswapEcosystemView';
-import { DesignSystemView } from './components/design-system/DesignSystemView';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -24,26 +17,13 @@ export default function App() {
     switch (activeView) {
       case 'swap':
         return <SwapTerminalView />;
-      case 'router':
-        return <UniversalRouterView />;
-      case 'ecosystem':
-        return <UniswapEcosystemView />;
       case 'explore':
         return <ExploreView />;
       case 'pools':
-        return <PoolsView />;
       case 'positions':
-        return <PositionsView />;
+        return <PoolsView />;
       case 'portfolio':
         return <PortfolioView />;
-      case 'launchpad':
-        return <LaunchpadView />;
-      case 'analytics':
-        return <AnalyticsView />;
-      case 'fees':
-        return <ProtocolFeesView />;
-      case 'design-system':
-        return <DesignSystemView />;
       default:
         return <SwapTerminalView />;
     }
@@ -58,7 +38,7 @@ export default function App() {
       <main className="flex-1 pb-16 md:pb-0">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeView}
+            key={activeView === 'positions' ? 'pools' : activeView}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

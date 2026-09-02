@@ -24,23 +24,19 @@ import {
   ArrowUpRight,
   TrendingUp,
   AlertCircle,
-  Terminal,
   UserCheck,
-  Trash2,
-  Filter,
   Server,
   Network,
   Activity,
   Plus,
 } from 'lucide-react';
-import { LogCategory, WalletTraceLog } from '../../utils/walletLogger';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type ModalTab = 'overview' | 'tokens' | 'chains' | 'rpc' | 'logs';
+type ModalTab = 'overview' | 'tokens' | 'chains' | 'rpc';
 
 export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   const {
@@ -76,8 +72,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
     lastRpcFailover,
     switchChainRpc,
     addCustomRpcUrl,
-    walletLogs,
-    clearLogs,
   } = useWallet();
 
   const { setActiveView } = useProtocol();
@@ -87,7 +81,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
   const [activeTab, setActiveTab] = useState<ModalTab>('overview');
   const [isTestingSignature, setIsTestingSignature] = useState(false);
   const [testSignatureResult, setTestSignatureResult] = useState<{ signature: string; isReal: boolean } | null>(null);
-  const [logCategoryFilter, setLogCategoryFilter] = useState<LogCategory | 'ALL'>('ALL');
   const [customRpcInput, setCustomRpcInput] = useState('');
   const [isTestingRpcFailover, setIsTestingRpcFailover] = useState(false);
 
@@ -373,17 +366,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
             >
               <Server className="w-3 h-3" />
               <span>RPC Pool ({backupRpcUrls.length + 1})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('logs')}
-              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                activeTab === 'logs'
-                  ? 'border-[var(--primary)] text-[var(--primary)]'
-                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Terminal className="w-3 h-3" />
-              <span>Logs ({walletLogs.length})</span>
             </button>
           </div>
 
@@ -685,74 +667,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                   </p>
                 </div>
               )}
-            </div>
-          )}
-
-          {activeTab === 'logs' && (
-            <div className="space-y-2">
-              {/* Filter bar & Clear */}
-              <div className="flex items-center justify-between gap-1 text-[10px]">
-                <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                  {(['ALL', 'PROVIDER_SELECTION', 'CHAIN_VALIDATION', 'BALANCE_QUERY', 'RPC_FAILOVER', 'TRANSACTION_LIFECYCLE'] as const).map(
-                    (cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setLogCategoryFilter(cat)}
-                        className={`px-2 py-0.5 rounded-full whitespace-nowrap font-mono transition-all cursor-pointer ${
-                          logCategoryFilter === cat
-                            ? 'bg-[var(--primary)] text-[#090B0E] font-bold'
-                            : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
-                        }`}
-                      >
-                        {cat === 'ALL' ? 'All' : cat.replace('_', ' ')}
-                      </button>
-                    )
-                  )}
-                </div>
-                <button
-                  onClick={clearLogs}
-                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--danger)] cursor-pointer shrink-0"
-                  title="Clear trace logs"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Console log list */}
-              <div className="max-h-60 overflow-y-auto font-mono text-[10px] bg-[#090B0E] p-2.5 rounded-xl border border-[var(--border-app)] space-y-1.5 text-left">
-                {filteredLogs.length > 0 ? (
-                  filteredLogs.map((log) => {
-                    const isWarn = log.level === 'warn' || log.level === 'error';
-                    return (
-                      <div key={log.id} className="leading-tight break-all">
-                        <span className="text-[var(--text-tertiary)]">[{log.timeFormatted}]</span>{' '}
-                        <span
-                          className={`font-semibold ${
-                            log.category === 'CHAIN_VALIDATION'
-                              ? 'text-purple-400'
-                              : log.category === 'BALANCE_QUERY'
-                              ? 'text-cyan-400'
-                              : log.category === 'RPC_FAILOVER'
-                              ? 'text-yellow-400'
-                              : log.category === 'TRANSACTION_LIFECYCLE'
-                              ? 'text-emerald-400'
-                              : 'text-amber-400'
-                          }`}
-                        >
-                          [{log.category}]
-                        </span>{' '}
-                        <span className={isWarn ? 'text-rose-400' : 'text-slate-300'}>
-                          {log.message}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-[var(--text-tertiary)] text-center py-4">
-                    No logs matching selected category filter.
-                  </div>
-                )}
-              </div>
             </div>
           )}
         </div>

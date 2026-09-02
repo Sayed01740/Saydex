@@ -1,9 +1,7 @@
 import React from 'react';
-import { useProtocol } from '../../context/ProtocolContext';
-import { ShieldCheck, Activity, Terminal, GitBranch, Sparkles } from 'lucide-react';
+import { ShieldCheck, Activity } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setActiveView } = useProtocol();
 
   return (
     <footer className="w-full border-t border-[var(--border-app)] bg-[var(--bg-app)] text-xs text-[var(--text-tertiary)] py-8 mt-auto">
@@ -31,16 +29,9 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Links & Audits */}
-        <div className="flex items-center gap-5 text-xs text-[var(--text-secondary)]">
-          <button
-            onClick={() => setActiveView('design-system')}
-            className="hover:text-[var(--primary)] transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <Sparkles className="w-3 h-3 text-[var(--primary)]" />
-            <span>Design Tokens</span>
-          </button>
-          <span className="text-[var(--text-tertiary)]">
-            Audited by Trail of Bits & OpenZeppelin
+        <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+          <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
+            SAYDEX Protocol v3 • Audited Architecture
           </span>
         </div>
       </div>

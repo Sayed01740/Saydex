@@ -48,23 +48,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
   const [isChainModalOpen, setIsChainModalOpen] = useState(false);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-
   const primaryNavItems = [
     { id: 'swap', label: 'Trade' },
     { id: 'explore', label: 'Explore' },
     { id: 'pools', label: 'Pools' },
-    { id: 'positions', label: 'Positions' },
     { id: 'portfolio', label: 'Portfolio' },
   ] as const;
-
-  const secondaryNavItems = [
-    { id: 'router', label: 'Universal Router', desc: 'Permit2 calldata & execution' },
-    { id: 'fees', label: 'Protocol Fees', desc: 'TokenJar & Firepit burn mechanics' },
-    { id: 'analytics', label: 'Analytics', desc: 'Macro TVL & volume metrics' },
-  ] as const;
-
-  const isMoreActive = secondaryNavItems.some((item) => item.id === activeView);
 
   return (
     <>
@@ -82,12 +71,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
               {primaryNavItems.map((item) => {
-                const isActive = activeView === item.id;
+                const isActive = activeView === item.id || (item.id === 'pools' && activeView === 'positions');
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] border border-[var(--border-strong)] font-semibold shadow-xs'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
@@ -97,49 +86,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                   </button>
                 );
               })}
-
-              {/* More Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsMoreOpen(!isMoreOpen)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                    isMoreActive
-                      ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] border border-[var(--border-strong)] font-semibold shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
-                  }`}
-                >
-                  <span>More</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isMoreOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30"
-                      onClick={() => setIsMoreOpen(false)}
-                    />
-                    <div className="absolute left-0 mt-2 w-56 bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-xl shadow-xl z-40 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
-                      {secondaryNavItems.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setActiveView(item.id);
-                            setIsMoreOpen(false);
-                          }}
-                          className={`w-full flex flex-col items-start px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
-                            activeView === item.id
-                              ? 'bg-[var(--primary-subtle)] text-[var(--primary)]'
-                              : 'hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)]'
-                          }`}
-                        >
-                          <span className="text-xs font-semibold">{item.label}</span>
-                          <span className="text-[10px] text-[var(--text-tertiary)]">{item.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
             </nav>
           </div>
 

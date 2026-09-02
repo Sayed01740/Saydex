@@ -9,7 +9,6 @@ import { RecentTradesTable } from './RecentTradesTable';
 import { PriceAlertsManager } from './PriceAlertsManager';
 import { SetPriceAlertModal } from './SetPriceAlertModal';
 import { SwapSettingsModal } from './SwapSettingsModal';
-import { HeroSection } from '../landing/HeroSection';
 import { TokenIcon } from '../common/TokenIcon';
 import {
   ShieldCheck,
@@ -24,7 +23,6 @@ import {
   Info,
   ChevronRight,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 export const SwapTerminalView: React.FC = () => {
   const { tokens, settings, targetTradeToken } = useProtocol();
@@ -33,26 +31,6 @@ export const SwapTerminalView: React.FC = () => {
   const [tokenOut, setTokenOut] = useState<Token>(() => tokens.find((t) => t.chainId === selectedChain.id && t.symbol === 'USDC') || tokens[1]);
   const [amountIn, setAmountIn] = useState<string>('1.0');
   const [isChartOpen, setIsChartOpen] = useState(true);
-
-  // Collapsible Hero Banner with persistent state
-  const [showHeroBanner, setShowHeroBanner] = useState(() => {
-    try {
-      const saved = localStorage.getItem('unx_show_hero_banner');
-      return saved !== null ? saved === 'true' : true;
-    } catch {
-      return true;
-    }
-  });
-
-  const toggleHeroBanner = () => {
-    setShowHeroBanner((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('unx_show_hero_banner', String(next));
-      } catch {}
-      return next;
-    });
-  };
 
   // Synchronize when a trade token is selected from Explore or Markets
   useEffect(() => {
@@ -135,41 +113,7 @@ export const SwapTerminalView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-16">
-      {/* Interactive Hero Banner (Collapsible for active traders) */}
-      <AnimatePresence>
-        {showHeroBanner && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden relative"
-          >
-            <HeroSection />
-            <button
-              onClick={toggleHeroBanner}
-              className="absolute top-4 right-4 z-20 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-sm transition-all cursor-pointer shadow-xs"
-              title="Minimize banner to focus on trading"
-            >
-              Minimize Banner ✕
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {!showHeroBanner && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2">
-          <button
-            onClick={toggleHeroBanner}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-xs text-[var(--text-secondary)] hover:text-[var(--primary)] transition-all cursor-pointer shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
-            <span>Show Protocol Banner</span>
-          </button>
-        </div>
-      )}
-
+    <div className="space-y-6 pb-16 pt-4 sm:pt-6">
       {/* Primary Swap Terminal Layout */}
       <div id="swap-terminal-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 scroll-mt-24">
         {/* Terminal Execution & Settings Quick Bar */}
