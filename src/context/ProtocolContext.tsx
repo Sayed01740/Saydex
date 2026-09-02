@@ -31,6 +31,8 @@ import {
 } from '../data/universalRouterData';
 import { generatePermit2EIP712Payload } from '../utils/universalRouterEncoder';
 import { walletLogger } from '../utils/walletLogger';
+import { useWallet } from './WalletContext';
+import { poolService } from '../services/poolService';
 
 export interface ToastMessage {
   id: string;
@@ -173,13 +175,65 @@ interface ProtocolContextType {
   targetTradeToken: Token | null;
   tradeToken: (token: Token) => void;
   addToken: (token: Token) => void;
+  isLoadingPools: boolean;
+  refreshPools: () => Promise<void>;
+  saveCustomPool: (pool: LiquidityPool) => void;
 }
 
 const ProtocolContext = createContext<ProtocolContextType | undefined>(undefined);
 
 export function ProtocolProvider({ children }: { children: React.ReactNode }) {
+  const { selectedChain } = useWallet();
   const [tokens, setTokens] = useState<Token[]>(TOKENS);
   const [pools, setPools] = useState<LiquidityPool[]>(MOCK_POOLS);
+  const [isLoadingPools, setIsLoadingPools] = useState(false);
+
+  // Dynamically load real pools when active chain changes
+  useEffect(() => {
+    let active = true;
+    const loadChainPools = async () => {
+      setIsLoadingPools(true);
+      try {
+        const live = await poolService.getPoolsForChain(selectedChain.id, false);
+        if (active && live && live.length > 0) {
+          setPools(live);
+        }
+      } catch (e) {
+        console.warn('Failed to load chain pools:', e);
+      } finally {
+        if (active) setIsLoadingPools(false);
+      }
+    };
+    loadChainPools();
+    return () => {
+      active = false;
+    };
+  }, [selectedChain.id]);
+
+  const refreshPools = async () => {
+    setIsLoadingPools(true);
+    try {
+      const live = await poolService.getPoolsForChain(selectedChain.id, true);
+      if (live && live.length > 0) {
+        setPools(live);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh pools:', e);
+    } finally {
+      setIsLoadingPools(false);
+    }
+  };
+
+  const saveCustomPool = (pool: LiquidityPool) => {
+    poolService.saveCustomPool(pool);
+    setPools((prev) => {
+      const key = `${pool.chainId}_${pool.token0.symbol}_${pool.token1.symbol}_${pool.feeTier}`.toLowerCase();
+      const filtered = prev.filter(
+        (p) => `${p.chainId}_${p.token0.symbol}_${p.token1.symbol}_${p.feeTier}`.toLowerCase() !== key
+      );
+      return [pool, ...filtered];
+    });
+  };
   const [userPositions, setUserPositions] = useState<UserPosition[]>(() => {
     try {
       const saved = localStorage.getItem('unx_user_positions_v2');
@@ -999,10 +1053,14 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
       targetTradeToken,
       tradeToken,
       addToken,
+      isLoadingPools,
+      refreshPools,
+      saveCustomPool,
     }),
     [
       tokens,
       pools,
+      isLoadingPools,
       userPositions,
       transactions,
       activeTransaction,

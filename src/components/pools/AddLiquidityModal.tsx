@@ -9,6 +9,7 @@ import { RangeVisualizer } from './RangeVisualizer';
 import { Sparkles, Info, ShieldCheck, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { uniswapV3Service } from '../../services/uniswapV3Service';
 import { getUniswapV3Deployment } from '../../config/uniswapV3Contracts';
+import { UNISWAP_TOKENS } from '../../data/uniswapTokens';
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -31,20 +32,27 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
     sendTransaction,
     selectedChain,
   } = useWallet();
-  const { tokens, addPosition, addTransaction } = useProtocol();
+  const { tokens, addPosition, addTransaction, saveCustomPool } = useProtocol();
+
+  const chainTokens = useMemo(() => {
+    return UNISWAP_TOKENS.filter((t) => t.chainId === selectedChain.id || t.chainId === 1);
+  }, [selectedChain.id]);
+
+  const defaultToken0 = chainTokens[0] || tokens[0];
+  const defaultToken1 = chainTokens.find((t) => t.symbol === 'USDC' || t.symbol === 'USDT') || chainTokens[1] || tokens[1];
 
   const selectedPool = pool || {
-    id: 'eth-usdc-005',
-    chainId: 1,
-    token0: tokens[0], // ETH
-    token1: tokens[1], // USDC
+    id: `${defaultToken0.symbol.toLowerCase()}-${defaultToken1.symbol.toLowerCase()}-005`,
+    chainId: selectedChain.id,
+    token0: defaultToken0,
+    token1: defaultToken1,
     feeTier: 500 as FeeTier,
     feePercent: 0.05,
-    tvlUSD: 1480000000,
-    volume24hUSD: 420500000,
-    fees24hUSD: 210250,
+    tvlUSD: 850000,
+    volume24hUSD: 240000,
+    fees24hUSD: 120,
     apr: 18.4,
-    currentPrice: 3482.5,
+    currentPrice: defaultToken1.priceUSD > 0 ? defaultToken0.priceUSD / defaultToken1.priceUSD : 3482.5,
     priceRangeMin: 3100.0,
     priceRangeMax: 3950.0,
     liquidityDistribution: [],
@@ -160,6 +168,14 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
         unclaimedFeesUSD: 0,
         totalValueUSD: totalUSD,
         apr: parseFloat(estimatedAPR),
+      });
+
+      saveCustomPool({
+        ...selectedPool,
+        chainId: targetChainId,
+        feeTier: feeTier,
+        feePercent: feeTier / 10000,
+        tvlUSD: (selectedPool.tvlUSD || 0) + totalUSD,
       });
 
       addTransaction({
