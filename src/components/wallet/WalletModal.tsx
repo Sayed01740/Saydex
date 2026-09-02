@@ -175,11 +175,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
     .filter((t, idx, arr) => t.balance > 0 && arr.findIndex((x) => x.symbol === t.symbol && x.chainId === t.chainId) === idx)
     .sort((a, b) => b.balanceUSD - a.balanceUSD);
 
-  const filteredLogs = walletLogs.filter((log) => {
-    if (logCategoryFilter === 'ALL') return true;
-    return log.category === logCategoryFilter;
-  });
-
   return (
     <Modal
       isOpen={isOpen}
