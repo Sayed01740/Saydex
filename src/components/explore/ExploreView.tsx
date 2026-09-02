@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const ExploreView: React.FC = () => {
-  const { tokens, setActiveView } = useProtocol();
+  const { tokens, tradeToken } = useProtocol();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'trending' | 'gainers' | 'defi' | 'stablecoin' | 'lst' | 'layer2' | 'ai' | 'meme'>('all');
   const [sortField, setSortField] = useState<'volume' | 'price' | 'change' | 'tvl'>('volume');
@@ -247,7 +247,7 @@ export const ExploreView: React.FC = () => {
 
                   <td className="py-3 px-4 text-right">
                     <button
-                      onClick={() => setActiveView('swap')}
+                      onClick={() => tradeToken(tok)}
                       className="px-3 py-1 rounded-lg bg-[var(--bg-surface-elevated)] hover:bg-[var(--primary)] hover:text-[#090B0E] border border-[var(--border-app)] text-xs font-semibold text-[var(--text-primary)] transition-all cursor-pointer"
                     >
                       Trade

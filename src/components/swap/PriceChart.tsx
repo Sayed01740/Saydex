@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Token } from '../../types';
 import { useProtocol } from '../../context/ProtocolContext';
-import { NATIVE_TOKEN_PRICES_USD } from '../../config/chains';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, ReferenceLine } from 'recharts';
 import { TrendingUp, TrendingDown, Clock, BarChart2, Bell, Target, Plus } from 'lucide-react';
 
@@ -28,7 +27,7 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
     symbol: 'ETH',
     name: 'Ethereum',
     decimals: 18,
-    priceUSD: NATIVE_TOKEN_PRICES_USD.ETH,
+    priceUSD: 3482.50,
     change24h: 3.42,
     volume24hUSD: 425000000,
     color: '#627EEA',
@@ -207,13 +206,14 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
 
       {/* Chart Canvas */}
       <div className="h-64 w-full select-none pt-2">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           {chartType === 'price' ? (
             <AreaChart
               data={chartData}
               onMouseMove={(e: any) => {
                 if (e?.activePayload && e.activePayload.length) {
-                  setHoveredPoint(e.activePayload[0].payload);
+                  const payload = e.activePayload[0].payload;
+                  setHoveredPoint((prev: any) => (prev?.timestamp === payload?.timestamp ? prev : payload));
                 }
               }}
               onMouseLeave={() => setHoveredPoint(null)}

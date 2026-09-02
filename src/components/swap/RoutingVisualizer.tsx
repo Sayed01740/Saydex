@@ -34,7 +34,7 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-[var(--text-primary)]">
-                Axiom Smart Router
+                Saydex Smart Router
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20">
                 {isMultiHop ? 'Multi-Hop' : 'Split Path'}

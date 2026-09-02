@@ -27,7 +27,7 @@ export const DesignSystemView: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] text-xs font-semibold border border-[var(--primary)]/20 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Axiom Design Specification v3.2</span>
+            <span>Saydex Design Specification v3.2</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
             Design Tokens & Component Architecture
@@ -268,7 +268,7 @@ export const DesignSystemView: React.FC = () => {
                 <Sparkles className="w-5 h-5 text-[var(--primary)] shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold text-sm text-[var(--text-primary)]">
-                    Axiom Concentrated Routing Engine v3.2 Released
+                    Saydex Concentrated Routing Engine v3.2 Released
                   </div>
                   <div className="text-[var(--text-secondary)] mt-0.5 leading-relaxed">
                     Now featuring zero-slippage solver batching and sub-millisecond route optimization across Arbitrum and Base.

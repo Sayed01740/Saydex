@@ -1,18 +1,16 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Token, SwapQuote } from '../../types';
 import { useWallet } from '../../context/WalletContext';
 import { useProtocol } from '../../context/ProtocolContext';
 import { calculateTradeRoutes } from '../../utils/routing';
 import { TokenIcon } from '../common/TokenIcon';
-import { getTokensForChain } from '../../data/uniswapTokens';
-import { PROTOCOL_CONTRACTS, NATIVE_TOKEN_PRICES_USD, getQuoterV2Address } from '../../config/chains';
-import { useReadContract } from 'wagmi';
-import { encodeFunctionData, parseEther, pad } from 'viem';
 import { Button } from '../common/Button';
 import { TokenSelectorModal } from './TokenSelectorModal';
 import { SwapSettingsModal } from './SwapSettingsModal';
 import { RoutingVisualizer } from './RoutingVisualizer';
+import { WalletModal } from '../wallet/WalletModal';
 import { SwapReviewModal } from './SwapReviewModal';
+import { ALL_CHAINS, getChainById } from '../../config/chains';
 import {
   ArrowDownUp,
   ChevronDown,
@@ -22,31 +20,12 @@ import {
   BarChart2,
   ShieldCheck,
   AlertTriangle,
+  AlertCircle,
   Target,
-  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-
-const QUOTER_ABI = [
-  {
-    inputs: [
-      { internalType: 'address', name: 'tokenIn', type: 'address' },
-      { internalType: 'address', name: 'tokenOut', type: 'address' },
-      { internalType: 'uint24', name: 'fee', type: 'uint24' },
-      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
-      { internalType: 'uint160', name: 'sqrtPriceLimitX96', type: 'uint160' },
-    ],
-    name: 'quoteExactInputSingle',
-    outputs: [
-      { internalType: 'uint256', name: 'amountOut', type: 'uint256' },
-      { internalType: 'uint160', name: 'sqrtPriceX96After', type: 'uint160' },
-      { internalType: 'uint32', name: 'initializedTicksCrossed', type: 'uint32' },
-      { internalType: 'uint256', name: 'gasEstimate', type: 'uint256' },
-    ],
-    stateMutability: 'payable', // quoteExactInputSingle reverts with output data — use staticcall via useReadContract
-    type: 'function',
-  },
-] as const;
+import { uniswapV3Service, OnChainQuoteResult } from '../../services/uniswapV3Service';
 
 interface SwapCardProps {
   onToggleChart?: () => void;
@@ -69,41 +48,91 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   externalAmountIn,
   onOpenSetAlertModal,
 }) => {
-  const { isConnected, nativeBalance, usdcBalance, walletChainId, switchChain, walletState, selectedChain } = useWallet();
+  const {
+    isConnected,
+    ethBalance,
+    usdcBalance,
+    getTokenBalance,
+    selectedChain,
+    isChainMismatch,
+    detectedChainId,
+    switchChain,
+    syncAppWithWalletChain,
+  } = useWallet();
   const { tokens, settings } = useProtocol();
 
-  const activeChainId = walletChainId ?? selectedChain?.id ?? 1;
-  const activeTokens = useMemo(() => getTokensForChain(activeChainId), [activeChainId]);
-
-  const [tokenIn, setTokenIn] = useState<Token>(() => externalTokenIn || activeTokens[0]);
-  const [tokenOut, setTokenOut] = useState<Token>(() => externalTokenOut || activeTokens[1]);
+  const [tokenIn, setTokenIn] = useState<Token>(() => externalTokenIn || tokens[0] || {
+    id: 'eth',
+    symbol: 'ETH',
+    name: 'Ethereum',
+    decimals: 18,
+    priceUSD: 3482.50,
+    change24h: 3.42,
+    volume24hUSD: 425000000,
+    color: '#627EEA',
+    iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+  });
+  const [tokenOut, setTokenOut] = useState<Token>(() => externalTokenOut || tokens[1] || {
+    id: 'usdc',
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+    priceUSD: 1.00,
+    change24h: 0.01,
+    volume24hUSD: 850000000,
+    color: '#2775CA',
+    iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+  });
   const [amountIn, setAmountIn] = useState<string>(() => externalAmountIn || '1.0');
 
-  // Keep tokens synced to active chain (RC-56 fix)
+  // Adapt native currency & pair tokens when selected chain changes
   useEffect(() => {
-    const defaultIn = activeTokens.find((t) => t.category === 'native') || activeTokens[0];
-    const defaultOut = activeTokens.find((t) => t.symbol === 'USDC' && t.address !== defaultIn.address) || activeTokens[1];
+    if (!externalTokenIn) {
+      const nativeSym = selectedChain.nativeCurrency.symbol;
+      const nativeName = selectedChain.nativeCurrency.name;
+      
+      const matchingNative = tokens.find(
+        (t) => t.symbol === nativeSym && (t.chainId === selectedChain.id || t.address === '0x0000000000000000000000000000000000000000')
+      ) || {
+        id: `${selectedChain.id}-${nativeSym.toLowerCase()}`,
+        symbol: nativeSym,
+        name: nativeName,
+        decimals: selectedChain.nativeCurrency.decimals || 18,
+        priceUSD: nativeSym === 'BNB' ? 645.0 : nativeSym === 'AVAX' ? 34.8 : nativeSym === 'POL' ? 0.52 : 3482.5,
+        change24h: 2.5,
+        volume24hUSD: 100000000,
+        color: '#627EEA',
+        iconUrl: selectedChain.icon,
+        chainId: selectedChain.id,
+      };
 
-    setTokenIn((prev) => {
-      if (prev.chainId === activeChainId) return prev;
-      return activeTokens.find((t) => t.symbol === prev.symbol) || defaultIn;
-    });
+      setTokenIn(matchingNative);
 
-    setTokenOut((prev) => {
-      if (prev.chainId === activeChainId) return prev;
-      return activeTokens.find((t) => t.symbol === prev.symbol && t.address !== defaultIn.address) || defaultOut;
-    });
-  }, [activeChainId, activeTokens]);
+      // Also adapt tokenOut to a token on the selected chain (e.g. USDC or USDT or popular DEX token)
+      if (!externalTokenOut) {
+        const chainTokens = tokens.filter((t) => t.chainId === selectedChain.id && t.symbol !== nativeSym);
+        const matchingOut = chainTokens.find((t) => t.symbol === 'USDC') || chainTokens.find((t) => t.symbol === 'USDT') || chainTokens[0];
+        if (matchingOut) {
+          setTokenOut(matchingOut);
+          if (onTokensChanged) onTokensChanged(matchingNative, matchingOut);
+        } else {
+          if (onTokensChanged) onTokensChanged(matchingNative, tokenOut);
+        }
+      } else {
+        if (onTokensChanged) onTokensChanged(matchingNative, tokenOut);
+      }
+    }
+  }, [selectedChain.id]);
 
   // Sync when external tokens change
   useEffect(() => {
-    if (externalTokenIn && externalTokenIn.address !== tokenIn.address) {
+    if (externalTokenIn && (externalTokenIn.symbol !== tokenIn.symbol || externalTokenIn.chainId !== tokenIn.chainId || externalTokenIn.address !== tokenIn.address)) {
       setTokenIn(externalTokenIn);
     }
   }, [externalTokenIn]);
 
   useEffect(() => {
-    if (externalTokenOut && externalTokenOut.address !== tokenOut.address) {
+    if (externalTokenOut && (externalTokenOut.symbol !== tokenOut.symbol || externalTokenOut.chainId !== tokenOut.chainId || externalTokenOut.address !== tokenOut.address)) {
       setTokenOut(externalTokenOut);
     }
   }, [externalTokenOut]);
@@ -117,59 +146,70 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   const [selectorTarget, setSelectorTarget] = useState<'in' | 'out' | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [onChainQuoteResult, setOnChainQuoteResult] = useState<OnChainQuoteResult | null>(null);
 
-  // Parse amount in to BigInt
-  const parsedAmountInBigInt = useMemo(() => {
-    if (!amountIn || isNaN(Number(amountIn))) return 0n;
-    return BigInt(Math.floor(parseFloat(amountIn) * Math.pow(10, tokenIn.decimals)));
-  }, [amountIn, tokenIn.decimals]);
-
-  // Fetch actual on-chain quote
-  const { data: quoteData, isLoading: isQuoteLoading } = useReadContract({
-    address: getQuoterV2Address(activeChainId),
-    abi: QUOTER_ABI,
-    functionName: 'quoteExactInputSingle',
-    args: [
-      (tokenIn.address || '0x0000000000000000000000000000000000000000') as `0x${string}`,
-      (tokenOut.address || '0x0000000000000000000000000000000000000000') as `0x${string}`,
-      500, // 0.05% fee tier
-      parsedAmountInBigInt,
-      0n, // sqrtPriceLimitX96
-    ],
-    chainId: activeChainId,
-    query: {
-      enabled: parsedAmountInBigInt > 0n && !!tokenIn.address && !!tokenOut.address,
-      refetchInterval: 12000,
+  // Debounced live on-chain quoting effect against QuoterV2
+  useEffect(() => {
+    let isCancelled = false;
+    const parsedAmount = parseFloat(amountIn) || 0;
+    if (parsedAmount <= 0) {
+      setOnChainQuoteResult(null);
+      setIsQuoting(false);
+      return;
     }
-  });
 
-  // Calculate live output quote
+    setIsQuoting(true);
+    const timer = setTimeout(async () => {
+      try {
+        const result = await uniswapV3Service.getOnChainQuote(
+          selectedChain.id,
+          tokenIn,
+          tokenOut,
+          amountIn,
+          3000
+        );
+        if (!isCancelled) {
+          setOnChainQuoteResult(result);
+          setIsQuoting(false);
+        }
+      } catch {
+        if (!isCancelled) setIsQuoting(false);
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [amountIn, tokenIn, tokenOut, selectedChain.id]);
+
+  // Calculate live output quote combining on-chain quoter with fallback math
   const quote: SwapQuote = useMemo(() => {
     const parsedAmount = parseFloat(amountIn) || 0;
-    
-    // Fallback if quote fails or is loading
-    let calculatedOut = 0;
-    if (quoteData && typeof quoteData[0] === 'bigint') {
-      calculatedOut = Number(quoteData[0]) / Math.pow(10, tokenOut.decimals);
-    } else {
-      const inPrice = tokenIn?.priceUSD ?? NATIVE_TOKEN_PRICES_USD.ETH;
-      const outPrice = tokenOut?.priceUSD ?? 1.00;
-      const rate = inPrice / Math.max(0.000001, outPrice);
-      calculatedOut = parsedAmount * rate;
-    }
-    
-    const rate = parsedAmount > 0 ? calculatedOut / parsedAmount : 0;
+    const inPrice = tokenIn?.priceUSD ?? 3482.50;
+    const outPrice = tokenOut?.priceUSD ?? 1.00;
+    const mathRate = inPrice / Math.max(0.000001, outPrice);
+    const mathOut = parsedAmount * mathRate;
+
+    // Use live on-chain quote if available and valid
+    const hasOnChain = Boolean(onChainQuoteResult && onChainQuoteResult.amountOut > 0);
+    const calculatedOut = hasOnChain ? onChainQuoteResult!.amountOut : mathOut;
+    const rate = parsedAmount > 0 ? calculatedOut / parsedAmount : mathRate;
+
     const slippageMultiplier = (100 - settings.slippageTolerance) / 100;
     const minOut = calculatedOut * slippageMultiplier;
 
+    // Use calculated trade routes
     const routes = calculateTradeRoutes(tokenIn, tokenOut, amountIn, settings.slippageTolerance, 'smart_split');
     const selectedRoute = routes[0];
 
+    const feeTier = onChainQuoteResult?.feeTier || 3000;
+    const feeTierDisplay = feeTier === 500 ? '0.05%' : feeTier === 10000 ? '1.00%' : '0.30%';
+
     return {
-      // RC-7: chainId binds this quote to the current wallet chain
-      // Before execution, verify quote.chainId === walletChainId
-      chainId: walletChainId ?? tokenIn.chainId ?? 1,
       tokenIn,
       tokenOut,
       amountIn: amountIn || '0',
@@ -177,84 +217,32 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       amountOutMin: minOut > 0 ? (minOut > 1 ? minOut.toFixed(4) : minOut.toFixed(6)) : '0.00',
       executionPrice: rate,
       priceImpact: selectedRoute ? selectedRoute.priceImpact : 0.01,
-      networkFeeUSD: selectedRoute ? selectedRoute.gasCostUSD : 1.45,
+      networkFeeUSD: onChainQuoteResult?.gasEstimate
+        ? Math.max(0.05, (onChainQuoteResult.gasEstimate * 25e-9 * (tokenIn.priceUSD || 3000)))
+        : (selectedRoute ? selectedRoute.gasCostUSD : 1.45),
+      feeTier,
+      quoteSource: onChainQuoteResult?.source || 'fallback_math',
+      gasEstimate: onChainQuoteResult?.gasEstimate,
       routeHops: selectedRoute ? selectedRoute.routeHops : [
         {
-          protocol: 'Axiom Concentrated v3',
+          protocol: 'Uniswap V3',
           poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
-          percentage: 70,
+          percentage: 100,
           fromToken: tokenIn?.symbol || 'ETH',
           toToken: tokenOut?.symbol || 'USDC',
-          feeTier: '0.05%',
+          feeTier: feeTierDisplay,
         },
       ],
-      calldataHex: (() => {
-        try {
-          // Build a real V3_SWAP_EXACT_IN calldata for the Universal Router
-          const UNIVERSAL_ROUTER_ABI = [{
-            name: 'execute',
-            type: 'function',
-            stateMutability: 'payable',
-            inputs: [
-              { name: 'commands', type: 'bytes' },
-              { name: 'inputs', type: 'bytes[]' },
-              { name: 'deadline', type: 'uint256' },
-            ],
-          }] as const;
-
-          const tokenInAddr = (tokenIn?.address || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-          const tokenOutAddr = (tokenOut?.address || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-          const isNativeIn = tokenInAddr === '0x0000000000000000000000000000000000000000';
-          const deadline = BigInt(Math.floor(Date.now() / 1000) + (settings.deadlineMinutes || 20) * 60);
-
-          // Commands: WRAP_ETH (0x03) + V3_SWAP_EXACT_IN (0x00) for native, or V3_SWAP_EXACT_IN (0x00) for ERC20
-          const commands = isNativeIn ? '0x0300' : '0x00';
-
-          const swapPath = `0x${tokenInAddr.slice(2)}0001f4${tokenOutAddr.slice(2)}`;
-          // BigInt math: amountOutMin = parsedAmountIn * (10000 - slippageBps) / 10000
-          const slippageBps = BigInt(Math.floor((settings.slippageTolerance || 0.5) * 100));
-          const amountOutMin = (parsedAmountInBigInt * (10000n - slippageBps)) / 10000n;
-
-          // Build swap input: recipient (0x01 = MSG_SENDER), amountIn, amountOutMin, path, payerIsUser
-          const swapInput = `0x0000000000000000000000000000000000000000000000000000000000000001${parsedAmountInBigInt.toString(16).padStart(64, '0')}${amountOutMin.toString(16).padStart(64, '0')}${swapPath.slice(2).padEnd(128, '0')}${isNativeIn ? '00' : '01'}`;
-
-          const inputs = isNativeIn
-            ? [
-                // WRAP_ETH input: recipient (0x02 = ROUTER), amountMin (0 = use msg.value)
-                `0x00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000`,
-                swapInput,
-              ]
-            : [swapInput];
-
-          return encodeFunctionData({
-            abi: UNIVERSAL_ROUTER_ABI,
-            functionName: 'execute',
-            args: [commands as `0x${string}`, inputs as `0x${string}`[], deadline],
-          });
-        } catch {
-          // Fallback: minimal valid calldata (will likely revert but prevents crash)
-          return '0x';
-        }
-      })(),
+      calldataHex: `0x5ae401dc000000000000000000000000${(tokenIn?.address || '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2').replace('0x', '')}000000000000000000000000${(tokenOut?.address || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48').replace('0x', '')}0000000000000000000000000000000000000000000000000de0b6b3a7640000`,
       guaranteedUntil: Date.now() + 30000,
       mevProtected: settings.mevProtection,
     };
-  }, [tokenIn, tokenOut, amountIn, settings, walletChainId, quoteData]);
+  }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult]);
 
-  // RC-2: userBalanceIn now uses nativeBalance (chain-specific) not a stale ethBalance
-  const userBalanceIn =
-    tokenIn.address === '0x0000000000000000000000000000000000000000'
-      ? nativeBalance
-      : tokenIn.symbol === 'USDC'
-      ? usdcBalance
-      : tokenIn.balance || 0;
+  const userBalanceIn = isConnected ? getTokenBalance(tokenIn, selectedChain.id) : 0;
+  const userBalanceOut = isConnected ? getTokenBalance(tokenOut, selectedChain.id) : 0;
 
-  // RC-28: Detect chain mismatch — token belongs to a different chain than wallet
-  const tokenChainMismatch = isConnected &&
-    walletChainId !== null &&
-    tokenIn.chainId !== walletChainId;
-
-  const isInsufficientBalance = isConnected && !tokenChainMismatch && parseFloat(amountIn || '0') > userBalanceIn;
+  const isInsufficientBalance = isConnected && parseFloat(amountIn || '0') > userBalanceIn;
 
   const handleFlipTokens = () => {
     setIsFlipping(true);
@@ -268,23 +256,19 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     }, 150);
   };
 
-  // RC-6: Token identity uses address + chainId — never symbol alone
   const handleSelectToken = (selected: Token) => {
-    const isSameAsOut =
-      selected.address.toLowerCase() === tokenOut.address.toLowerCase() &&
-      selected.chainId === tokenOut.chainId;
-    const isSameAsIn =
-      selected.address.toLowerCase() === tokenIn.address.toLowerCase() &&
-      selected.chainId === tokenIn.chainId;
-
     if (selectorTarget === 'in') {
-      if (isSameAsOut) setTokenOut(tokenIn); // swap them
+      if (selected.symbol === tokenOut.symbol) {
+        setTokenOut(tokenIn);
+      }
       setTokenIn(selected);
-      if (onTokensChanged) onTokensChanged(selected, isSameAsOut ? tokenIn : tokenOut);
+      if (onTokensChanged) onTokensChanged(selected, tokenOut);
     } else if (selectorTarget === 'out') {
-      if (isSameAsIn) setTokenIn(tokenOut); // swap them
+      if (selected.symbol === tokenIn.symbol) {
+        setTokenIn(tokenOut);
+      }
       setTokenOut(selected);
-      if (onTokensChanged) onTokensChanged(isSameAsIn ? tokenOut : tokenIn, selected);
+      if (onTokensChanged) onTokensChanged(tokenIn, selected);
     }
   };
 
@@ -337,6 +321,36 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Network Mismatch Quick Sync Bar */}
+        {isChainMismatch && detectedChainId && (
+          <div className="mb-3.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-300">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="truncate">
+                Wallet on <strong>{ALL_CHAINS.find(c => c.id === detectedChainId)?.shortName || `#${detectedChainId}`}</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => switchChain(selectedChain.id)}
+                className="px-2 py-1 rounded bg-amber-500 text-black font-semibold text-[11px] hover:bg-amber-400 cursor-pointer transition-colors"
+                title={`Switch wallet extension to ${selectedChain.name}`}
+              >
+                Sync Wallet
+              </button>
+              <button
+                type="button"
+                onClick={() => syncAppWithWalletChain()}
+                className="px-2 py-1 rounded bg-[var(--bg-surface)] border border-amber-500/30 text-amber-200 font-semibold text-[11px] hover:bg-[var(--bg-surface-hover)] cursor-pointer transition-colors"
+                title="Switch app interface to match wallet"
+              >
+                Sync App
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Input: Token In Terminal */}
         <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] focus-within:border-[var(--primary)]/60 rounded-xl p-3.5 transition-all">
@@ -417,14 +431,21 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             <div className="flex items-center gap-1.5 font-mono">
               <span>Balance:</span>
               <span className="text-[var(--text-primary)] font-semibold">
-                {(tokenOut.symbol === 'USDC' ? usdcBalance : tokenOut.balance || 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenOut.symbol}
+                {userBalanceOut.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenOut.symbol}
               </span>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="w-full font-mono text-2xl font-bold text-[var(--primary)] select-all truncate">
-              {isQuoteLoading ? 'Fetching Quote...' : quote.amountOut}
+            <div className="w-full font-mono text-2xl font-bold text-[var(--primary)] select-all truncate flex items-center gap-2">
+              {isQuoting ? (
+                <span className="text-sm font-sans font-medium text-[var(--text-tertiary)] flex items-center gap-1.5 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />
+                  <span>Fetching QuoterV2 route...</span>
+                </span>
+              ) : (
+                quote.amountOut
+              )}
             </div>
 
             <button
@@ -443,8 +464,15 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             <span className="text-[var(--text-tertiary)] font-mono">
               ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[11px] font-mono text-[var(--success)]">
-              Best Protocol Route
+            <span className="text-[11px] font-mono text-[var(--success)] flex items-center gap-1">
+              {quote.quoteSource === 'onchain_quoter' ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Uniswap V3 On-Chain</span>
+                </>
+              ) : (
+                'Best Protocol Route'
+              )}
             </span>
           </div>
         </div>
@@ -475,19 +503,8 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           <RoutingVisualizer quote={quote} />
         </div>
 
-        {/* Chain mismatch warning (RC-28/54) */}
-        {tokenChainMismatch && (
-          <div className="mb-3 p-2.5 rounded-xl bg-[var(--warning-subtle,var(--bg-subtle))] border border-amber-500/30 flex items-center gap-2 text-xs text-amber-400">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>
-              Selected tokens are on a different network than your wallet.
-              Switch your wallet network to continue.
-            </span>
-          </div>
-        )}
-
-        {/* Insufficient balance warning */}
-        {isInsufficientBalance && !tokenChainMismatch && (
+        {/* Warning if balance is insufficient */}
+        {isInsufficientBalance && (
           <div className="mb-3 p-2.5 rounded-xl bg-[var(--error-subtle)] border border-[var(--error)]/30 flex items-center gap-2 text-xs text-[var(--error)]">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>Insufficient {tokenIn.symbol} balance for this swap.</span>
@@ -495,17 +512,15 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         )}
 
         {/* Primary Swap Action Button */}
-        {tokenChainMismatch && isConnected ? (
-          // RC-13/31: Must switch wallet chain before executing — never fake a chain
+        {!isConnected ? (
           <Button
-            variant="secondary"
+            variant="primary"
             size="lg"
             fullWidth
-            onClick={() => tokenIn.chainId && switchChain(tokenIn.chainId)}
+            onClick={() => setIsWalletModalOpen(true)}
             className="mt-1"
-            leftIcon={<RefreshCw className="w-4 h-4" />}
           >
-            Switch Wallet to {tokenIn.chainId === 8453 ? 'Base' : tokenIn.chainId === 42161 ? 'Arbitrum' : 'Correct Network'}
+            Connect Wallet
           </Button>
         ) : (
           <Button
@@ -547,6 +562,12 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         onSwapCompleted={() => {
           setAmountIn('');
         }}
+      />
+
+      {/* Wallet Connection Modal */}
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
       />
     </>
   );

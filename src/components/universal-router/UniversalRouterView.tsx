@@ -42,6 +42,7 @@ import {
   AlertCircle,
   HelpCircle,
   Key,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -59,11 +60,13 @@ export const UniversalRouterView: React.FC = () => {
     addToast,
   } = useProtocol();
 
-  const { selectedChain } = useWallet();
+  const { selectedChain, sendTransaction, signTypedDataV4, address } = useWallet();
 
   const [activeTab, setActiveTab] = useState<RouterTab>('builder');
   const [selectedChainId, setSelectedChainId] = useState<number>(1);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [isExecutingPipeline, setIsExecutingPipeline] = useState(false);
+  const [isSigningPermit2, setIsSigningPermit2] = useState(false);
 
   // Command Builder State
   const [pipelineSteps, setPipelineSteps] = useState<UniversalRouterStep[]>([
@@ -170,24 +173,115 @@ export const UniversalRouterView: React.FC = () => {
   const traditionalGas = totalGas + 68000;
   const gasSavingsPct = Math.round(((traditionalGas - totalGas) / traditionalGas) * 100);
 
-  const handleExecutePipeline = () => {
-    const summary = pipelineSteps.map((s) => s.name).join(' -> ');
-    executeUniversalRouterCalldata(compiledCommandsHex, pipelineSteps.length, summary);
+  const handleExecutePipeline = async () => {
+    try {
+      setIsExecutingPipeline(true);
+      const summary = pipelineSteps.map((s) => s.name).join(' -> ');
+      
+      const routerAddress = currentDeployment.routerAddress;
+      const tx = await sendTransaction({
+        to: routerAddress,
+        value: '0x0',
+        data: `0x3593564c${compiledCommandsHex.replace('0x', '')}`,
+        title: `Universal Router: ${pipelineSteps.length} Opcodes`,
+      });
+
+      executeUniversalRouterCalldata(compiledCommandsHex, pipelineSteps.length, summary);
+      setIsExecutingPipeline(false);
+    } catch (err: any) {
+      console.warn('Pipeline execution rejected:', err);
+      setIsExecutingPipeline(false);
+      addToast({
+        type: 'error',
+        title: 'Execution Cancelled',
+        description: err.message || 'Signature / Transaction was rejected in your Web3 wallet.',
+      });
+    }
   };
 
-  const handleExecuteAtomicNftTrade = () => {
-    setIsExecutingAtomicNft(true);
-    setTimeout(() => {
-      setIsExecutingAtomicNft(false);
+  const handleExecuteAtomicNftTrade = async () => {
+    try {
+      setIsExecutingAtomicNft(true);
       const summary = `PERMIT2_PERMIT -> V3_SWAP (${nftPayToken} -> WETH) -> ${selectedNft.marketplace} (${selectedNft.collectionName} ${selectedNft.tokenId}) -> SWEEP`;
       const randomCommands = '0x0200210b';
+      
+      const tx = await sendTransaction({
+        to: currentDeployment.routerAddress,
+        value: '0x0',
+        data: '0x3593564c0200210b',
+        title: `Atomic NFT Swap: ${selectedNft.collectionName} #${selectedNft.tokenId}`,
+      });
+
       executeUniversalRouterCalldata(randomCommands, 4, summary);
+      setIsExecutingAtomicNft(false);
       addToast({
         type: 'success',
         title: 'Atomic Multi-Asset NFT Swap Complete!',
-        description: `Successfully swapped ${nftPayToken} and acquired ${selectedNft.collectionName} ${selectedNft.tokenId} in 1 single transaction!`,
+        description: `Successfully swapped ${nftPayToken} and acquired ${selectedNft.collectionName} ${selectedNft.tokenId} on-chain!`,
       });
-    }, 1200);
+    } catch (err: any) {
+      console.warn('Atomic NFT trade rejected:', err);
+      setIsExecutingAtomicNft(false);
+      addToast({
+        type: 'error',
+        title: 'NFT Trade Rejected',
+        description: err.message || 'Wallet rejected the atomic settlement transaction.',
+      });
+    }
+  };
+
+  const handleSignPermit2WithWallet = async (tokenSymbol: string) => {
+    try {
+      setIsSigningPermit2(true);
+      const typedData = {
+        types: {
+          EIP712Domain: [
+            { name: 'name', type: 'string' },
+            { name: 'chainId', type: 'uint256' },
+            { name: 'verifyingContract', type: 'address' },
+          ],
+          PermitSingle: [
+            { name: 'details', type: 'PermitDetails' },
+            { name: 'spender', type: 'address' },
+            { name: 'sigDeadline', type: 'uint256' },
+          ],
+          PermitDetails: [
+            { name: 'token', type: 'address' },
+            { name: 'amount', type: 'uint160' },
+            { name: 'expiration', type: 'uint48' },
+            { name: 'nonce', type: 'uint48' },
+          ],
+        },
+        primaryType: 'PermitSingle',
+        domain: {
+          name: 'Permit2',
+          chainId: selectedChainId,
+          verifyingContract: PERMIT2_CONTRACT_ADDRESS,
+        },
+        message: {
+          details: {
+            token: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            amount: '1461501637330902918203684832716283019655932542975',
+            expiration: Math.floor(Date.now() / 1000) + 86400 * 30,
+            nonce: 0,
+          },
+          spender: currentDeployment.routerAddress,
+          sigDeadline: Math.floor(Date.now() / 1000) + 3600,
+        },
+      };
+
+      await signTypedDataV4(typedData);
+      signPermit2Approval(tokenSymbol);
+      setIsSigningPermit2(false);
+    } catch (err: any) {
+      console.warn('Permit2 signing rejected:', err);
+      setIsSigningPermit2(false);
+      addToast({
+        type: 'error',
+        title: 'Permit2 Signature Rejected',
+        description: err.message || 'User rejected EIP-712 structured data signing in wallet.',
+      });
+    }
   };
 
   return (
@@ -530,11 +624,21 @@ export const UniversalRouterView: React.FC = () => {
 
                 {/* Execute Pipeline Button */}
                 <Button
+                  disabled={isExecutingPipeline}
                   onClick={handleExecutePipeline}
-                  className="w-full py-3 text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl shadow-md flex items-center justify-center gap-2"
+                  className="w-full py-3 text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Play className="w-4 h-4 fill-white" />
-                  Simulate & Execute Pipeline
+                  {isExecutingPipeline ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Confirming in Wallet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Simulate & Execute Pipeline</span>
+                    </>
+                  )}
                 </Button>
               </div>
 
@@ -689,10 +793,18 @@ export const UniversalRouterView: React.FC = () => {
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={() => signPermit2Approval(item.tokenSymbol)}
-                            className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={isSigningPermit2}
+                            onClick={() => handleSignPermit2WithWallet(item.tokenSymbol)}
+                            className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
                           >
-                            Sign Permit2
+                            {isSigningPermit2 ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Signing...</span>
+                              </>
+                            ) : (
+                              <span>Sign Permit2</span>
+                            )}
                           </Button>
                         )}
                       </div>
@@ -751,11 +863,21 @@ export const UniversalRouterView: React.FC = () => {
 
                 {/* Action Button */}
                 <Button
-                  onClick={() => signPermit2Approval(selectedPermitToken)}
-                  className="w-full py-3 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md flex items-center justify-center gap-2"
+                  disabled={isSigningPermit2}
+                  onClick={() => handleSignPermit2WithWallet(selectedPermitToken)}
+                  className="w-full py-3 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Key className="w-4 h-4" />
-                  Sign Permit2 with Wallet (0 Gas)
+                  {isSigningPermit2 ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sign Request Pending in Wallet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key className="w-4 h-4" />
+                      <span>Sign Permit2 with Wallet (0 Gas)</span>
+                    </>
+                  )}
                 </Button>
               </div>
 

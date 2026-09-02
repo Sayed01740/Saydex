@@ -1,5 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Token, LiquidityPool, UserPosition, ProtocolTransaction, UserSettings, LaunchpadProject, PriceAlert } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import {
+  Token,
+  LiquidityPool,
+  UserPosition,
+  ProtocolTransaction,
+  UserSettings,
+  LaunchpadProject,
+  PriceAlert,
+  ActiveTransactionMonitor,
+  TransactionLifecycleStage,
+} from '../types';
 import { TokenJarState, FeeSourceAdapter, FirepitAuction, FeePolicyTier, ProtocolFeeEvent } from '../types/protocolFees';
 import {
   Permit2Allowance,
@@ -20,6 +30,7 @@ import {
   INITIAL_UNIVERSAL_ROUTER_EXECUTIONS,
 } from '../data/universalRouterData';
 import { generatePermit2EIP712Payload } from '../utils/universalRouterEncoder';
+import { walletLogger } from '../utils/walletLogger';
 
 export interface ToastMessage {
   id: string;
@@ -30,7 +41,7 @@ export interface ToastMessage {
   actionUrl?: string;
 }
 
-// Gentle pleasant audio notification for price alerts
+// Gentle pleasant audio notification for price alerts and confirmations
 const playAlertChime = () => {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -91,7 +102,7 @@ const INITIAL_PRICE_ALERTS: PriceAlert[] = [
   },
   {
     id: 'alert-3',
-    tokenInSymbol: 'AXIOM',
+    tokenInSymbol: 'SAYDEX',
     tokenOutSymbol: 'ETH',
     targetPrice: 0.0050,
     currentPriceAtCreation: 0.00425,
@@ -107,6 +118,7 @@ interface ProtocolContextType {
   pools: LiquidityPool[];
   userPositions: UserPosition[];
   transactions: ProtocolTransaction[];
+  activeTransaction: ActiveTransactionMonitor | null;
   launchpadProjects: LaunchpadProject[];
   settings: UserSettings;
   toasts: ToastMessage[];
@@ -121,6 +133,26 @@ interface ProtocolContextType {
   permit2Allowances: Permit2Allowance[];
   permit2Signatures: Permit2EIP712Signature[];
   universalRouterExecutions: UniversalRouterExecutionResult[];
+
+  // Granular Transaction Lifecycle Monitor
+  startTransactionLifecycle: (init: {
+    type: ProtocolTransaction['type'] | 'universal_router' | 'permit2';
+    title: string;
+    description: string;
+    explorerUrl?: string;
+    isRealWallet?: boolean;
+    tokenIn?: { symbol: string; amount: string; icon: string };
+    tokenOut?: { symbol: string; amount: string; icon: string };
+    chainId?: number;
+    userAddress?: string;
+  }) => string;
+  markTransactionSigning: (txId: string) => void;
+  markTransactionSigned: (txId: string, hash: string, signerAddress?: string) => void;
+  markTransactionPending: (txId: string) => void;
+  markTransactionConfirmed: (txId: string, details?: { blockNumber?: number; gasCostUSD?: number }) => void;
+  markTransactionFailed: (txId: string, errorMessage: string) => void;
+  clearActiveTransaction: () => void;
+
   signPermit2Approval: (tokenSymbol: string, amount?: string) => void;
   revokePermit2Approval: (tokenSymbol: string) => void;
   executeUniversalRouterCalldata: (commandsHex: string, inputsCount: number, summary: string) => void;
@@ -129,6 +161,7 @@ interface ProtocolContextType {
   updateFeePolicyFraction: (feeTier: number, fraction: number) => void;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   addTransaction: (tx: Omit<ProtocolTransaction, 'id' | 'timestamp'>) => void;
+  clearTransactions: () => void;
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
   addPosition: (pos: Omit<UserPosition, 'id' | 'createdAt'>) => void;
@@ -137,7 +170,8 @@ interface ProtocolContextType {
   participateInLaunchpad: (projectId: string, amountUSD: number) => void;
   addPriceAlert: (alert: Omit<PriceAlert, 'id' | 'createdAt' | 'status'>) => void;
   removePriceAlert: (id: string) => void;
-  simulatePriceAlertTrigger: (id: string) => void;
+  targetTradeToken: Token | null;
+  tradeToken: (token: Token) => void;
   addToken: (token: Token) => void;
 }
 
@@ -146,20 +180,29 @@ const ProtocolContext = createContext<ProtocolContextType | undefined>(undefined
 export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [tokens, setTokens] = useState<Token[]>(TOKENS);
   const [pools, setPools] = useState<LiquidityPool[]>(MOCK_POOLS);
-  const [userPositions, setUserPositions] = useState<UserPosition[]>(MOCK_USER_POSITIONS);
+  const [userPositions, setUserPositions] = useState<UserPosition[]>(() => {
+    try {
+      const saved = localStorage.getItem('unx_user_positions_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [targetTradeToken, setTargetTradeToken] = useState<Token | null>(null);
   const [transactions, setTransactions] = useState<ProtocolTransaction[]>(() => {
     try {
-      const saved = localStorage.getItem('axiom_transactions');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error('Failed to parse transactions', e);
-    }
-    return MOCK_TRANSACTIONS;
+      const saved = localStorage.getItem('unx_protocol_transactions_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
   });
-
-  useEffect(() => {
-    localStorage.setItem('axiom_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  const [activeTransaction, setActiveTransaction] = useState<ActiveTransactionMonitor | null>(null);
+  const activeMonitorRef = useRef<ActiveTransactionMonitor | null>(null);
   const [launchpadProjects, setLaunchpadProjects] = useState<LaunchpadProject[]>(MOCK_LAUNCHPAD);
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>(INITIAL_PRICE_ALERTS);
   const [tokenJars, setTokenJars] = useState<Record<number, TokenJarState>>(INITIAL_TOKEN_JARS);
@@ -170,7 +213,7 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [permit2Allowances, setPermit2Allowances] = useState<Permit2Allowance[]>(INITIAL_PERMIT2_ALLOWANCES);
   const [permit2Signatures, setPermit2Signatures] = useState<Permit2EIP712Signature[]>(INITIAL_PERMIT2_SIGNATURES);
   const [universalRouterExecutions, setUniversalRouterExecutions] = useState<UniversalRouterExecutionResult[]>(INITIAL_UNIVERSAL_ROUTER_EXECUTIONS);
-  const [activeView, setActiveView] = useState<'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'ecosystem' | 'design-system'>('swap');
+  const [activeView, setActiveView] = useState<'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system'>('swap');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const alertsRef = useRef<PriceAlert[]>(priceAlerts);
   alertsRef.current = priceAlerts;
@@ -202,13 +245,241 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Check price alerts whenever prices tick
+  /**
+   * Transaction Lifecycle Monitor & Granular State Manager:
+   * Tracks 'preparing' -> 'signing' -> 'signed' -> 'pending' -> 'confirmed' (or 'failed' / 'rejected')
+   */
+  const startTransactionLifecycle = (init: {
+    type: ProtocolTransaction['type'] | 'universal_router' | 'permit2';
+    title: string;
+    description: string;
+    explorerUrl?: string;
+    isRealWallet?: boolean;
+    tokenIn?: { symbol: string; amount: string; icon: string };
+    tokenOut?: { symbol: string; amount: string; icon: string };
+    chainId?: number;
+    userAddress?: string;
+  }): string => {
+    const txId = `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const monitor: ActiveTransactionMonitor = {
+      id: txId,
+      hash: '',
+      type: init.type,
+      title: init.title,
+      description: init.description,
+      status: 'preparing',
+      startedAt: Date.now(),
+      confirmations: 0,
+      explorerUrl: init.explorerUrl,
+      isRealWallet: init.isRealWallet,
+      tokenIn: init.tokenIn,
+      tokenOut: init.tokenOut,
+      chainId: init.chainId,
+      userAddress: init.userAddress,
+    };
+
+    activeMonitorRef.current = monitor;
+    setActiveTransaction(monitor);
+    walletLogger.info('TRANSACTION_LIFECYCLE', `Started transaction lifecycle [${txId}]: ${init.title} (Status: PREPARING)`);
+    return txId;
+  };
+
+  const markTransactionSigning = (txId: string) => {
+    setActiveTransaction((prev) => {
+      if (!prev || prev.id !== txId) return prev;
+      return { ...prev, status: 'signing' };
+    });
+    walletLogger.info('TRANSACTION_LIFECYCLE', `Transaction [${txId}] transitioned to SIGNING (Awaiting user signature in wallet provider)`);
+  };
+
+  const markTransactionSigned = (txId: string, hash: string, signerAddress?: string) => {
+    const signedAt = Date.now();
+    const monitor = activeMonitorRef.current;
+    const fullExplorerUrl = monitor?.explorerUrl
+      ? (monitor.explorerUrl.endsWith('/') ? `${monitor.explorerUrl}${hash}` : `${monitor.explorerUrl}/${hash}`)
+      : `https://etherscan.io/tx/${hash}`;
+
+    setActiveTransaction((prev) => {
+      if (!prev || prev.id !== txId) return prev;
+      return {
+        ...prev,
+        status: 'signed',
+        hash,
+        signedAt,
+        signerAddress: signerAddress || monitor?.userAddress,
+        explorerUrl: fullExplorerUrl,
+      };
+    });
+
+    // Record in protocol transactions state with exact tokens & chainId
+    setTransactions((prev) => {
+      const existingIdx = prev.findIndex((t) => t.id === txId);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          hash,
+          status: 'signed',
+          signedAt,
+          explorerUrl: fullExplorerUrl,
+          userAddress: signerAddress || updated[existingIdx].userAddress || monitor?.userAddress,
+        };
+        try {
+          localStorage.setItem('unx_protocol_transactions_v2', JSON.stringify(updated.slice(0, 50)));
+        } catch {}
+        return updated;
+      }
+      const updated = [
+        {
+          id: txId,
+          hash,
+          type: (monitor?.type as any) || 'swap',
+          title: monitor?.title || 'Token Swap',
+          description: monitor?.description || 'Executed via Uniswap V3',
+          timestamp: signedAt,
+          signedAt,
+          status: 'signed' as const,
+          tokenIn: monitor?.tokenIn,
+          tokenOut: monitor?.tokenOut,
+          chainId: monitor?.chainId,
+          userAddress: signerAddress || monitor?.userAddress,
+          explorerUrl: fullExplorerUrl,
+          gasCostUSD: 0,
+        },
+        ...prev,
+      ];
+      try {
+        localStorage.setItem('unx_protocol_transactions_v2', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
+
+    walletLogger.info('TRANSACTION_LIFECYCLE', `Transaction [${txId}] SIGNED! Hash: ${hash}. Signer: ${signerAddress || 'Wallet'}`);
+
+    addToast({
+      type: 'info',
+      title: 'Transaction Signed',
+      description: `Signature captured from wallet provider. Tx Hash: ${hash.slice(0, 10)}...`,
+    });
+  };
+
+  const markTransactionPending = (txId: string) => {
+    setActiveTransaction((prev) => {
+      if (!prev || prev.id !== txId) return prev;
+      return { ...prev, status: 'pending' };
+    });
+
+    setTransactions((prev) => {
+      const updated = prev.map((t) => (t.id === txId ? { ...t, status: 'pending' as const } : t));
+      try {
+        localStorage.setItem('unx_protocol_transactions_v2', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
+
+    walletLogger.info('TRANSACTION_LIFECYCLE', `Transaction [${txId}] transitioned to PENDING (In mempool awaiting block inclusion)`);
+
+    addToast({
+      type: 'info',
+      title: 'Transaction Pending',
+      description: 'Submitted to network mempool. Awaiting on-chain confirmation...',
+    });
+  };
+
+  const markTransactionConfirmed = (
+    txId: string,
+    details?: { blockNumber?: number; gasCostUSD?: number }
+  ) => {
+    const confirmedAt = Date.now();
+    const blockNum = details?.blockNumber || 19854210 + Math.floor(Math.random() * 50);
+
+    setActiveTransaction((prev) => {
+      if (!prev || prev.id !== txId) return prev;
+      return {
+        ...prev,
+        status: 'confirmed',
+        confirmedAt,
+        confirmations: 1,
+        blockNumber: blockNum,
+      };
+    });
+
+    setTransactions((prev) => {
+      const updated = prev.map((t) =>
+        t.id === txId
+          ? {
+              ...t,
+              status: 'confirmed' as const,
+              confirmedAt,
+              blockNumber: blockNum,
+              gasCostUSD: details?.gasCostUSD ?? t.gasCostUSD,
+            }
+          : t
+      );
+      try {
+        localStorage.setItem('unx_protocol_transactions_v2', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
+
+    playAlertChime();
+    walletLogger.info('TRANSACTION_LIFECYCLE', `Transaction [${txId}] CONFIRMED on Block #${blockNum}!`);
+
+    addToast({
+      type: 'success',
+      title: 'Transaction Confirmed',
+      description: `Mined in Block #${blockNum.toLocaleString()}. State updated.`,
+    });
+  };
+
+  const markTransactionFailed = (txId: string, errorMessage: string) => {
+    const isRejection = errorMessage.toLowerCase().includes('reject') || errorMessage.toLowerCase().includes('cancel');
+    const finalStatus: TransactionLifecycleStage = isRejection ? 'rejected' : 'failed';
+
+    setActiveTransaction((prev) => {
+      if (!prev || prev.id !== txId) return prev;
+      return {
+        ...prev,
+        status: finalStatus,
+        error: errorMessage,
+      };
+    });
+
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === txId
+          ? {
+              ...t,
+              status: isRejection ? 'rejected' : 'failed',
+            }
+          : t
+      )
+    );
+
+    walletLogger.warn('TRANSACTION_LIFECYCLE', `Transaction [${txId}] ${finalStatus.toUpperCase()}: ${errorMessage}`);
+
+    addToast({
+      type: 'error',
+      title: isRejection ? 'Transaction Rejected' : 'Transaction Failed',
+      description: errorMessage || 'Operation could not be completed.',
+    });
+  };
+
+  const clearActiveTransaction = () => {
+    setActiveTransaction(null);
+  };
+
+  // Check price alerts whenever prices tick (gentle 25s cadence, paused when backgrounded)
   useEffect(() => {
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      
+      const triggeredAlerts: { alert: PriceAlert; currentRate: number }[] = [];
+
       setTokens((prev) => {
         const nextTokens = prev.map((tok) => {
           if (tok.symbol === 'USDC' || tok.symbol === 'USDT' || tok.symbol === 'DAI') return tok;
-          const deltaPercent = (Math.random() - 0.495) * 0.25;
+          const deltaPercent = (Math.random() - 0.495) * 0.15;
           const newPrice = parseFloat((tok.priceUSD * (1 + deltaPercent / 100)).toFixed(tok.priceUSD > 10 ? 2 : 4));
           return {
             ...tok,
@@ -231,24 +502,31 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
             (alert.condition === 'lte' && currentRate <= alert.targetPrice);
 
           if (isTriggered) {
-            setPriceAlerts((prevAlerts) =>
-              prevAlerts.map((a) =>
-                a.id === alert.id ? { ...a, status: 'triggered', triggeredAt: Date.now() } : a
-              )
-            );
-            playAlertChime();
-            addToast({
-              type: 'success',
-              title: `🎯 Target Price Hit: ${alert.tokenInSymbol}/${alert.tokenOutSymbol}`,
-              description: `Target rate reached: 1 ${alert.tokenInSymbol} = ${currentRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${alert.tokenOutSymbol} (Condition: ${alert.condition === 'gte' ? '≥' : '≤'} ${alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })})`,
-              actionText: 'Swap Now',
-            });
+            triggeredAlerts.push({ alert, currentRate });
           }
         });
 
         return nextTokens;
       });
-    }, 6000);
+
+      // Execute alert side-effects safely outside the state reducer
+      if (triggeredAlerts.length > 0) {
+        triggeredAlerts.forEach(({ alert, currentRate }) => {
+          setPriceAlerts((prevAlerts) =>
+            prevAlerts.map((a) =>
+              a.id === alert.id ? { ...a, status: 'triggered', triggeredAt: Date.now() } : a
+            )
+          );
+          playAlertChime();
+          addToast({
+            type: 'success',
+            title: `🎯 Target Price Hit: ${alert.tokenInSymbol}/${alert.tokenOutSymbol}`,
+            description: `Target rate reached: 1 ${alert.tokenInSymbol} = ${currentRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${alert.tokenOutSymbol} (Condition: ${alert.condition === 'gte' ? '≥' : '≤'} ${alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })})`,
+            actionText: 'Swap Now',
+          });
+        });
+      }
+    }, 25000);
 
     return () => clearInterval(interval);
   }, []);
@@ -295,22 +573,44 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-
   const addTransaction = (tx: Omit<ProtocolTransaction, 'id' | 'timestamp'>) => {
     const newTx: ProtocolTransaction = {
       ...tx,
       id: `tx-${Date.now()}`,
       timestamp: Date.now(),
     };
-    setTransactions((prev) => [newTx, ...prev]);
+    setTransactions((prev) => {
+      const updated = [newTx, ...prev];
+      try {
+        localStorage.setItem('unx_protocol_transactions_v2', JSON.stringify(updated.slice(0, 50)));
+      } catch {}
+      return updated;
+    });
 
     addToast({
-      type: tx.status === 'confirmed' ? 'success' : tx.status === 'failed' ? 'error' : 'info',
+      type: tx.status === 'confirmed' ? 'success' : tx.status === 'failed' || tx.status === 'rejected' ? 'error' : 'info',
       title: tx.title,
       description: tx.description,
       actionText: 'View on Explorer',
       actionUrl: tx.explorerUrl,
     });
+  };
+
+  const clearTransactions = () => {
+    setTransactions([]);
+    try {
+      localStorage.removeItem('unx_protocol_transactions_v2');
+    } catch {}
+    addToast({
+      type: 'info',
+      title: 'Trade History Cleared',
+      description: 'Your local transaction records have been reset.',
+    });
+  };
+
+  const tradeToken = (token: Token) => {
+    setTargetTradeToken(token);
+    setActiveView('swap');
   };
 
   const addPosition = (pos: Omit<UserPosition, 'id' | 'createdAt'>) => {
@@ -319,7 +619,13 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
       id: `pos-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
-    setUserPositions((prev) => [newPos, ...prev]);
+    setUserPositions((prev) => {
+      const updated = [newPos, ...prev];
+      try {
+        localStorage.setItem('unx_user_positions_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     addToast({
       type: 'success',
       title: 'Liquidity Position Minted',
@@ -328,7 +634,13 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removePosition = (positionId: string) => {
-    setUserPositions((prev) => prev.filter((p) => p.id !== positionId));
+    setUserPositions((prev) => {
+      const updated = prev.filter((p) => p.id !== positionId);
+      try {
+        localStorage.setItem('unx_user_positions_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     addToast({
       type: 'info',
       title: 'Liquidity Withdrawn',
@@ -337,14 +649,18 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   };
 
   const claimPositionFees = (positionId: string) => {
-    setUserPositions((prev) =>
-      prev.map((p) => {
+    setUserPositions((prev) => {
+      const updated = prev.map((p) => {
         if (p.id === positionId) {
           return { ...p, unclaimedFeesUSD: 0 };
         }
         return p;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('unx_user_positions_v2', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     addToast({
       type: 'success',
       title: 'Fees Harvested',
@@ -634,47 +950,81 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const contextValue = useMemo(
+    () => ({
+      tokens,
+      pools,
+      userPositions,
+      transactions,
+      activeTransaction,
+      launchpadProjects,
+      settings,
+      toasts,
+      priceAlerts,
+      activeView,
+      setActiveView,
+      tokenJars,
+      feeAdapters,
+      firepitAuctions,
+      feePolicyTiers,
+      feeEvents,
+      permit2Allowances,
+      permit2Signatures,
+      universalRouterExecutions,
+      startTransactionLifecycle,
+      markTransactionSigning,
+      markTransactionSigned,
+      markTransactionPending,
+      markTransactionConfirmed,
+      markTransactionFailed,
+      clearActiveTransaction,
+      signPermit2Approval,
+      revokePermit2Approval,
+      executeUniversalRouterCalldata,
+      sweepFeesToJar,
+      burnUniInFirepit,
+      updateFeePolicyFraction,
+      updateSettings,
+      addTransaction,
+      clearTransactions,
+      addToast,
+      removeToast,
+      addPosition,
+      removePosition,
+      claimPositionFees,
+      participateInLaunchpad,
+      addPriceAlert,
+      removePriceAlert,
+      simulatePriceAlertTrigger,
+      targetTradeToken,
+      tradeToken,
+      addToken,
+    }),
+    [
+      tokens,
+      pools,
+      userPositions,
+      transactions,
+      activeTransaction,
+      launchpadProjects,
+      settings,
+      toasts,
+      priceAlerts,
+      targetTradeToken,
+      activeView,
+      tokenJars,
+      feeAdapters,
+      firepitAuctions,
+      feePolicyTiers,
+      feeEvents,
+      permit2Allowances,
+      permit2Signatures,
+      universalRouterExecutions,
+    ]
+  );
+
   return (
-    <ProtocolContext.Provider
-      value={{
-        tokens,
-        pools,
-        userPositions,
-        transactions,
-        launchpadProjects,
-        settings,
-        toasts,
-        priceAlerts,
-        activeView,
-        setActiveView,
-        tokenJars,
-        feeAdapters,
-        firepitAuctions,
-        feePolicyTiers,
-        feeEvents,
-        permit2Allowances,
-        permit2Signatures,
-        universalRouterExecutions,
-        signPermit2Approval,
-        revokePermit2Approval,
-        executeUniversalRouterCalldata,
-        sweepFeesToJar,
-        burnUniInFirepit,
-        updateFeePolicyFraction,
-        updateSettings,
-        addTransaction,
-        addToast,
-        removeToast,
-        addPosition,
-        removePosition,
-        claimPositionFees,
-        participateInLaunchpad,
-        addPriceAlert,
-        removePriceAlert,
-        simulatePriceAlertTrigger,
-        addToken,
-      }}
-    >
+    <ProtocolContext.Provider value={contextValue}>
       {children}
     </ProtocolContext.Provider>
   );

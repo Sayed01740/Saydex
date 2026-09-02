@@ -1,6 +1,7 @@
 import { Token, Chain } from '../types';
-import { ALL_CHAINS, getChainById, NATIVE_TOKEN_PRICES_USD } from '../config/chains';
+import { ALL_CHAINS, getChainById } from '../config/chains';
 import { walletLogger } from './walletLogger';
+import { rpcProviderWrapper, DEFAULT_NETWORK_RPCS } from './rpcProviderWrapper';
 
 export interface ChainBalanceSummary {
   chainId: number;
@@ -33,63 +34,13 @@ const DEMO_PRESET_ADDRESSES = new Set([
   '0xA82F72e9D349581A7b91d46c82dB49eC91D4B892'.toLowerCase(),
 ]);
 
-// Resilient public RPC endpoints per chain with CORS support
-export const CHAIN_RPC_FALLBACKS: Record<number, string[]> = {
-  1: [
-    'https://cloudflare-eth.com',
-    'https://ethereum-rpc.publicnode.com',
-    'https://eth.llamarpc.com',
-    'https://rpc.ankr.com/eth',
-  ],
-  42161: [
-    'https://arb1.arbitrum.io/rpc',
-    'https://arbitrum-one-rpc.publicnode.com',
-    'https://arbitrum.llamarpc.com',
-    'https://rpc.ankr.com/arbitrum',
-  ],
-  8453: [
-    'https://mainnet.base.org',
-    'https://base-rpc.publicnode.com',
-    'https://base.llamarpc.com',
-    'https://1rpc.io/base',
-  ],
-  10: [
-    'https://mainnet.optimism.io',
-    'https://optimism-rpc.publicnode.com',
-    'https://optimism.llamarpc.com',
-    'https://rpc.ankr.com/optimism',
-  ],
-  137: [
-    'https://polygon-rpc.com',
-    'https://polygon-bor-rpc.publicnode.com',
-    'https://polygon.llamarpc.com',
-    'https://rpc.ankr.com/polygon',
-  ],
-  56: [
-    'https://binance.llamarpc.com',
-    'https://bsc-rpc.publicnode.com',
-    'https://bsc-dataseed.binance.org',
-    'https://rpc.ankr.com/bsc',
-  ],
-  43114: [
-    'https://api.avax.network/ext/bc/C/rpc',
-    'https://avalanche-c-chain-rpc.publicnode.com',
-    'https://rpc.ankr.com/avalanche',
-  ],
-  11155111: [
-    'https://ethereum-sepolia-rpc.publicnode.com',
-    'https://sepolia.gateway.tenderly.co',
-  ],
-  130: [
-    'https://mainnet.unichain.org',
-    'https://unichain-rpc.publicnode.com',
-  ],
-};
+// Resilient public RPC endpoints per chain
+export const CHAIN_RPC_FALLBACKS: Record<number, string[]> = DEFAULT_NETWORK_RPCS;
 
 // Fallback balance templates ONLY for simulated demo profiles
 export const PRESET_CHAIN_BALANCES: Record<string, Record<number, { native: number; tokens: Record<string, number> }>> = {
   default: {
-    1: { native: 4.825, tokens: { USDC: 14850.2, USDT: 2400.0, WBTC: 0.42, UNI: 350.0, DAI: 500.0, AXIOM: 12500.0 } },
+    1: { native: 4.825, tokens: { USDC: 14850.2, USDT: 2400.0, WBTC: 0.42, UNI: 350.0, DAI: 500.0, SAYDEX: 12500.0 } },
     42161: { native: 2.15, tokens: { ARB: 3400.0, USDC: 4200.0, WETH: 1.8 } },
     8453: { native: 1.45, tokens: { USDC: 3100.0, AERO: 1850.0, DEGEN: 45000.0 } },
     10: { native: 0.85, tokens: { OP: 800.0, USDC: 1500.0 } },
@@ -98,6 +49,7 @@ export const PRESET_CHAIN_BALANCES: Record<string, Record<number, { native: numb
     43114: { native: 45.2, tokens: { AVAX: 45.2, USDC: 1800.0 } },
     11155111: { native: 10.5, tokens: { SEP: 10.5, UNI: 100.0 } },
     130: { native: 1.2, tokens: { UNI: 50.0, USDC: 1000.0 } },
+    1301: { native: 1.2, tokens: { UNI: 50.0, USDC: 1000.0 } },
   },
 };
 
@@ -109,134 +61,57 @@ const RESTRICTED_RPC_PATTERNS = ['drpc.org', 'drpc.io', 'infura.io/v3/YOUR', 'al
  */
 export function sanitizeRpcUrlList(rpcUrls: string | string[]): string[] {
   const list = Array.isArray(rpcUrls) ? rpcUrls : [rpcUrls];
-  const valid = list.filter((url) => {
-    if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
-    const lower = url.toLowerCase();
-    return !RESTRICTED_RPC_PATTERNS.some((pattern) => lower.includes(pattern));
-  });
-  return valid.length > 0 ? Array.from(new Set(valid)) : list;
+  return rpcProviderWrapper.sanitizeEndpoints(list);
 }
 
 /**
- * Fetch native balance for a specific address across a list of RPC endpoints
+ * Fetch native balance for a specific address across a list of RPC endpoints with auto-failover
  */
 export async function fetchNativeBalanceRpc(
   rpcUrls: string | string[],
   address: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  chainId?: number
 ): Promise<number | null> {
+  if (signal?.aborted) return null;
+  const resolvedChainId = chainId || 1;
   const urlList = sanitizeRpcUrlList(rpcUrls);
 
-  for (const url of urlList) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+  // Register endpoints with rpcProviderWrapper
+  urlList.forEach((url) => rpcProviderWrapper.addBackupEndpoint(resolvedChainId, url));
 
-      // Link external abort signal if provided
-      if (signal) {
-        signal.addEventListener('abort', () => controller.abort(), { once: true });
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'eth_getBalance',
-          params: [address, 'latest'],
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.error) {
-        // e.g. paid tier error, rate limit, or invalid response
-        continue;
-      }
-
-      if (data.result !== undefined && data.result !== null) {
-        const hex = data.result;
-        const wei = BigInt(hex);
-        const eth = Number(wei) / 1e18;
-        return isNaN(eth) ? 0 : parseFloat(eth.toFixed(6));
-      }
-    } catch {
-      // try next fallback RPC
-    }
-  }
-
-  return null;
+  // Query via custom RPC wrapper with automatic failover
+  return rpcProviderWrapper.getBalance(resolvedChainId, address, signal);
 }
 
 /**
- * Fetch ERC-20 token balance via standard `balanceOf(address)` RPC call
+ * Fetch ERC-20 token balance via standard `balanceOf(address)` RPC call with auto-failover
  */
 export async function fetchTokenBalanceRpc(
   rpcUrls: string | string[],
   tokenAddress: string,
   walletAddress: string,
   decimals: number = 18,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  chainId?: number
 ): Promise<number | null> {
+  if (signal?.aborted) return null;
   if (!tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000') {
-    return fetchNativeBalanceRpc(rpcUrls, walletAddress, signal);
+    return fetchNativeBalanceRpc(rpcUrls, walletAddress, signal, chainId);
   }
 
+  const resolvedChainId = chainId || 1;
   const urlList = sanitizeRpcUrlList(rpcUrls);
-  const cleanAddr = walletAddress.toLowerCase().replace(/^0x/, '').padStart(64, '0');
-  const callData = `0x70a08231${cleanAddr}`;
+  urlList.forEach((url) => rpcProviderWrapper.addBackupEndpoint(resolvedChainId, url));
 
-  for (const url of urlList) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-      if (signal) {
-        signal.addEventListener('abort', () => controller.abort(), { once: true });
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'eth_call',
-          params: [
-            {
-              to: tokenAddress,
-              data: callData,
-            },
-            'latest',
-          ],
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.error) {
-        continue;
-      }
-
-      if (data.result && data.result !== '0x') {
-        const rawBal = BigInt(data.result);
-        const divisor = 10 ** decimals;
-        const parsed = Number(rawBal) / divisor;
-        return isNaN(parsed) ? 0 : parsed;
-      }
-    } catch {
-      // try next fallback RPC
-    }
-  }
-
-  return null;
+  // Query via custom RPC wrapper
+  return rpcProviderWrapper.getTokenBalance(
+    resolvedChainId,
+    tokenAddress,
+    walletAddress,
+    decimals,
+    signal
+  );
 }
 
 /**
@@ -285,8 +160,14 @@ export async function fetchAllMultiChainBalances(
     }
   }
 
-  // Use centralized native token prices from config
-  const nativePrices = NATIVE_TOKEN_PRICES_USD;
+  // Native price estimation map
+  const nativePrices: Record<string, number> = {
+    ETH: 3482.5,
+    POL: 0.52,
+    BNB: 645.0,
+    AVAX: 34.8,
+    SEP: 0.0,
+  };
 
   // 1. Initialize summaries for each chain
   for (const chain of ALL_CHAINS) {
@@ -333,7 +214,7 @@ export async function fetchAllMultiChainBalances(
 
     // If not fetched via injected provider or provider chain was different, query resilient public RPCs
     if (bal === null) {
-      bal = await fetchNativeBalanceRpc(rpcEndpoints, cleanAddress, signal);
+      bal = await fetchNativeBalanceRpc(rpcEndpoints, cleanAddress, signal, chain.id);
     }
 
     // If simulated demo profile and offline/unreachable, fallback to preset
@@ -344,7 +225,7 @@ export async function fetchAllMultiChainBalances(
 
     // For real wallets, default unresolved balance to 0, not mock data
     const finalBal = bal !== null && !isNaN(bal) ? bal : 0;
-    const nativePrice = nativePrices[chain.nativeCurrency.symbol] ?? NATIVE_TOKEN_PRICES_USD.ETH;
+    const nativePrice = nativePrices[chain.nativeCurrency.symbol] || 3482.5;
     const usdVal = finalBal * nativePrice;
 
     chainSummaries[chain.id].nativeBalance = finalBal;
@@ -366,10 +247,47 @@ export async function fetchAllMultiChainBalances(
 
     tokenBalances[nativeKey] = res;
     tokenBalances[nativeSymbolKey] = res;
+
+    // If this is the active selected chain, also record as primary native balance
+    if (chain.id === activeChainId) {
+      tokenBalances['native'] = res;
+      tokenBalances[chain.nativeCurrency.symbol.toUpperCase()] = res;
+      tokenBalances[chain.nativeCurrency.symbol.toLowerCase()] = res;
+    }
   });
 
-  // 3. Process Token balances
-  const tokenPromises = tokens.map(async (token) => {
+  // 3. Process Token balances efficiently
+  // Curated major token symbols to query actively on real chains
+  const MAJOR_SYMBOLS = new Set(['USDC', 'USDT', 'WETH', 'WBTC', 'UNI', 'DAI', 'LINK', 'AAVE', 'AERO', 'ARB', 'OP', 'POL', 'BNB', 'AVAX', 'CAKE', 'DEGEN', 'SAYDEX']);
+
+  // For demo accounts, populate from presets/mock; for real wallets, prioritize activeChain tokens to prevent network starvation
+  const tokensToQuery = isDemo
+    ? tokens
+    : tokens.filter((t) => t.chainId === activeChainId && (MAJOR_SYMBOLS.has(t.symbol.toUpperCase()) || (t.balance && t.balance > 0)));
+
+  // Initialize all tokens in the directory with default zero/demo state
+  tokens.forEach((token) => {
+    const tokenKey = `${token.chainId}:${(token.address || token.symbol).toLowerCase()}`;
+    const symbolKey = `${token.chainId}:${token.symbol.toUpperCase()}`;
+    const defaultBal = isDemo ? (token.balance ?? 0) : 0;
+    const usdVal = defaultBal * (token.priceUSD || 1);
+
+    const initRes: TokenBalanceResult = {
+      key: tokenKey,
+      symbol: token.symbol,
+      chainId: token.chainId,
+      balance: defaultBal,
+      balanceUSD: usdVal,
+      formatted: defaultBal > 0
+        ? (defaultBal < 0.001 ? defaultBal.toFixed(6) : defaultBal.toLocaleString(undefined, { maximumFractionDigits: 4 }))
+        : '0.00',
+    };
+    tokenBalances[tokenKey] = initRes;
+    tokenBalances[symbolKey] = initRes;
+  });
+
+  const processSingleToken = async (token: Token) => {
+    if (signal?.aborted) return;
     const chain = ALL_CHAINS.find((c) => c.id === token.chainId) || ALL_CHAINS[0];
     const rpcEndpoints = [
       chain.rpcUrl,
@@ -383,8 +301,30 @@ export async function fetchAllMultiChainBalances(
     if (!token.address || token.address === '0x0000000000000000000000000000000000000000') {
       bal = chainSummaries[token.chainId]?.nativeBalance ?? (isDemo ? (token.balance || 0) : 0);
     } else {
-      // Query token balance via authoritative RPCs for the token's chainId
-      bal = await fetchTokenBalanceRpc(rpcEndpoints, token.address, cleanAddress, token.decimals, signal);
+      // Query token balance via injected provider first if on the same chain (10x faster, zero rate limits)
+      if (isLiveExtension && typeof window !== 'undefined') {
+        const eth = (window as any).ethereum;
+        if (eth?.request && walletProviderChainId === token.chainId) {
+          try {
+            const cleanAddr = cleanAddress.toLowerCase().replace(/^0x/, '').padStart(64, '0');
+            const hex = await eth.request({
+              method: 'eth_call',
+              params: [{ to: token.address, data: `0x70a08231${cleanAddr}` }, 'latest'],
+            });
+            if (hex && hex !== '0x') {
+              const rawBal = BigInt(hex);
+              const divisor = 10 ** (token.decimals || 18);
+              bal = Number(rawBal) / divisor;
+            }
+          } catch {
+            // fallback to public rpc
+          }
+        }
+
+        if (bal === null) {
+          bal = await fetchTokenBalanceRpc(rpcEndpoints, token.address, cleanAddress, token.decimals, signal, token.chainId);
+        }
+      }
       
       if (bal === null && isDemo) {
         // Fallback to preset token balance ONLY for demo accounts
@@ -417,6 +357,15 @@ export async function fetchAllMultiChainBalances(
     tokenBalances[tokenKey] = res;
     tokenBalances[symbolKey] = res;
 
+    // If this token belongs to the active selected chain, also index by bare symbol/address
+    if (token.chainId === activeChainId) {
+      tokenBalances[token.symbol.toUpperCase()] = res;
+      tokenBalances[token.symbol.toLowerCase()] = res;
+      if (token.address) {
+        tokenBalances[token.address.toLowerCase()] = res;
+      }
+    }
+
     // Aggregate into chain summaries
     if (chainSummaries[token.chainId]) {
       if (token.address && token.address !== '0x0000000000000000000000000000000000000000') {
@@ -426,9 +375,17 @@ export async function fetchAllMultiChainBalances(
         }
       }
     }
-  });
+  };
 
-  await Promise.allSettled([...chainBalancePromises, ...tokenPromises]);
+  // Run in concurrent batches of 4 to prevent network socket starvation
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < tokensToQuery.length; i += BATCH_SIZE) {
+    if (signal?.aborted) break;
+    const batch = tokensToQuery.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(batch.map(processSingleToken));
+  }
+
+  await Promise.allSettled(chainBalancePromises);
 
   // Compute grand total
   let totalPortfolioUSD = 0;

@@ -50,9 +50,10 @@ export const ProtocolFeesView: React.FC = () => {
     sweepFeesToJar,
     burnUniInFirepit,
     updateFeePolicyFraction,
+    addToast,
   } = useProtocol();
 
-  const { selectedChain } = useWallet();
+  const { selectedChain, sendTransaction } = useWallet();
   const [selectedChainId, setSelectedChainId] = useState<number>(selectedChain?.id || 1);
   const [activeTab, setActiveTab] = useState<'overview' | 'tokenjar' | 'firepit' | 'policy' | 'contracts'>('overview');
 
@@ -60,6 +61,7 @@ export const ProtocolFeesView: React.FC = () => {
   const [isBurnModalOpen, setIsBurnModalOpen] = useState(false);
   const [uniBurnInput, setUniBurnInput] = useState('5000');
   const [isBurning, setIsBurning] = useState(false);
+  const [isSweeping, setIsSweeping] = useState(false);
 
   // Contract execution state
   const [selectedContractTab, setSelectedContractTab] = useState<'tokenjar' | 'v3adapter' | 'v4policy' | 'firepit'>('tokenjar');
@@ -71,17 +73,57 @@ export const ProtocolFeesView: React.FC = () => {
   const totalUniBurnedAllChains = (Object.values(firepitAuctions) as any[]).reduce((acc: number, a: any) => acc + (a?.totalUniBurnedLifetime || 0), 0);
   const totalUsdBurnedAllChains = (Object.values(firepitAuctions) as any[]).reduce((acc: number, a: any) => acc + (a?.totalUsdBurnedLifetime || 0), 0);
 
-  const handleExecuteBurn = () => {
+  const handleExecuteBurn = async () => {
     const amount = parseFloat(uniBurnInput);
     if (isNaN(amount) || amount <= 0) return;
 
-    setIsBurning(true);
-    setTimeout(() => {
+    try {
+      setIsBurning(true);
+      await sendTransaction({
+        to: currentAuction.contractAddress || '0x66a9893cC07D91D95644AEDD05d03f95e1dBA8Af',
+        value: '0x0',
+        data: '0x42966c68', // burn(uint256)
+        chainId: selectedChainId,
+        title: `Firepit: Burn ${amount.toLocaleString()} UNI & Release Basket`,
+      });
+
       burnUniInFirepit(selectedChainId, amount);
       setIsBurning(false);
       setIsBurnModalOpen(false);
       setUniBurnInput('5000');
-    }, 1000);
+    } catch (err: any) {
+      console.warn('Firepit burn rejected:', err);
+      setIsBurning(false);
+      addToast({
+        type: 'error',
+        title: 'Firepit Burn Rejected',
+        description: err.message || 'Transaction rejected in Web3 wallet.',
+      });
+    }
+  };
+
+  const handleSweepWithWallet = async (adapterId: string, chainId: number) => {
+    try {
+      setIsSweeping(true);
+      await sendTransaction({
+        to: currentJar.releaserAddress || '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
+        value: '0x0',
+        data: '0xa41e737c', // sweepToTokenJar()
+        chainId,
+        title: `Protocol Fee Keeper Sweep (${currentJar.chainName})`,
+      });
+
+      sweepFeesToJar(adapterId, chainId);
+      setIsSweeping(false);
+    } catch (err: any) {
+      console.warn('Sweep rejected:', err);
+      setIsSweeping(false);
+      addToast({
+        type: 'error',
+        title: 'Keeper Sweep Rejected',
+        description: err.message || 'Transaction rejected in Web3 wallet.',
+      });
+    }
   };
 
   return (
@@ -532,10 +574,11 @@ export const ProtocolFeesView: React.FC = () => {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => sweepFeesToJar('v3-adapter', selectedChainId)}
+                  disabled={isSweeping}
+                  onClick={() => handleSweepWithWallet('v3-adapter', selectedChainId)}
                 >
-                  <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                  Simulate Keeper Sweep
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isSweeping ? 'animate-spin' : ''}`} />
+                  <span>{isSweeping ? 'Sweeping...' : 'Execute Keeper Sweep'}</span>
                 </Button>
                 <Button
                   variant="primary"

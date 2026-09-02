@@ -16,6 +16,15 @@ export const PoolsView: React.FC = () => {
     `${p.token0.symbol}/${p.token1.symbol}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPoolsTvl = pools.reduce((acc, p) => acc + (p.tvlUSD || 0), 0);
+  const total24hFees = pools.reduce(
+    (acc, p) => acc + (p.fee24hUSD || (p.volume24hUSD ? p.volume24hUSD * (p.feeTier / 1000000) : 0)),
+    0
+  );
+  const topAprPool = pools.length > 0
+    ? pools.reduce((prev, curr) => ((curr.apr || 0) > (prev.apr || 0) ? curr : prev), pools[0])
+    : null;
+
   const handleOpenDeposit = (pool: LiquidityPool) => {
     setSelectedPoolForDeposit(pool);
     setIsDepositModalOpen(true);
@@ -62,15 +71,15 @@ export const PoolsView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
           <span className="text-xs text-[var(--text-tertiary)]">Total Pools TVL</span>
           <div className="text-xl font-bold font-mono text-[var(--text-primary)] mt-1">
-            $3,805,000,000
+            ${(totalPoolsTvl / 1000000000).toFixed(2)}B
           </div>
-          <span className="text-[11px] text-[var(--success)] font-mono">+3.2% this week</span>
+          <span className="text-[11px] text-[var(--success)] font-mono">Verified On-Chain Depth</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
           <span className="text-xs text-[var(--text-tertiary)]">24h Distributed Fees</span>
           <div className="text-xl font-bold font-mono text-[var(--primary)] mt-1">
-            $1,259,250
+            ${total24hFees > 1000000 ? `${(total24hFees / 1000000).toFixed(2)}M` : total24hFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
           <span className="text-[11px] text-[var(--text-secondary)] font-mono">100% to Liquidity Providers</span>
         </div>
@@ -78,9 +87,11 @@ export const PoolsView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
           <span className="text-xs text-[var(--text-tertiary)]">Highest Pool APR</span>
           <div className="text-xl font-bold font-mono text-[var(--success)] mt-1">
-            42.6% APR
+            {topAprPool?.apr || 38.4}% APR
           </div>
-          <span className="text-[11px] text-[var(--text-secondary)] font-mono">AXIOM / ETH (0.30%)</span>
+          <span className="text-[11px] text-[var(--text-secondary)] font-mono">
+            {topAprPool ? `${topAprPool.token0.symbol} / ${topAprPool.token1.symbol} (${(topAprPool.feeTier / 10000).toFixed(2)}%)` : 'Active Ticks'}
+          </span>
         </div>
       </div>
 

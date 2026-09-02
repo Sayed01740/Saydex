@@ -1,5 +1,5 @@
 /**
- * AXIOM PROTOCOL DESIGN TOKENS
+ * SAYDEX PROTOCOL DESIGN TOKENS
  * Semantic design tokens for next-generation DeFi interface
  */
 

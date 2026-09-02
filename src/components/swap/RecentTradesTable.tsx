@@ -20,26 +20,42 @@ import {
   Filter,
   Layers,
   ArrowUpRight,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ALL_CHAINS } from '../../config/chains';
 
 interface RecentTradesTableProps {
   onSelectPair?: (tokenInSymbol: string, tokenOutSymbol: string, amount?: string) => void;
 }
 
 export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPair }) => {
-  const { transactions, tokens } = useProtocol();
-  const { formatAddress } = useWallet();
+  const { transactions, tokens, clearTransactions } = useProtocol();
+  const { formatAddress, selectedChain, address } = useWallet();
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'failed'>('all');
+  const [networkFilter, setNetworkFilter] = useState<'current' | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTx, setSelectedTx] = useState<ProtocolTransaction | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
 
+  // Helper to get chain label
+  const getChainName = (chainId?: number) => {
+    if (!chainId) return null;
+    const found = ALL_CHAINS.find((c) => c.id === chainId);
+    return found ? found.name : `Chain ${chainId}`;
+  };
+
   // Filter only swap-related transactions
   const swapTrades = useMemo(() => {
-    return transactions.filter((tx) => tx.type === 'swap');
-  }, [transactions]);
+    return transactions.filter((tx) => {
+      if (tx.type !== 'swap') return false;
+      if (networkFilter === 'current' && tx.chainId && tx.chainId !== selectedChain.id) {
+        return false;
+      }
+      return true;
+    });
+  }, [transactions, networkFilter, selectedChain.id]);
 
   // Apply filters & search
   const filteredTrades = useMemo(() => {
@@ -147,6 +163,30 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
               />
             </div>
 
+            {/* Network Filter Badges */}
+            <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
+              <button
+                onClick={() => setNetworkFilter('all')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  networkFilter === 'all'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                All Chains
+              </button>
+              <button
+                onClick={() => setNetworkFilter('current')}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  networkFilter === 'current'
+                    ? 'bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {selectedChain.name.split(' ')[0]}
+              </button>
+            </div>
+
             {/* Status Filter Badges */}
             <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
               <button
@@ -180,6 +220,21 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
                 Pending
               </button>
             </div>
+
+            {/* Clear History Button */}
+            {swapTrades.length > 0 && (
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to clear your local trade history?')) {
+                    clearTransactions();
+                  }
+                }}
+                title="Clear trade history"
+                className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-rose-500 border border-[var(--border-app)] hover:border-rose-500/30 transition-all cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -188,7 +243,7 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
           <table className="w-full text-left text-xs">
             <thead className="bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)] text-[var(--text-tertiary)] uppercase font-semibold text-[10px] tracking-wider">
               <tr>
-                <th className="py-3 px-4">Token Pair</th>
+                <th className="py-3 px-4">Token Pair & Network</th>
                 <th className="py-3 px-4">Swapped (In ➔ Out)</th>
                 <th className="py-3 px-4 hidden md:table-cell">Execution Rate</th>
                 <th className="py-3 px-4">Status</th>
@@ -202,6 +257,11 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
                   const inIcon = getTokenIcon(tx.tokenIn?.symbol, tx.tokenIn?.icon);
                   const outIcon = getTokenIcon(tx.tokenOut?.symbol, tx.tokenOut?.icon);
                   const usdVal = getTradeUSDValue(tx);
+                  const chainLabel = getChainName(tx.chainId);
+
+                  const inAmtNum = parseFloat(tx.tokenIn?.amount?.replace(/,/g, '') || '0');
+                  const outAmtNum = parseFloat(tx.tokenOut?.amount?.replace(/,/g, '') || '0');
+                  const calcRate = inAmtNum > 0 && outAmtNum > 0 ? (outAmtNum / inAmtNum).toFixed(4) : null;
 
                   return (
                     <tr
@@ -226,14 +286,19 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
                             />
                           </div>
                           <div>
-                            <div className="flex items-center gap-1 font-bold text-sm text-[var(--text-primary)]">
-                              <span>{tx.tokenIn?.symbol || 'IN'}</span>
+                            <div className="flex items-center gap-1.5 font-bold text-sm text-[var(--text-primary)]">
+                              <span>{tx.tokenIn?.symbol || 'Unknown'}</span>
                               <ArrowRight className="w-3 h-3 text-[var(--text-tertiary)]" />
-                              <span>{tx.tokenOut?.symbol || 'OUT'}</span>
+                              <span>{tx.tokenOut?.symbol || 'Unknown'}</span>
                             </div>
-                            <div className="text-[10px] text-[var(--text-tertiary)] font-mono flex items-center gap-1 mt-0.5">
+                            <div className="text-[10px] text-[var(--text-tertiary)] font-mono flex items-center gap-1.5 mt-0.5">
+                              {chainLabel && (
+                                <span className="px-1.5 py-0.2 rounded bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)] font-medium">
+                                  {chainLabel}
+                                </span>
+                              )}
                               <span className="text-[var(--primary)]">●</span>
-                              <span>MEV Shielded</span>
+                              <span>Uniswap V3</span>
                             </div>
                           </div>
                         </div>
@@ -243,9 +308,13 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5 font-mono">
                           <div className="font-semibold text-[var(--text-primary)] text-xs flex items-center gap-1">
-                            <span className="text-[var(--text-secondary)]">{tx.tokenIn?.amount || '0'} {tx.tokenIn?.symbol}</span>
+                            <span className="text-[var(--text-secondary)]">
+                              {tx.tokenIn?.amount || '0'} {tx.tokenIn?.symbol || ''}
+                            </span>
                             <ArrowRight className="w-3 h-3 text-[var(--text-tertiary)] shrink-0" />
-                            <span className="text-[var(--primary)] font-bold">{tx.tokenOut?.amount || '0'} {tx.tokenOut?.symbol}</span>
+                            <span className="text-[var(--primary)] font-bold">
+                              {tx.tokenOut?.amount || '0'} {tx.tokenOut?.symbol || ''}
+                            </span>
                           </div>
                           {usdVal && (
                             <div className="text-[11px] text-[var(--text-tertiary)] font-mono">
@@ -257,13 +326,15 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
 
                       {/* Execution Rate */}
                       <td className="py-3.5 px-4 hidden md:table-cell">
-                        <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate max-w-[200px]">
-                          {tx.description?.includes('Rate:')
+                        <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate max-w-[220px]">
+                          {calcRate
+                            ? `1 ${tx.tokenIn?.symbol} ≈ ${calcRate} ${tx.tokenOut?.symbol}`
+                            : tx.description?.includes('Rate:')
                             ? tx.description.split('•')[0].trim()
-                            : `1 ${tx.tokenIn?.symbol} = ${(parseFloat(tx.tokenOut?.amount?.replace(/,/g, '') || '0') / Math.max(0.000001, parseFloat(tx.tokenIn?.amount?.replace(/,/g, '') || '1'))).toFixed(4)} ${tx.tokenOut?.symbol}`}
+                            : 'Direct Pool Swap'}
                         </div>
                         <div className="text-[10px] text-[var(--text-tertiary)] font-mono mt-0.5">
-                          Gas: ~${(tx.gasCostUSD || 1.45).toFixed(2)}
+                          Gas: ~${(tx.gasCostUSD || 0.05).toFixed(2)}
                         </div>
                       </td>
 

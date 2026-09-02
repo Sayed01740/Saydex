@@ -7,7 +7,8 @@ export type LogCategory =
   | 'CHAIN_VALIDATION'
   | 'BALANCE_QUERY'
   | 'TRANSACTION_LIFECYCLE'
-  | 'RPC_DISPATCH';
+  | 'RPC_DISPATCH'
+  | 'RPC_FAILOVER';
 
 export interface WalletTraceLog {
   id: string;
@@ -25,6 +26,7 @@ class WalletLogger {
   private logs: WalletTraceLog[] = [];
   private listeners: Set<LogListener> = new Set();
   private maxLogs: number = 200;
+  private lastConsoleLogs: Map<string, number> = new Map();
 
   constructor() {
     this.info('PROVIDER_DISCOVERY', 'Wallet logger initialized and trace monitor ready.');
@@ -52,21 +54,30 @@ class WalletLogger {
       this.logs.pop();
     }
 
-    // Console output with distinctive styling
-    const colorMap: Record<LogLevel, string> = {
-      DEBUG: 'color: #94a3b8;',
-      INFO: 'color: #38bdf8; font-weight: bold;',
-      WARN: 'color: #fbbf24; font-weight: bold;',
-      ERROR: 'color: #f87171; font-weight: bold;',
-    };
+    // Rate-limit & deduplicate console output to avoid console flooding
+    const logKey = `${level}:${category}:${message}`;
+    const lastTime = this.lastConsoleLogs.get(logKey) || 0;
+    const isSpam = Date.now() - lastTime < 3000;
 
-    const prefix = `%c[Axiom:${category}]%c ${message}`;
-    if (level === 'ERROR') {
-      console.error(prefix, colorMap[level], 'color: inherit;', details || '');
-    } else if (level === 'WARN') {
-      console.warn(prefix, colorMap[level], 'color: inherit;', details || '');
-    } else {
-      console.log(prefix, colorMap[level], 'color: inherit;', details || '');
+    if (!isSpam) {
+      this.lastConsoleLogs.set(logKey, Date.now());
+
+      // Console output with distinctive styling
+      const colorMap: Record<LogLevel, string> = {
+        DEBUG: 'color: #94a3b8;',
+        INFO: 'color: #38bdf8; font-weight: bold;',
+        WARN: 'color: #fbbf24; font-weight: bold;',
+        ERROR: 'color: #f87171; font-weight: bold;',
+      };
+
+      const prefix = `%c[Saydex:${category}]%c ${message}`;
+      if (level === 'ERROR') {
+        console.error(prefix, colorMap[level], 'color: inherit;', details || '');
+      } else if (level === 'WARN') {
+        console.warn(prefix, colorMap[level], 'color: inherit;', details || '');
+      } else {
+        console.log(prefix, colorMap[level], 'color: inherit;', details || '');
+      }
     }
 
     // Notify subscribers

@@ -102,7 +102,7 @@ export const AnalyticsView: React.FC = () => {
         </div>
 
         <div className="h-64 w-full pt-2">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             {metricTab === 'tvl' ? (
               <AreaChart data={historicalData}>
                 <defs>

@@ -1,5 +1,13 @@
 import { Chain } from '../types';
 
+// Alchemy API Key from environment (.env)
+const ALCHEMY_KEY = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ALCHEMY_API_KEY) || '';
+
+export function getAlchemyRpc(networkSubdomain: string): string | null {
+  if (!ALCHEMY_KEY || ALCHEMY_KEY === 'your_alchemy_key_here') return null;
+  return `https://${networkSubdomain}.g.alchemy.com/v2/${ALCHEMY_KEY}`;
+}
+
 /**
  * Viem-compatible defineChain helper for custom and standard chains
  */
@@ -22,10 +30,24 @@ export const mainnet = defineChain({
   shortName: 'Ethereum',
   icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrl: 'https://eth.llamarpc.com',
+  rpcUrl: 'https://cloudflare-eth.com',
   rpcUrls: {
-    default: { http: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'] },
-    public: { http: ['https://eth.llamarpc.com'] },
+    default: {
+      http: [
+        'https://cloudflare-eth.com',
+        'https://eth.llamarpc.com',
+        'https://ethereum-rpc.publicnode.com',
+        'https://rpc.ankr.com/eth',
+        'https://1rpc.io/eth',
+      ],
+    },
+    public: {
+      http: [
+        'https://cloudflare-eth.com',
+        'https://eth.llamarpc.com',
+        'https://ethereum-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://etherscan.io',
   blockExplorers: {
@@ -57,8 +79,20 @@ export const arbitrum = defineChain({
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrl: 'https://arb1.arbitrum.io/rpc',
   rpcUrls: {
-    default: { http: ['https://arb1.arbitrum.io/rpc', 'https://rpc.ankr.com/arbitrum'] },
-    public: { http: ['https://arb1.arbitrum.io/rpc'] },
+    default: {
+      http: [
+        'https://arb1.arbitrum.io/rpc',
+        'https://arbitrum-one-rpc.publicnode.com',
+        'https://rpc.ankr.com/arbitrum',
+        'https://1rpc.io/arb',
+      ],
+    },
+    public: {
+      http: [
+        'https://arb1.arbitrum.io/rpc',
+        'https://arbitrum-one-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://arbiscan.io',
   blockExplorers: {
@@ -84,8 +118,20 @@ export const base = defineChain({
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrl: 'https://mainnet.base.org',
   rpcUrls: {
-    default: { http: ['https://mainnet.base.org', 'https://base.llamarpc.com'] },
-    public: { http: ['https://mainnet.base.org'] },
+    default: {
+      http: [
+        'https://mainnet.base.org',
+        'https://base-rpc.publicnode.com',
+        'https://base.llamarpc.com',
+        'https://1rpc.io/base',
+      ],
+    },
+    public: {
+      http: [
+        'https://mainnet.base.org',
+        'https://base-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://basescan.org',
   blockExplorers: {
@@ -111,8 +157,20 @@ export const optimism = defineChain({
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrl: 'https://mainnet.optimism.io',
   rpcUrls: {
-    default: { http: ['https://mainnet.optimism.io', 'https://optimism.llamarpc.com'] },
-    public: { http: ['https://mainnet.optimism.io'] },
+    default: {
+      http: [
+        'https://mainnet.optimism.io',
+        'https://optimism-rpc.publicnode.com',
+        'https://optimism.llamarpc.com',
+        'https://1rpc.io/op',
+      ],
+    },
+    public: {
+      http: [
+        'https://mainnet.optimism.io',
+        'https://optimism-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://optimistic.etherscan.io',
   blockExplorers: {
@@ -138,8 +196,20 @@ export const polygon = defineChain({
   nativeCurrency: { name: 'Polygon Ecosystem Token', symbol: 'POL', decimals: 18 },
   rpcUrl: 'https://polygon-rpc.com',
   rpcUrls: {
-    default: { http: ['https://polygon-rpc.com', 'https://polygon.llamarpc.com'] },
-    public: { http: ['https://polygon-rpc.com'] },
+    default: {
+      http: [
+        'https://polygon-rpc.com',
+        'https://polygon-bor-rpc.publicnode.com',
+        'https://polygon.llamarpc.com',
+        'https://1rpc.io/matic',
+      ],
+    },
+    public: {
+      http: [
+        'https://polygon-rpc.com',
+        'https://polygon-bor-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://polygonscan.com',
   blockExplorers: {
@@ -164,8 +234,19 @@ export const avalanche = defineChain({
   nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
   rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
   rpcUrls: {
-    default: { http: ['https://api.avax.network/ext/bc/C/rpc', 'https://avalanche.public-rpc.com'] },
-    public: { http: ['https://api.avax.network/ext/bc/C/rpc'] },
+    default: {
+      http: [
+        'https://api.avax.network/ext/bc/C/rpc',
+        'https://avalanche-c-chain-rpc.publicnode.com',
+        'https://1rpc.io/avax/c',
+      ],
+    },
+    public: {
+      http: [
+        'https://api.avax.network/ext/bc/C/rpc',
+        'https://avalanche-c-chain-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://snowtrace.io',
   blockExplorers: {
@@ -184,14 +265,27 @@ export const avalanche = defineChain({
 
 export const sepolia = defineChain({
   id: 11155111,
-  name: 'Sepolia Testnet',
+  name: 'Ethereum Sepolia',
   shortName: 'Sepolia',
   icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
-  nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
-  rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
+  nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: getAlchemyRpc('eth-sepolia') || 'https://rpc.sepolia.org',
   rpcUrls: {
-    default: { http: ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.ankr.com/eth_sepolia', 'https://sepolia.gateway.tenderly.co'] },
-    public: { http: ['https://ethereum-sepolia-rpc.publicnode.com'] },
+    default: {
+      http: [
+        ...(getAlchemyRpc('eth-sepolia') ? [getAlchemyRpc('eth-sepolia')!] : []),
+        'https://rpc.sepolia.org',
+        'https://ethereum-sepolia-rpc.publicnode.com',
+        'https://rpc2.sepolia.org',
+        'https://1rpc.io/sepolia',
+      ],
+    },
+    public: {
+      http: [
+        'https://rpc.sepolia.org',
+        'https://ethereum-sepolia-rpc.publicnode.com',
+      ],
+    },
   },
   blockExplorerUrl: 'https://sepolia.etherscan.io',
   blockExplorers: {
@@ -208,30 +302,179 @@ export const sepolia = defineChain({
   testnet: true,
 });
 
-export const unichain = defineChain({
-  id: 130,
-  name: 'Unichain',
-  shortName: 'Unichain',
-  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrl: 'https://mainnet.unichain.org',
+export const baseSepolia = defineChain({
+  id: 84532,
+  name: 'Base Sepolia',
+  shortName: 'Base Sepolia',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+  nativeCurrency: { name: 'Base Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: getAlchemyRpc('base-sepolia') || 'https://sepolia.base.org',
   rpcUrls: {
-    default: { http: ['https://mainnet.unichain.org', 'https://unichain-rpc.publicnode.com'] },
-    public: { http: ['https://mainnet.unichain.org'] },
+    default: {
+      http: [
+        ...(getAlchemyRpc('base-sepolia') ? [getAlchemyRpc('base-sepolia')!] : []),
+        'https://sepolia.base.org',
+        'https://base-sepolia-rpc.publicnode.com',
+        'https://1rpc.io/base-sepolia',
+      ],
+    },
+    public: {
+      http: [
+        'https://sepolia.base.org',
+        'https://base-sepolia-rpc.publicnode.com',
+      ],
+    },
   },
-  blockExplorerUrl: 'https://unichain.blockscout.com',
+  blockExplorerUrl: 'https://sepolia.basescan.org',
   blockExplorers: {
-    default: { name: 'Unichain Explorer', url: 'https://unichain.blockscout.com' },
+    default: { name: 'BaseScan Sepolia', url: 'https://sepolia.basescan.org' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 1059647,
+    },
+  },
+  gasPriceGwei: 0.1,
+  isSupported: true,
+  testnet: true,
+});
+
+export const arbitrumSepolia = defineChain({
+  id: 421614,
+  name: 'Arbitrum Sepolia',
+  shortName: 'Arb Sepolia',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+  nativeCurrency: { name: 'Arbitrum Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: getAlchemyRpc('arb-sepolia') || 'https://sepolia-rollup.arbitrum.io/rpc',
+  rpcUrls: {
+    default: {
+      http: [
+        ...(getAlchemyRpc('arb-sepolia') ? [getAlchemyRpc('arb-sepolia')!] : []),
+        'https://sepolia-rollup.arbitrum.io/rpc',
+        'https://arbitrum-sepolia-rpc.publicnode.com',
+        'https://1rpc.io/arb-sepolia',
+      ],
+    },
+    public: {
+      http: [
+        'https://sepolia-rollup.arbitrum.io/rpc',
+        'https://arbitrum-sepolia-rpc.publicnode.com',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://sepolia.arbiscan.io',
+  blockExplorers: {
+    default: { name: 'Arbiscan Sepolia', url: 'https://sepolia.arbiscan.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 81140,
+    },
+  },
+  gasPriceGwei: 0.1,
+  isSupported: true,
+  testnet: true,
+});
+
+export const optimismSepolia = defineChain({
+  id: 11155420,
+  name: 'Optimism Sepolia',
+  shortName: 'OP Sepolia',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+  nativeCurrency: { name: 'OP Sepolia Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: getAlchemyRpc('opt-sepolia') || 'https://sepolia.optimism.io',
+  rpcUrls: {
+    default: {
+      http: [
+        ...(getAlchemyRpc('opt-sepolia') ? [getAlchemyRpc('opt-sepolia')!] : []),
+        'https://sepolia.optimism.io',
+        'https://optimism-sepolia-rpc.publicnode.com',
+      ],
+    },
+    public: {
+      http: [
+        'https://sepolia.optimism.io',
+        'https://optimism-sepolia-rpc.publicnode.com',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://sepolia-optimism.etherscan.io',
+  blockExplorers: {
+    default: { name: 'OP Etherscan Sepolia', url: 'https://sepolia-optimism.etherscan.io' },
   },
   contracts: {
     multicall3: {
       address: '0xca11bde05977b3631167028862be2a173976ca11',
     },
   },
-  gasPriceGwei: 0.01,
+  gasPriceGwei: 0.1,
+  isSupported: true,
+  testnet: true,
+});
+
+export const bsc = defineChain({
+  id: 56,
+  name: 'BNB Smart Chain',
+  shortName: 'BNB Chain',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrl: 'https://binance.llamarpc.com',
+  rpcUrls: {
+    default: {
+      http: [
+        'https://binance.llamarpc.com',
+        'https://bsc-dataseed.binance.org',
+        'https://bsc-rpc.publicnode.com',
+        'https://1rpc.io/bnb',
+      ],
+    },
+    public: {
+      http: [
+        'https://binance.llamarpc.com',
+        'https://bsc-dataseed.binance.org',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://bscscan.com',
+  blockExplorers: {
+    default: { name: 'BscScan', url: 'https://bscscan.com' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 15921452,
+    },
+  },
+  gasPriceGwei: 3.0,
   isSupported: true,
   testnet: false,
-  sourceId: 1,
+});
+
+export const unichain = defineChain({
+  id: 1301,
+  name: 'Unichain Sepolia',
+  shortName: 'Unichain',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://sepolia.unichain.org',
+  rpcUrls: {
+    default: { http: ['https://sepolia.unichain.org'] },
+    public: { http: ['https://sepolia.unichain.org'] },
+  },
+  blockExplorerUrl: 'https://sepolia.uniscan.xyz',
+  blockExplorers: {
+    default: { name: 'UniScan', url: 'https://sepolia.uniscan.xyz' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.05,
+  isSupported: true,
+  testnet: true,
 });
 
 export const ALL_CHAINS: Chain[] = [
@@ -240,131 +483,56 @@ export const ALL_CHAINS: Chain[] = [
   base,
   optimism,
   polygon,
+  bsc,
   avalanche,
   sepolia,
+  baseSepolia,
+  arbitrumSepolia,
+  optimismSepolia,
   unichain,
 ];
 
 /**
- * Look up a chain by numeric chainId.
- * Returns a safe fallback (mainnet) if the chain is unknown —
- * but logs a warning so callers know something is misconfigured.
+ * Check if a chain ID is in the officially supported list
  */
-export function getChainById(chainId: number): Chain {
-  const found = ALL_CHAINS.find((c) => c.id === chainId);
-  if (!found) {
-    console.warn(`[CHAIN] getChainById: unknown chainId ${chainId}, falling back to mainnet. Add this chain to ALL_CHAINS to fix.`);
-    return mainnet;
-  }
-  return found;
+export function isSupportedChain(chainId: number | string): boolean {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : parseInt(chainId, 10)) : chainId;
+  return ALL_CHAINS.some((c) => c.id === numId);
 }
 
 /**
- * Build a block-explorer transaction URL for any supported chain.
- * Uses chain registry data — never hardcoded.
+ * Get prioritized RPC endpoint list for a chain
  */
-export function getExplorerTxUrl(chainId: number, txHash: string): string {
+export function getChainRpcUrls(chainId: number | string): string[] {
   const chain = getChainById(chainId);
-  const base = chain.blockExplorerUrl.replace(/\/$/, '');
-  return `${base}/tx/${txHash}`;
+  const urls = [
+    chain.rpcUrl,
+    ...(chain.rpcUrls?.default?.http || []),
+    ...(chain.rpcUrls?.public?.http || []),
+  ];
+  return Array.from(new Set(urls.filter(Boolean)));
 }
 
 /**
- * Build a block-explorer address URL for any supported chain.
+ * Universal Chain Resolver & Dynamic Detector:
+ * Matches any chain by decimal or hex ID, or synthesizes a dynamic EVM Chain definition
  */
-export function getExplorerAddressUrl(chainId: number, address: string): string {
-  const chain = getChainById(chainId);
-  const base = chain.blockExplorerUrl.replace(/\/$/, '');
-  return `${base}/address/${address}`;
+export function getChainById(chainId: number | string): Chain {
+  const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : parseInt(chainId, 10)) : chainId;
+  const found = ALL_CHAINS.find((c) => c.id === numId);
+  if (found) return found;
+
+  // Synthesize dynamic chain object for custom EVM networks
+  return defineChain({
+    id: numId,
+    name: `EVM Chain #${numId}`,
+    shortName: `Chain ${numId}`,
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    nativeCurrency: { name: 'Native Token', symbol: 'ETH', decimals: 18 },
+    rpcUrl: 'https://rpc.ankr.com/eth',
+    blockExplorerUrl: 'https://etherscan.io',
+    gasPriceGwei: 1.0,
+    isSupported: true,
+    testnet: numId > 100000,
+  });
 }
-
-/**
- * Get the native currency symbol for a chain.
- */
-export function getChainNativeSymbol(chainId: number): string {
-  return getChainById(chainId).nativeCurrency.symbol;
-}
-
-/**
- * Determine whether a chain is a testnet.
- */
-export function isTestnet(chainId: number): boolean {
-  return getChainById(chainId).testnet === true;
-}
-
-/**
- * USDC contract addresses per chain.
- * Used by WalletContext to query the correct USDC balance per connected chain.
- */
-export const USDC_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
-  1:       '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum
-  42161:   '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum One
-  8453:    '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base
-  10:      '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', // Optimism
-  137:     '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', // Polygon PoS (native USDC)
-  43114:   '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', // Avalanche C-Chain
-  11155111:'0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia (Chainlink test USDC, 6 decimals)
-};
-
-/**
- * Canonical native token prices (USD) — single source of truth.
- * Replace with a live price oracle (e.g. CoinGecko, Chainlink) in production.
- */
-export const NATIVE_TOKEN_PRICES_USD: Record<string, number> = {
-  ETH: 3482.50,
-  POL: 0.52,
-  BNB: 645.0,
-  AVAX: 34.80,
-  SEP: 0.0,
-};
-
-/**
- * Canonical Uniswap contract addresses (single source of truth).
- * The Universal Router v2 address is the canonical deployment used across all integrations.
- */
-export const PROTOCOL_CONTRACTS = {
-  PERMIT2: '0x000000000022D473030F116dDEE9F6B43aC78BA3' as `0x${string}`,
-};
-
-/**
- * Per-chain Universal Router deployment addresses.
- * Falls back to Ethereum mainnet if chain is unknown.
- */
-export const UNIVERSAL_ROUTER_ADDRESSES: Record<number, `0x${string}`> = {
-  1:       '0x66a9893cC07D91D95644AEDD05d03f95e1dBA8Af', // Ethereum
-  42161:   '0x4C60051384bd2d3C01bfc845Cf5F4b44bcbE9de5', // Arbitrum
-  8453:    '0x198EF79F1F515F02dFE9e3115eD9fC07183f02fC', // Base
-  10:      '0xb555edF5dcF85f42cEd1F07E5DEa2B043726f781', // Optimism
-  137:     '0xec7BE89e9d109e7e3Fec59c222CF297125FEFda2', // Polygon
-  43114:   '0x66a9893cC07D91D95644AEDD05d03f95e1dBA8Af', // Avalanche (uses mainnet-equivalent)
-  11155111:'0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b', // Sepolia
-};
-
-/**
- * Per-chain Quoter V2 addresses.
- * Falls back to Ethereum mainnet quoter if chain is unknown.
- */
-export const QUOTER_V2_ADDRESSES: Record<number, `0x${string}`> = {
-  1:       '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Ethereum
-  42161:   '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Arbitrum
-  8453:    '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Base
-  10:      '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Optimism
-  137:     '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Polygon
-  43114:   '0x61fFE014bA17989E743c5F6cB21bF9697530B21e', // Avalanche
-  11155111:'0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3', // Sepolia
-};
-
-/**
- * Get the Universal Router address for a specific chain.
- */
-export function getUniversalRouterAddress(chainId: number): `0x${string}` {
-  return UNIVERSAL_ROUTER_ADDRESSES[chainId] ?? UNIVERSAL_ROUTER_ADDRESSES[1];
-}
-
-/**
- * Get the Quoter V2 address for a specific chain.
- */
-export function getQuoterV2Address(chainId: number): `0x${string}` {
-  return QUOTER_V2_ADDRESSES[chainId] ?? QUOTER_V2_ADDRESSES[1];
-}
-

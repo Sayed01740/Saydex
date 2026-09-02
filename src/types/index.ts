@@ -1,19 +1,18 @@
-export type ChainId = 1 | 42161 | 10 | 8453 | 137 | 43114 | 11155111 | 130 | number;
+export type ChainId = 1 | 42161 | 10 | 8453 | 137 | 56 | 43114 | 11155111 | 1301 | number;
 
-/**
- * Explicit wallet connection state machine.
- * Never reduce this to a single boolean.
- */
-export type WalletState =
-  | 'DISCONNECTED'
-  | 'CONNECTING'
-  | 'CONNECTED'
-  | 'RECONNECTING'
-  | 'WRONG_CHAIN'
-  | 'CHAIN_SWITCHING'
-  | 'ACCOUNT_CHANGED'
-  | 'DISCONNECTING'
-  | 'ERROR';
+export interface PublicClient {
+  chainId: number;
+  getActiveRpcUrl: () => string;
+  getBackupRpcUrls: () => string[];
+  getBalance: (address: string, signal?: AbortSignal) => Promise<number | null>;
+  getTokenBalance: (tokenAddress: string, walletAddress: string, decimals?: number, signal?: AbortSignal) => Promise<number | null>;
+  call: (params: { to: string; data: string; from?: string; value?: string }, blockTag?: string) => Promise<string>;
+  estimateGas: (params: { to?: string; from?: string; data?: string; value?: string }) => Promise<string>;
+  getChainId: () => Promise<number | null>;
+  getBlockNumber: () => Promise<number | null>;
+  getTransactionReceipt: (hash: string) => Promise<any>;
+  execute: <T = any>(method: string, params?: any[], options?: { timeoutMs?: number; signal?: AbortSignal; maxRetries?: number }) => Promise<T>;
+}
 
 export interface ChainContract {
   address: string;
@@ -139,8 +138,6 @@ export interface RouteHop {
 }
 
 export interface SwapQuote {
-  /** The chain this quote was computed on. Must match wallet chain before execution. */
-  chainId: ChainId;
   tokenIn: Token;
   tokenOut: Token;
   amountIn: string;
@@ -153,20 +150,54 @@ export interface SwapQuote {
   calldataHex: string;
   guaranteedUntil: number;
   mevProtected: boolean;
+  feeTier?: number;
+  quoteSource?: 'onchain_quoter' | 'fallback_math';
+  gasEstimate?: number;
 }
+
+export type TransactionLifecycleStage =
+  | 'idle'
+  | 'preparing'
+  | 'signing'
+  | 'signed'
+  | 'pending'
+  | 'confirmed'
+  | 'failed'
+  | 'rejected';
 
 export type TransactionStatus =
   | 'idle'
   | 'simulating'
-  | 'checking_allowance'
-  | 'approving'
   | 'wallet_approval'
+  | 'signing'
+  | 'signed'
   | 'submitting'
   | 'pending'
   | 'confirmed'
   | 'failed'
-  | 'rejected'      // User rejected in wallet
-  | 'wrong_chain';  // Chain mismatch detected before submit
+  | 'rejected';
+
+export interface ActiveTransactionMonitor {
+  id: string;
+  hash: string;
+  type: 'swap' | 'add_liquidity' | 'remove_liquidity' | 'claim_fees' | 'launch_participate' | 'universal_router' | 'permit2';
+  title: string;
+  description: string;
+  status: TransactionLifecycleStage;
+  startedAt: number;
+  signedAt?: number;
+  confirmedAt?: number;
+  confirmations: number;
+  blockNumber?: number;
+  explorerUrl?: string;
+  isRealWallet?: boolean;
+  signerAddress?: string;
+  tokenIn?: { symbol: string; amount: string; icon: string };
+  tokenOut?: { symbol: string; amount: string; icon: string };
+  chainId?: number;
+  userAddress?: string;
+  error?: string;
+}
 
 export interface ProtocolTransaction {
   id: string;
@@ -175,11 +206,16 @@ export interface ProtocolTransaction {
   title: string;
   description: string;
   timestamp: number;
-  status: 'confirmed' | 'pending' | 'failed';
+  status: 'signed' | 'pending' | 'confirmed' | 'failed' | 'rejected';
   tokenIn?: { symbol: string; amount: string; icon: string };
   tokenOut?: { symbol: string; amount: string; icon: string };
   explorerUrl: string;
   gasCostUSD: number;
+  chainId?: number;
+  userAddress?: string;
+  blockNumber?: number;
+  signedAt?: number;
+  confirmedAt?: number;
 }
 
 export interface LaunchpadProject {

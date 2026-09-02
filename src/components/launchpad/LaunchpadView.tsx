@@ -28,7 +28,7 @@ export const LaunchpadView: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] text-xs font-semibold border border-[var(--primary)]/20 mb-2">
             <Rocket className="w-3.5 h-3.5" />
-            <span>Axiom Fair Launch Incubator</span>
+            <span>Saydex Fair Launch Incubator</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
             Decentralized Protocol Launchpad

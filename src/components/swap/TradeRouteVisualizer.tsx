@@ -456,7 +456,7 @@ export const TradeRouteVisualizer: React.FC<TradeRouteVisualizerProps> = ({
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-[var(--primary)]" />
             <span>
-              All atomic swap hops are validated by the Axiom On-Chain Settlement Router.
+              All atomic swap hops are validated by the Saydex On-Chain Settlement Router.
             </span>
           </div>
 

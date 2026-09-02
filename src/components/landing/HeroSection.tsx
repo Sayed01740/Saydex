@@ -7,6 +7,18 @@ export const HeroSection: React.FC = () => {
   const { setActiveView } = useProtocol();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const handleLaunchTerminal = () => {
+    setActiveView('swap');
+    setTimeout(() => {
+      const el = document.getElementById('swap-terminal-section') || document.getElementById('swap-card-container');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 480, behavior: 'smooth' });
+      }
+    }, 60);
+  };
+
   // Subtle animated canvas of liquidity paths, market routes, and traveling particles (Section 15, 16)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,24 +27,27 @@ export const HeroSection: React.FC = () => {
     if (!ctx) return;
 
     let animationFrameId: number;
-    let width = (canvas.width = canvas.offsetWidth);
-    let height = (canvas.height = canvas.offsetHeight);
+    let width = (canvas.width = canvas.offsetWidth || 1200);
+    let height = (canvas.height = canvas.offsetHeight || 400);
+
+    const initNodes = (w: number, h: number) =>
+      Array.from({ length: 14 }, (_, i) => ({
+        x: (w * (i + 1)) / 15 + (Math.random() - 0.5) * 40,
+        y: h * 0.3 + (Math.random() - 0.5) * (h * 0.45),
+        radius: Math.random() * 2.5 + 2,
+        pulse: Math.random() * Math.PI * 2,
+      }));
+
+    let nodes = initNodes(width, height);
 
     const handleResize = () => {
       if (!canvas) return;
-      width = canvas.width = canvas.offsetWidth;
-      height = canvas.height = canvas.offsetHeight;
+      width = canvas.width = canvas.offsetWidth || 1200;
+      height = canvas.height = canvas.offsetHeight || 400;
+      nodes = initNodes(width, height);
     };
 
     window.addEventListener('resize', handleResize);
-
-    // Nodes and routing flow lines
-    const nodes = Array.from({ length: 14 }, (_, i) => ({
-      x: (width * (i + 1)) / 15 + (Math.random() - 0.5) * 40,
-      y: height * 0.3 + (Math.random() - 0.5) * (height * 0.45),
-      radius: Math.random() * 2.5 + 2,
-      pulse: Math.random() * Math.PI * 2,
-    }));
 
     // Traveling liquidity particles
     const particles = Array.from({ length: 22 }, () => ({
@@ -119,7 +134,7 @@ export const HeroSection: React.FC = () => {
         {/* Protocol Status Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/30 text-xs font-semibold text-[var(--primary)] shadow-xs">
           <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
-          <span>Axiom Concentrated Routing v3.2 Protocol Active</span>
+          <span>Saydex Concentrated Routing v3.2 Protocol Active</span>
         </div>
 
         {/* Large Confident Headline (Section 14) */}
@@ -137,9 +152,9 @@ export const HeroSection: React.FC = () => {
           <Button
             variant="primary"
             size="lg"
-            onClick={() => setActiveView('swap')}
+            onClick={handleLaunchTerminal}
             rightIcon={<ArrowRight className="w-4 h-4" />}
-            className="w-full sm:w-auto shadow-md"
+            className="w-full sm:w-auto shadow-md cursor-pointer"
           >
             Launch Terminal
           </Button>

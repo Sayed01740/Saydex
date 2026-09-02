@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProtocol } from '../../context/ProtocolContext';
-import { ArrowLeftRight, Compass, Droplet, WalletCards, Rocket, BarChart3, Flame, Cpu } from 'lucide-react';
+import { ArrowLeftRight, Compass, Droplet, WalletCards, Wallet, BarChart3, Flame, Cpu } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const { activeView, setActiveView } = useProtocol();
@@ -12,7 +12,7 @@ export const MobileNav: React.FC = () => {
     { id: 'pools', label: 'Pools', icon: Droplet },
     { id: 'fees', label: 'Fees', icon: Flame },
     { id: 'positions', label: 'Positions', icon: WalletCards },
-    { id: 'launchpad', label: 'Launch', icon: Rocket },
+    { id: 'portfolio', label: 'Portfolio', icon: Wallet },
     { id: 'analytics', label: 'Stats', icon: BarChart3 },
   ] as const;
 
@@ -25,17 +25,18 @@ export const MobileNav: React.FC = () => {
           <button
             key={item.id}
             onClick={() => setActiveView(item.id)}
-            className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-colors cursor-pointer ${
+            className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-lg transition-colors cursor-pointer ${
               isActive
                 ? 'text-[var(--primary)] font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
             }`}
           >
-            <Icon className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">{item.label}</span>
+            <Icon className="w-4 h-4" />
+            <span className="text-[9px] mt-0.5 whitespace-nowrap">{item.label}</span>
           </button>
         );
       })}
     </div>
   );
 };
+

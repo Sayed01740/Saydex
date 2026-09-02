@@ -282,7 +282,7 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
               <Zap className="w-4 h-4 text-[var(--info)] mt-0.5" />
               <div>
                 <div className="text-xs font-semibold text-[var(--text-primary)]">
-                  Axiom Split Auto-Router
+                  Saydex Split Auto-Router
                 </div>
                 <div className="text-[11px] text-[var(--text-tertiary)]">
                   Splits trades across concentrated liquidity pools for optimal pricing

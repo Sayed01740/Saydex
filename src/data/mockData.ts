@@ -1,5 +1,5 @@
 import { Chain, Token, LiquidityPool, UserPosition, ProtocolTransaction, LaunchpadProject } from '../types';
-import { ALL_CHAINS, NATIVE_TOKEN_PRICES_USD } from '../config/chains';
+import { ALL_CHAINS } from '../config/chains';
 import { UNISWAP_TOKENS } from './uniswapTokens';
 
 export const SUPPORTED_CHAINS: Chain[] = ALL_CHAINS;
@@ -9,7 +9,7 @@ export const TOKENS: Token[] = UNISWAP_TOKENS;
 const tokETH = UNISWAP_TOKENS.find((t) => t.symbol === 'ETH') || UNISWAP_TOKENS[0];
 const tokUSDC = UNISWAP_TOKENS.find((t) => t.symbol === 'USDC') || UNISWAP_TOKENS[4];
 const tokWBTC = UNISWAP_TOKENS.find((t) => t.symbol === 'WBTC') || UNISWAP_TOKENS[2];
-const tokAXIOM = UNISWAP_TOKENS.find((t) => t.symbol === 'AXIOM') || UNISWAP_TOKENS[3];
+const tokSAYDEX = UNISWAP_TOKENS.find((t) => t.symbol === 'SAYDEX') || UNISWAP_TOKENS[3];
 const tokUSDT = UNISWAP_TOKENS.find((t) => t.symbol === 'USDT') || UNISWAP_TOKENS[5];
 const tokLINK = UNISWAP_TOKENS.find((t) => t.symbol === 'LINK') || UNISWAP_TOKENS[8];
 const tokUNI = UNISWAP_TOKENS.find((t) => t.symbol === 'UNI') || UNISWAP_TOKENS[3];
@@ -26,7 +26,7 @@ export const MOCK_POOLS: LiquidityPool[] = [
     volume24hUSD: 420500000,
     fees24hUSD: 210250,
     apr: 18.4,
-    currentPrice: NATIVE_TOKEN_PRICES_USD.ETH,
+    currentPrice: 3482.50,
     priceRangeMin: 3100.00,
     priceRangeMax: 3950.00,
     liquidityDistribution: [
@@ -66,9 +66,9 @@ export const MOCK_POOLS: LiquidityPool[] = [
     ],
   },
   {
-    id: 'axiom-eth-030',
+    id: 'saydex-eth-030',
     chainId: 1,
-    token0: tokAXIOM,
+    token0: tokSAYDEX,
     token1: tokETH,
     feeTier: 3000,
     feePercent: 0.30,
@@ -164,7 +164,7 @@ export const MOCK_USER_POSITIONS: UserPosition[] = [
     feeTier: 500,
     priceMin: 3200,
     priceMax: 3800,
-    currentPrice: NATIVE_TOKEN_PRICES_USD.ETH,
+    currentPrice: 3482.50,
     inRange: true,
     amount0: 2.14,
     amount1: 7450.0,
@@ -175,8 +175,8 @@ export const MOCK_USER_POSITIONS: UserPosition[] = [
   },
   {
     id: 'pos-102',
-    poolId: 'axiom-eth-030',
-    token0: tokAXIOM,
+    poolId: 'saydex-eth-030',
+    token0: tokSAYDEX,
     token1: tokETH,
     feeTier: 3000,
     priceMin: 0.0038,
@@ -227,11 +227,11 @@ export const MOCK_TRANSACTIONS: ProtocolTransaction[] = [
     id: 'tx-swap-2',
     hash: '0x4e21a8c901dfbc7829103e84bf90281234ac98f7123489ab1029384756102938',
     type: 'swap',
-    title: 'Swap 350.00 AXIOM for 1.488 ETH',
-    description: 'Rate: 1 AXIOM = 0.00425 ETH • Split 80/20 Concentrated',
+    title: 'Swap 350.00 SAYDEX for 1.488 ETH',
+    description: 'Rate: 1 SAYDEX = 0.00425 ETH • Split 80/20 Concentrated',
     timestamp: Date.now() - 1000 * 60 * 42, // 42 mins ago
     status: 'confirmed',
-    tokenIn: { symbol: 'AXIOM', amount: '350.00', icon: TOKENS[3].icon },
+    tokenIn: { symbol: 'SAYDEX', amount: '350.00', icon: TOKENS[3].icon },
     tokenOut: { symbol: 'ETH', amount: '1.488', icon: TOKENS[0].icon },
     explorerUrl: 'https://etherscan.io/tx/0x4e21a8c901dfbc7829103e84bf90281234ac98f7123489ab1029384756102938',
     gasCostUSD: 1.82,
@@ -278,7 +278,7 @@ export const MOCK_TRANSACTIONS: ProtocolTransaction[] = [
     hash: '0x5c4b3a29d18e749021c38fa82b71940a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e',
     type: 'claim_fees',
     title: 'Harvest Accrued Fees ($342.80)',
-    description: 'Claimed 0.085 ETH and 124.50 AXIOM from Position #102',
+    description: 'Claimed 0.085 ETH and 124.50 SAYDEX from Position #102',
     timestamp: Date.now() - 1000 * 60 * 60 * 36,
     status: 'confirmed',
     explorerUrl: 'https://etherscan.io/tx/0x5c4b3a29d18e749021c38fa82b71940a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e',

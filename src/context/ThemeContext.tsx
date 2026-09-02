@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('axiom_theme');
+    const saved = localStorage.getItem('saydex_theme') || localStorage.getItem('axiom_theme');
     return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   });
 
@@ -27,7 +27,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add('light');
       root.setAttribute('data-theme', 'light');
     }
-    localStorage.setItem('axiom_theme', theme);
+    localStorage.setItem('saydex_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

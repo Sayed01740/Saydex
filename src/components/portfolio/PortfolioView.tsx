@@ -5,23 +5,27 @@ import { TokenIcon } from '../common/TokenIcon';
 import { Button } from '../common/Button';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, ExternalLink, Clock } from 'lucide-react';
-import { NATIVE_TOKEN_PRICES_USD } from '../../config/chains';
 
 export const PortfolioView: React.FC = () => {
-  const { nativeBalance, nativeSymbol, usdcBalance, selectedChain, formatAddress } = useWallet();
+  const { ethBalance, usdcBalance, selectedChain, formatAddress } = useWallet();
   const { tokens, userPositions, transactions, setActiveView } = useProtocol();
 
-  const ethValUSD = nativeBalance * (NATIVE_TOKEN_PRICES_USD[nativeSymbol] ?? NATIVE_TOKEN_PRICES_USD.ETH);
+  const ethValUSD = ethBalance * (tokens.find((t) => t.symbol === 'ETH')?.priceUSD || 3482.5);
   const usdcValUSD = usdcBalance;
   const positionsValUSD = userPositions.reduce((acc, p) => acc + p.totalValueUSD, 0);
-  const totalNetWorth = ethValUSD + usdcValUSD + positionsValUSD + 1250 * 14.8; // AXIOM holdings
+  const unclaimedFeesUSD = userPositions.reduce((acc, p) => acc + p.unclaimedFeesUSD, 0);
+  const totalNetWorth = ethValUSD + usdcValUSD + positionsValUSD + unclaimedFeesUSD;
 
   const allocationData = [
-    { name: 'ETH (Ether)', value: Math.round(ethValUSD), color: '#00D2B4' },
-    { name: 'USDC (USD Coin)', value: Math.round(usdcValUSD), color: '#38BDF8' },
-    { name: 'Concentrated LP Positions', value: Math.round(positionsValUSD), color: '#10B981' },
-    { name: 'AXIOM Governance', value: Math.round(1250 * 14.8), color: '#818CF8' },
+    ...(ethValUSD > 0 ? [{ name: 'ETH (Ether)', value: Math.round(ethValUSD), color: '#00D2B4' }] : []),
+    ...(usdcValUSD > 0 ? [{ name: 'USDC (USD Coin)', value: Math.round(usdcValUSD), color: '#38BDF8' }] : []),
+    ...(positionsValUSD > 0 ? [{ name: 'Concentrated LP Positions', value: Math.round(positionsValUSD), color: '#10B981' }] : []),
+    ...(unclaimedFeesUSD > 0 ? [{ name: 'Unclaimed Fees', value: Math.round(unclaimedFeesUSD), color: '#F59E0B' }] : []),
   ];
+
+  if (allocationData.length === 0) {
+    allocationData.push({ name: 'Empty Portfolio', value: 1, color: '#374151' });
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -32,7 +36,7 @@ export const PortfolioView: React.FC = () => {
             Portfolio Terminal
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Real-time balance accounting, asset allocations, and protocol transaction logs.
+            Real-time balance accounting, asset allocations, and protocol transaction logs on {selectedChain.name}.
           </p>
         </div>
 
@@ -52,11 +56,15 @@ export const PortfolioView: React.FC = () => {
           <span className="text-xs text-[var(--text-tertiary)] font-medium">Total Net Worth</span>
           <div>
             <h2 className="text-3xl font-bold font-mono text-[var(--text-primary)]">
-              ${totalNetWorth.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              ${totalNetWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
             <div className="flex items-center gap-1.5 text-xs text-[var(--success)] font-mono mt-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>+$1,842.20 (+3.84%) past 24h</span>
+              <span>
+                {totalNetWorth > 0
+                  ? `+$${(totalNetWorth * 0.024).toFixed(2)} (+2.40%) past 24h`
+                  : '0.00% past 24h'}
+              </span>
             </div>
           </div>
 
@@ -64,19 +72,19 @@ export const PortfolioView: React.FC = () => {
             <div className="flex justify-between">
               <span className="text-[var(--text-tertiary)]">Wallet Tokens</span>
               <span className="font-mono text-[var(--text-primary)] font-semibold">
-                ${(ethValUSD + usdcValUSD + 1250 * 14.8).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                ${(ethValUSD + usdcValUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--text-tertiary)]">Liquidity Positions</span>
               <span className="font-mono text-[var(--text-primary)] font-semibold">
-                ${positionsValUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                ${positionsValUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--text-tertiary)]">Unclaimed Fee Rewards</span>
               <span className="font-mono text-[var(--success)] font-semibold">
-                +$569.10
+                +${unclaimedFeesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -85,7 +93,7 @@ export const PortfolioView: React.FC = () => {
         {/* Allocation Donut Chart */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="w-full sm:w-1/2 h-44">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie
                   data={allocationData}
@@ -166,7 +174,7 @@ export const PortfolioView: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 text-right text-[var(--text-primary)]">$3,482.50</td>
                 <td className="py-3 px-4 text-right font-semibold text-[var(--text-primary)]">
-                  {nativeBalance.toFixed(4)} ETH
+                  {ethBalance.toFixed(4)} ETH
                 </td>
                 <td className="py-3 px-4 text-right font-bold text-[var(--text-primary)]">
                   ${ethValUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -194,30 +202,6 @@ export const PortfolioView: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 text-right font-bold text-[var(--text-primary)]">
                   ${usdcValUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </td>
-                <td className="py-3 px-4 text-right font-sans">
-                  <button
-                    onClick={() => setActiveView('swap')}
-                    className="px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--primary)] hover:text-[#090B0E] border border-[var(--border-app)] text-xs font-semibold text-[var(--text-primary)] transition-all cursor-pointer"
-                  >
-                    Swap
-                  </button>
-                </td>
-              </tr>
-
-              <tr>
-                <td className="py-3 px-4 font-sans font-semibold">
-                  <div className="flex items-center gap-2">
-                    <TokenIcon symbol="AXIOM" icon={tokens[3].icon} size="sm" />
-                    <span>Axiom Protocol (AXIOM)</span>
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-right text-[var(--text-primary)]">$14.80</td>
-                <td className="py-3 px-4 text-right font-semibold text-[var(--text-primary)]">
-                  1,250.00 AXIOM
-                </td>
-                <td className="py-3 px-4 text-right font-bold text-[var(--text-primary)]">
-                  ${(1250 * 14.8).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </td>
                 <td className="py-3 px-4 text-right font-sans">
                   <button

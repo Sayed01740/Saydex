@@ -50,7 +50,7 @@ export function calculateTradeRoutes(
   const smartSplitHops: RouteHop[] = isDirectPair
     ? [
         {
-          protocol: 'Axiom Concentrated v3',
+          protocol: 'Saydex Concentrated v3',
           poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
           percentage: 70,
           fromToken: symIn,
@@ -61,14 +61,14 @@ export function calculateTradeRoutes(
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Axiom v3 Pool (0.05%)',
+              protocol: 'Saydex v3 Pool (0.05%)',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
           ],
         },
         {
-          protocol: 'Axiom StableSwap / Curve',
+          protocol: 'Saydex StableSwap / Curve',
           poolAddress: '0x3416cf6c708da44db26246036dd72e2938de866b',
           percentage: 30,
           fromToken: symIn,
@@ -79,7 +79,7 @@ export function calculateTradeRoutes(
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Axiom Stable Pool (0.01%)',
+              protocol: 'Saydex Stable Pool (0.01%)',
               feeTier: '0.01%',
               poolAddress: '0x3416cf6c708da44db26246036dd72e2938de866b',
             },
@@ -88,7 +88,7 @@ export function calculateTradeRoutes(
       ]
     : [
         {
-          protocol: 'Axiom Concentrated v3',
+          protocol: 'Saydex Concentrated v3',
           poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
           percentage: 65,
           fromToken: symIn,
@@ -100,14 +100,14 @@ export function calculateTradeRoutes(
             {
               fromToken: symIn,
               toToken: intermediaryToken,
-              protocol: 'Axiom v3 Primary',
+              protocol: 'Saydex v3 Primary',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Axiom v3 Secondary',
+              protocol: 'Saydex v3 Secondary',
               feeTier: '0.05%',
               poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
             },
@@ -145,7 +145,7 @@ export function calculateTradeRoutes(
   const directHops: RouteHop[] = isDirectPair
     ? [
         {
-          protocol: 'Axiom Concentrated v3 Direct',
+          protocol: 'Saydex Concentrated v3 Direct',
           poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
           percentage: 100,
           fromToken: symIn,
@@ -156,7 +156,7 @@ export function calculateTradeRoutes(
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Axiom Concentrated Pool',
+              protocol: 'Saydex Concentrated Pool',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
@@ -165,7 +165,7 @@ export function calculateTradeRoutes(
       ]
     : [
         {
-          protocol: 'Axiom Multi-Hop Direct Pipeline',
+          protocol: 'Saydex Multi-Hop Direct Pipeline',
           poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
           percentage: 100,
           fromToken: symIn,
@@ -177,14 +177,14 @@ export function calculateTradeRoutes(
             {
               fromToken: symIn,
               toToken: intermediaryToken,
-              protocol: 'Axiom Concentrated v3',
+              protocol: 'Saydex Concentrated v3',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Axiom Concentrated v3',
+              protocol: 'Saydex Concentrated v3',
               feeTier: '0.05%',
               poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
             },
@@ -224,7 +224,7 @@ export function calculateTradeRoutes(
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Axiom Private Fill',
+              protocol: 'Saydex Private Fill',
               feeTier: '0.01%',
               poolAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
             },
@@ -249,9 +249,9 @@ export function calculateTradeRoutes(
     expectedOutput: smartExpected,
     minimumOutput: smartExpected * slippageFactor,
     executionPrice: directRate,
-    solverProtocol: 'Axiom Split Smart Engine',
+    solverProtocol: 'Saydex Split Smart Engine',
     routeSummaryText: isDirectPair
-      ? `${symIn} ➔ 70% Axiom v3 + 30% StableSwap ➔ ${symOut}`
+      ? `${symIn} ➔ 70% Saydex v3 + 30% StableSwap ➔ ${symOut}`
       : `${symIn} ➔ 65% [${intermediaryToken}] + 35% [USDC] ➔ ${symOut}`,
   };
 
@@ -270,9 +270,9 @@ export function calculateTradeRoutes(
     expectedOutput: directExpected,
     minimumOutput: directExpected * slippageFactor,
     executionPrice: directRate * 0.9994,
-    solverProtocol: 'Axiom Direct Liquidity Pool',
+    solverProtocol: 'Saydex Direct Liquidity Pool',
     routeSummaryText: isDirectPair
-      ? `${symIn} ➔ 100% Axiom v3 ➔ ${symOut}`
+      ? `${symIn} ➔ 100% Saydex v3 ➔ ${symOut}`
       : `${symIn} ➔ ${intermediaryToken} ➔ ${symOut}`,
   };
 

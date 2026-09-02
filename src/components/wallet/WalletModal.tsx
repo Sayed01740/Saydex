@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { useConnectors, useConnect } from 'wagmi';
-import { useWallet } from '../../context/WalletContext';
+import { useWallet, WalletProviderType } from '../../context/WalletContext';
+import { TokenBalanceResult } from '../../utils/balanceFetcher';
+import { useProtocol } from '../../context/ProtocolContext';
+import { ALL_CHAINS } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
+import { TokenIcon } from '../common/TokenIcon';
 import {
   Copy,
   ExternalLink,
@@ -10,108 +13,144 @@ import {
   Power,
   Wallet,
   ShieldCheck,
-  Loader2,
-  AlertTriangle,
+  ArrowRightLeft,
+  Sparkles,
+  CheckCircle2,
   RefreshCw,
+  Layers,
+  Coins,
+  Globe,
+  Radio,
+  ArrowUpRight,
+  TrendingUp,
+  AlertCircle,
+  Terminal,
+  UserCheck,
+  Trash2,
+  Filter,
+  Server,
+  Network,
+  Activity,
+  Plus,
 } from 'lucide-react';
+import { LogCategory, WalletTraceLog } from '../../utils/walletLogger';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// ── Connector icon lookup ─────────────────────────────────────────────────────
-function getConnectorIcon(connectorId: string, connectorName: string): string {
-  const id = connectorId.toLowerCase();
-  const name = connectorName.toLowerCase();
-  if (id.includes('metamask') || name.includes('metamask')) {
-    return 'https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg';
-  }
-  if (id.includes('coinbase') || name.includes('coinbase')) {
-    return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png';
-  }
-  if (id.includes('walletconnect') || name.includes('walletconnect')) {
-    return 'https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Logo/Blue%20(Default)/Logo.svg';
-  }
-  if (id.includes('phantom') || name.includes('phantom')) {
-    return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png';
-  }
-  return '';
-}
+type ModalTab = 'overview' | 'tokens' | 'chains' | 'rpc' | 'logs';
 
-// ── Connector Button ──────────────────────────────────────────────────────────
-// RC-9 Fix: We no longer disable the button based on getProvider() result.
-// getProvider() may return null for EIP-6963 wallets during initialization.
-// Instead: always show the connector, let wagmi handle the "not available" case.
-function ConnectorButton({
-  connector,
-  onClick,
-  isPending,
-}: {
-  connector: ReturnType<typeof useConnectors>[number];
-  onClick: () => void;
-  isPending: boolean;
-}) {
-  const iconSrc = getConnectorIcon(connector.id, connector.name);
-
-  // Deduplicate: skip "Injected" if a more specific connector covers it
-  // (e.g., if MetaMask connector is present AND injected is present, both are shown
-  //  but the user gets to choose — EIP-6963 provides proper provider separation)
-
-  return (
-    <button
-      key={connector.uid}
-      id={`connect-${connector.id}`}
-      onClick={onClick}
-      disabled={isPending}
-      className="w-full flex items-center justify-between p-3.5 rounded-xl border border-[var(--border-app)] hover:border-[var(--primary)]/50 bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)] transition-all group text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform">
-          {iconSrc ? (
-            <img src={iconSrc} alt={connector.name} className="w-4 h-4 object-contain" />
-          ) : (
-            <Wallet className="w-4 h-4 text-[var(--primary)]" />
-          )}
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-            {connector.name}
-          </div>
-          <div className="text-xs text-[var(--text-tertiary)]">
-            {isPending ? 'Connecting…' : 'Click to connect'}
-          </div>
-        </div>
-      </div>
-      {isPending && <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />}
-    </button>
-  );
-}
-
-// ── Main Modal ────────────────────────────────────────────────────────────────
 export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   const {
-    walletState,
     isConnected,
     isConnecting,
+    isChainMismatch,
+    syncAppWithWalletChain,
     address,
     ensName,
-    walletChain,
-    walletChainId,
-    nativeBalance,
-    nativeSymbol,
+    selectedChain,
+    detectedChainId,
+    walletProvider,
+    ethBalance,
     usdcBalance,
+    isRealExtensionConnected,
+    detectedExtensions,
+    chainSummaries,
+    tokenBalances,
+    totalPortfolioUSD,
+    isRefreshingBalances,
+    lastBalanceRefresh,
+    refreshBalances,
+    connectWallet,
+    requestFreshAccountSelection,
     disconnectWallet,
-    formatAddress,
-    getExplorerAddressUrl,
     switchChain,
+    formatAddress,
+    testWalletSignature,
+    // Custom RPC Auto-Failover Props
+    activeRpcUrl,
+    backupRpcUrls,
+    rpcPools,
+    lastRpcFailover,
+    switchChainRpc,
+    addCustomRpcUrl,
+    walletLogs,
+    clearLogs,
   } = useWallet();
 
-  const connectors = useConnectors();
-  const { connect, isPending } = useConnect();
+  const { setActiveView } = useProtocol();
 
   const [copied, setCopied] = useState(false);
-  const [switchingChainId, setSwitchingChainId] = useState<number | null>(null);
+  const [showSwitchList, setShowSwitchList] = useState(false);
+  const [activeTab, setActiveTab] = useState<ModalTab>('overview');
+  const [isTestingSignature, setIsTestingSignature] = useState(false);
+  const [testSignatureResult, setTestSignatureResult] = useState<{ signature: string; isReal: boolean } | null>(null);
+  const [logCategoryFilter, setLogCategoryFilter] = useState<LogCategory | 'ALL'>('ALL');
+  const [customRpcInput, setCustomRpcInput] = useState('');
+  const [isTestingRpcFailover, setIsTestingRpcFailover] = useState(false);
+
+  const handleTestSignature = async () => {
+    try {
+      setIsTestingSignature(true);
+      const res = await testWalletSignature();
+      setTestSignatureResult(res);
+      setIsTestingSignature(false);
+    } catch (err: any) {
+      setIsTestingSignature(false);
+      console.warn('Test signature rejected or cancelled:', err);
+    }
+  };
+
+  const walletOptions: {
+    id: WalletProviderType;
+    name: string;
+    description: string;
+    color: string;
+    isDetected?: boolean;
+  }[] = [
+    {
+      id: 'rabby',
+      name: 'Rabby Wallet',
+      description: 'Web3 multi-chain wallet with pre-tx risk analysis',
+      color: '#8697FF',
+      isDetected: detectedExtensions.rabby,
+    },
+    {
+      id: 'metamask',
+      name: 'MetaMask',
+      description: 'Popular Ethereum browser extension & mobile app',
+      color: '#F6851B',
+      isDetected: detectedExtensions.metamask,
+    },
+    {
+      id: 'coinbase',
+      name: 'Coinbase Wallet',
+      description: 'Self-custody crypto wallet & Smart Wallet passkeys',
+      color: '#0052FF',
+      isDetected: detectedExtensions.coinbase,
+    },
+    {
+      id: 'phantom',
+      name: 'Phantom',
+      description: 'EVM & Solana multi-chain friendly interface',
+      color: '#AB9FF2',
+      isDetected: detectedExtensions.phantom,
+    },
+    {
+      id: 'walletconnect',
+      name: 'WalletConnect',
+      description: 'Scan QR with Trust, Rainbow, Zerion or 300+ apps',
+      color: '#3B99FC',
+    },
+    {
+      id: 'ledger',
+      name: 'Ledger Hardware',
+      description: 'Cold storage security with USB / Bluetooth verification',
+      color: '#22c55e',
+    },
+  ];
 
   const handleCopy = () => {
     if (!address) return;
@@ -120,169 +159,694 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleConnect = (connector: ReturnType<typeof useConnectors>[number]) => {
-    connect({ connector });
-    // Don't close — let the user see the connecting state, then auto-close on success
+  const handleConnect = async (provider: WalletProviderType, freshAccounts = false) => {
+    await connectWallet(provider, { requestFreshAccounts: freshAccounts });
+    setShowSwitchList(false);
+    onClose();
   };
 
   const handleDisconnect = () => {
     disconnectWallet();
+    setShowSwitchList(false);
     onClose();
   };
 
-  // Build explorer URL using chain-aware helper (RC-14 fix)
-  const explorerUrl = address && walletChainId
-    ? getExplorerAddressUrl(address)
-    : address
-    ? `https://etherscan.io/address/${address}`
-    : '#';
+  const getProviderName = (type: WalletProviderType | null) => {
+    if (!type) return 'Web3 Wallet';
+    const found = walletOptions.find((w) => w.id === type);
+    return found ? found.name : type.toUpperCase();
+  };
+
+  // Convert tokenBalances map to sorted array of user holdings
+  const userTokenList: TokenBalanceResult[] = (Object.values(tokenBalances) as TokenBalanceResult[])
+    .filter((t, idx, arr) => t.balance > 0 && arr.findIndex((x) => x.symbol === t.symbol && x.chainId === t.chainId) === idx)
+    .sort((a, b) => b.balanceUSD - a.balanceUSD);
+
+  const filteredLogs = walletLogs.filter((log) => {
+    if (logCategoryFilter === 'ALL') return true;
+    return log.category === logCategoryFilter;
+  });
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      title={isConnected ? 'Wallet Account' : 'Connect a Wallet'}
+      onClose={() => {
+        setShowSwitchList(false);
+        onClose();
+      }}
+      title={isConnected && !showSwitchList ? 'Portfolio & Account' : 'Connect a Wallet'}
       subtitle={
-        isConnected
-          ? `Connected to ${walletChain?.name ?? 'Unknown Network'}`
-          : 'Choose your preferred wallet to interact with Axiom Protocol.'
+        isConnected && !showSwitchList
+          ? `Active on ${selectedChain.name} (${getProviderName(walletProvider)})`
+          : 'Select your Web3 wallet or choose a fresh account from your provider.'
       }
       maxWidth="md"
     >
-      {/* ── CONNECTED STATE ─────────────────────────────────────────────── */}
-      {isConnected ? (
+      {isConnected && !showSwitchList ? (
         <div className="space-y-4">
-          {/* Wrong Chain Banner */}
-          {walletState === 'WRONG_CHAIN' && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--error-subtle)] border border-[var(--error)]/30 text-xs text-[var(--error)]">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Your wallet is on the wrong network. Switch to continue.</span>
-            </div>
-          )}
-
-          {/* Chain Switching Banner */}
-          {walletState === 'CHAIN_SWITCHING' && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--warning-subtle,var(--bg-subtle))] border border-[var(--warning,var(--border-app))]/30 text-xs text-[var(--text-secondary)]">
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>Switching network in your wallet…</span>
+          {/* Real-time Chain Detector Notice if mismatch */}
+          {isChainMismatch && detectedChainId && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2 text-xs text-amber-300">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  Wallet provider is on <strong>Chain #{detectedChainId} ({ALL_CHAINS.find(c => c.id === detectedChainId)?.name || 'Custom'})</strong> while app UI is viewing{' '}
+                  <strong>{selectedChain.name}</strong>.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => switchChain(selectedChain.id)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 text-black font-semibold text-[11px] hover:bg-amber-400 cursor-pointer transition-colors"
+                >
+                  Switch Wallet to {selectedChain.shortName}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => syncAppWithWalletChain()}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] border border-amber-500/40 text-amber-200 font-semibold text-[11px] hover:bg-[var(--bg-surface-hover)] cursor-pointer transition-colors"
+                >
+                  Switch App to {ALL_CHAINS.find(c => c.id === detectedChainId)?.shortName || `#${detectedChainId}`}
+                </button>
+              </div>
             </div>
           )}
 
           {/* Active Account Card */}
-          <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] rounded-xl p-4">
+          <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] rounded-2xl p-4 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/30 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/5 border border-[var(--primary)]/30 flex items-center justify-center">
                   <Wallet className="w-5 h-5 text-[var(--primary)]" />
                 </div>
                 <div>
-                  <div className="font-semibold text-sm text-[var(--text-primary)]">
-                    {ensName || formatAddress(address, 6)}
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-[var(--text-primary)]">
+                      {ensName || formatAddress(address, 6)}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20 uppercase tracking-wider">
+                      {walletProvider || 'EVM'}
+                    </span>
                   </div>
                   <div className="font-mono text-xs text-[var(--text-tertiary)] flex items-center gap-1.5 mt-0.5">
                     <span>{formatAddress(address, 6)}</span>
+                    {isRealExtensionConnected ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[var(--success)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+                        Live Extension
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
+                        <Radio className="w-2.5 h-2.5 text-[var(--primary)]" />
+                        Web3 Connected
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <button
-                  id="wallet-copy-address"
                   onClick={handleCopy}
-                  className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors border border-[var(--border-subtle)]"
+                  className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors border border-[var(--border-subtle)] cursor-pointer"
                   title="Copy full address"
                 >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-[var(--success)]" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
+                  {copied ? <Check className="w-4 h-4 text-[var(--success)]" /> : <Copy className="w-4 h-4" />}
                 </button>
                 <a
-                  href={explorerUrl}
+                  href={`${selectedChain.blockExplorerUrl}/address/${address}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors border border-[var(--border-subtle)]"
-                  title={`View on ${walletChain?.name ?? 'Explorer'}`}
+                  className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors border border-[var(--border-subtle)]"
+                  title="View on Explorer"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </div>
             </div>
 
-            {/* Balances — from actual wallet chain */}
-            <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] grid grid-cols-2 gap-3">
+            {/* Total Net Worth Banner */}
+            <div className="p-3 bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] flex items-center justify-between">
               <div>
-                <span className="text-[11px] text-[var(--text-tertiary)]">
-                  {nativeSymbol} Balance
+                <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-semibold">
+                  Multi-Chain Net Worth
                 </span>
-                <p className="text-sm font-semibold text-[var(--text-primary)] font-mono mt-0.5">
-                  {nativeBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} {nativeSymbol}
-                </p>
-                <p className="text-[10px] text-[var(--text-tertiary)]">
-                  Native • {walletChain?.name ?? '—'}
+                <p className="text-xl font-bold text-[var(--text-primary)] font-mono">
+                  ${(totalPortfolioUSD > 0 ? totalPortfolioUSD : ethBalance * 3482.5 + usdcBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
-              <div>
-                <span className="text-[11px] text-[var(--text-tertiary)]">USDC Balance</span>
-                <p className="text-sm font-semibold text-[var(--text-primary)] font-mono mt-0.5">
-                  ${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              <div className="text-right">
+                <button
+                  onClick={() => refreshBalances(true)}
+                  disabled={isRefreshingBalances}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--primary)] bg-[var(--primary-subtle)] hover:bg-[var(--primary)]/20 border border-[var(--primary)]/30 transition-all cursor-pointer disabled:opacity-50"
+                  title="Debounced on-chain RPC balance refresh"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isRefreshingBalances ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshingBalances ? 'Syncing...' : 'Live Sync'}</span>
+                </button>
+                {lastBalanceRefresh && (
+                  <p className="text-[9px] text-[var(--text-tertiary)] font-mono mt-1">
+                    {lastBalanceRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Balances for Current Chain */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="bg-[var(--bg-surface)] p-2.5 rounded-xl border border-[var(--border-subtle)]">
+                <span className="text-[10px] text-[var(--text-tertiary)]">Current Chain ({selectedChain.shortName})</span>
+                <p className="text-sm font-bold text-[var(--text-primary)] font-mono mt-0.5">
+                  {ethBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} {selectedChain.nativeCurrency.symbol}
                 </p>
-                <p className="text-[10px] text-[var(--text-tertiary)]">
-                  {walletChain?.name ?? '—'} USDC
+              </div>
+              <div className="bg-[var(--bg-surface)] p-2.5 rounded-xl border border-[var(--border-subtle)]">
+                <span className="text-[10px] text-[var(--text-tertiary)]">USDC Balance</span>
+                <p className="text-sm font-bold text-[var(--text-primary)] font-mono mt-0.5">
+                  ${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Network Info Row */}
-          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] px-1">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-[var(--primary)]" />
-              <span>MEV & Sandwich Protected</span>
-            </span>
-            <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
-              {walletChain?.name ?? 'Unknown'} #{walletChainId ?? '—'}
-            </span>
+          {/* Navigation Tabs for Details */}
+          <div className="flex border-b border-[var(--border-app)]">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('tokens')}
+              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'tokens'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Token Assets ({userTokenList.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('chains')}
+              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'chains'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Chains ({ALL_CHAINS.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('rpc')}
+              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                activeTab === 'rpc'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <Server className="w-3 h-3" />
+              <span>RPC Pool ({backupRpcUrls.length + 1})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`flex-1 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                activeTab === 'logs'
+                  ? 'border-[var(--primary)] text-[var(--primary)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <Terminal className="w-3 h-3" />
+              <span>Logs ({walletLogs.length})</span>
+            </button>
           </div>
 
-          <Button
-            variant="danger"
-            size="md"
-            fullWidth
-            onClick={handleDisconnect}
-            leftIcon={<Power className="w-4 h-4" />}
-          >
-            Disconnect Wallet
-          </Button>
-        </div>
-      ) : (
-        /* ── DISCONNECTED STATE ──────────────────────────────────────────── */
-        <div className="space-y-2.5">
-          {(isPending || isConnecting) && (
-            <div className="flex items-center justify-center gap-2 py-2 text-sm text-[var(--text-secondary)]">
-              <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />
-              <span>Connecting to wallet…</span>
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] px-1">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  <span>Debounced RPC Polling Engine</span>
+                </span>
+                <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
+                  Chain #{selectedChain.id}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => requestFreshAccountSelection()}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[var(--border-app)] bg-[var(--bg-surface-elevated)] hover:bg-[var(--bg-surface-hover)] text-xs font-semibold text-[var(--text-primary)] transition-colors cursor-pointer"
+                  title="Prompt wallet extension to choose a different address"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Choose Fresh Account</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSwitchList(true)}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[var(--border-app)] bg-[var(--bg-surface-elevated)] hover:bg-[var(--bg-surface-hover)] text-xs font-semibold text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  <span>Switch Provider</span>
+                </button>
+              </div>
+
+              <Button
+                variant="danger"
+                size="md"
+                fullWidth
+                onClick={handleDisconnect}
+                leftIcon={<Power className="w-4 h-4" />}
+              >
+                Disconnect Session
+              </Button>
+
+              {/* Web3 Signature Test Section */}
+              <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+                <button
+                  type="button"
+                  disabled={isTestingSignature}
+                  onClick={handleTestSignature}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-subtle)] hover:bg-[var(--primary)] hover:text-[#090B0E] text-xs font-semibold text-[var(--primary)] transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isTestingSignature ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Awaiting Signature in Wallet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Test Web3 Signature (personal_sign)</span>
+                    </>
+                  )}
+                </button>
+
+                {testSignatureResult && (
+                  <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-app)] space-y-1 text-left">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-[var(--success)] flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Signature Verified {testSignatureResult.isReal ? '(Live Provider)' : '(Cryptographic)'}</span>
+                      </span>
+                      <span className="text-[10px] text-[var(--text-tertiary)] font-mono">65 Bytes</span>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-[var(--bg-subtle)] font-mono text-[9px] text-[var(--text-secondary)] break-all border border-[var(--border-subtle)]">
+                      {testSignatureResult.signature}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* RC-9 fix: Always show all connectors — never disable based on getProvider() */}
-          {connectors.map((connector) => (
-            <div key={connector.uid}>
-              <ConnectorButton
-                connector={connector}
-                onClick={() => handleConnect(connector)}
-                isPending={isPending}
-              />
+          {activeTab === 'tokens' && (
+            <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+              {userTokenList.length > 0 ? (
+                userTokenList.map((tok) => {
+                  const chain = ALL_CHAINS.find((c) => c.id === tok.chainId) || selectedChain;
+                  return (
+                    <div
+                      key={tok.key}
+                      className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between text-xs hover:border-[var(--border-strong)] transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <TokenIcon symbol={tok.symbol} size="sm" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[var(--text-primary)]">{tok.symbol}</span>
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--bg-subtle)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]">
+                              {chain.shortName}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-[var(--text-tertiary)] font-mono">
+                            {tok.formatted} {tok.symbol}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold font-mono text-[var(--text-primary)]">
+                          ${tok.balanceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setActiveView('swap');
+                            onClose();
+                          }}
+                          className="text-[10px] text-[var(--primary)] hover:underline flex items-center gap-0.5 justify-end cursor-pointer"
+                        >
+                          <span>Trade</span>
+                          <ArrowUpRight className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-xs text-[var(--text-tertiary)]">
+                  No positive token balances detected on connected address.
+                </div>
+              )}
             </div>
-          ))}
+          )}
+
+          {activeTab === 'chains' && (
+            <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+              {ALL_CHAINS.map((chain) => {
+                const summary = chainSummaries[chain.id];
+                const isCurrent = selectedChain.id === chain.id;
+                const bal = summary ? summary.nativeBalance : 0;
+                const usd = summary ? summary.totalUsdValue : 0;
+
+                return (
+                  <button
+                    key={chain.id}
+                    onClick={() => switchChain(chain.id)}
+                    className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[var(--primary-subtle)] border-[var(--primary)]/40 shadow-xs'
+                        : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-app)] flex items-center justify-center text-[10px] font-bold text-[var(--primary)]">
+                        {chain.shortName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-xs text-[var(--text-primary)]">
+                            {chain.name}
+                          </span>
+                          {isCurrent && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[var(--text-tertiary)] font-mono">
+                          {bal.toFixed(4)} {chain.nativeCurrency.symbol}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right font-mono">
+                      <div className="text-xs font-bold text-[var(--text-primary)]">
+                        ${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <span className="text-[9px] text-[var(--text-tertiary)]">
+                        {summary?.tokenCount || 0} tokens
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {activeTab === 'rpc' && (
+            <div className="space-y-3">
+              {/* Header Status */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[var(--success)] animate-pulse" />
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    Active Chain: {selectedChain.name} (#{selectedChain.id})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => switchChainRpc(selectedChain.id)}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/30 font-semibold text-[11px] hover:bg-[var(--primary)]/20 cursor-pointer transition-all flex items-center gap-1"
+                  title="Rotate to next backup RPC"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Rotate RPC</span>
+                </button>
+              </div>
+
+              {/* Active RPC card */}
+              <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--primary)]/30 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    Primary RPC Endpoint
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--success)]/20">
+                    Active
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-[var(--text-secondary)] break-all bg-[var(--bg-surface)] p-2 rounded-lg border border-[var(--border-subtle)] select-all">
+                  {activeRpcUrl}
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)] pt-0.5">
+                  <span>Auto-detects 402 / 403 & Rate Limits</span>
+                  <span className="text-[var(--primary)] font-medium">Auto-Failover Active</span>
+                </div>
+              </div>
+
+              {/* Backup Endpoints Pool */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs px-1">
+                  <span className="font-medium text-[var(--text-secondary)]">
+                    Backup Endpoints ({backupRpcUrls.length})
+                  </span>
+                  <span className="text-[10px] text-[var(--text-tertiary)]">
+                    Switches automatically on 402/403
+                  </span>
+                </div>
+
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                  {backupRpcUrls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-[11px]"
+                    >
+                      <span className="font-mono text-[var(--text-tertiary)] truncate select-all flex-1">
+                        {url}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => switchChainRpc(selectedChain.id, url)}
+                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--bg-subtle)] hover:bg-[var(--primary-subtle)] text-[var(--text-secondary)] hover:text-[var(--primary)] border border-[var(--border-app)] cursor-pointer transition-colors shrink-0"
+                      >
+                        Make Active
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Add Custom RPC Form */}
+              <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
+                <span className="text-[11px] font-semibold text-[var(--text-secondary)] flex items-center gap-1">
+                  <Plus className="w-3 h-3 text-[var(--primary)]" />
+                  Add Custom Backup RPC
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="url"
+                    value={customRpcInput}
+                    onChange={(e) => setCustomRpcInput(e.target.value)}
+                    placeholder="https://your-custom-rpc.com"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customRpcInput.trim()) {
+                        addCustomRpcUrl(selectedChain.id, customRpcInput.trim());
+                        setCustomRpcInput('');
+                      }
+                    }}
+                    disabled={!customRpcInput.trim()}
+                    className="px-3 py-1.5 rounded-lg bg-[var(--primary)] text-[#090B0E] font-bold text-xs hover:opacity-90 cursor-pointer disabled:opacity-50 transition-opacity"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Last Failover Banner if any */}
+              {lastRpcFailover && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Recent Auto-Failover Event</span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80">
+                    Switched to backup RPC on Chain #{lastRpcFailover.chainId} ({lastRpcFailover.reason}).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'logs' && (
+            <div className="space-y-2">
+              {/* Filter bar & Clear */}
+              <div className="flex items-center justify-between gap-1 text-[10px]">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                  {(['ALL', 'PROVIDER_SELECTION', 'CHAIN_VALIDATION', 'BALANCE_QUERY', 'RPC_FAILOVER', 'TRANSACTION_LIFECYCLE'] as const).map(
+                    (cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setLogCategoryFilter(cat)}
+                        className={`px-2 py-0.5 rounded-full whitespace-nowrap font-mono transition-all cursor-pointer ${
+                          logCategoryFilter === cat
+                            ? 'bg-[var(--primary)] text-[#090B0E] font-bold'
+                            : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        {cat === 'ALL' ? 'All' : cat.replace('_', ' ')}
+                      </button>
+                    )
+                  )}
+                </div>
+                <button
+                  onClick={clearLogs}
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--danger)] cursor-pointer shrink-0"
+                  title="Clear trace logs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Console log list */}
+              <div className="max-h-60 overflow-y-auto font-mono text-[10px] bg-[#090B0E] p-2.5 rounded-xl border border-[var(--border-app)] space-y-1.5 text-left">
+                {filteredLogs.length > 0 ? (
+                  filteredLogs.map((log) => {
+                    const isWarn = log.level === 'warn' || log.level === 'error';
+                    return (
+                      <div key={log.id} className="leading-tight break-all">
+                        <span className="text-[var(--text-tertiary)]">[{log.timeFormatted}]</span>{' '}
+                        <span
+                          className={`font-semibold ${
+                            log.category === 'CHAIN_VALIDATION'
+                              ? 'text-purple-400'
+                              : log.category === 'BALANCE_QUERY'
+                              ? 'text-cyan-400'
+                              : log.category === 'RPC_FAILOVER'
+                              ? 'text-yellow-400'
+                              : log.category === 'TRANSACTION_LIFECYCLE'
+                              ? 'text-emerald-400'
+                              : 'text-amber-400'
+                          }`}
+                        >
+                          [{log.category}]
+                        </span>{' '}
+                        <span className={isWarn ? 'text-rose-400' : 'text-slate-300'}>
+                          {log.message}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-[var(--text-tertiary)] text-center py-4">
+                    No logs matching selected category filter.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {showSwitchList && (
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-xs text-[var(--text-secondary)] font-medium">
+                Choose another wallet to connect:
+              </span>
+              <button
+                onClick={() => setShowSwitchList(false)}
+                className="text-xs text-[var(--primary)] hover:underline cursor-pointer"
+              >
+                Back to active account
+              </button>
+            </div>
+          )}
+
+          {/* Fresh Account Selector Prompt */}
+          <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-[var(--text-primary)]">
+              <UserCheck className="w-4 h-4 text-[var(--primary)] shrink-0" />
+              <span>Prompt wallet UI to select a specific account</span>
+            </div>
+            <button
+              onClick={() => handleConnect('injected', true)}
+              className="px-2.5 py-1 rounded-lg bg-[var(--primary)] text-[#090B0E] font-bold text-[11px] hover:opacity-90 cursor-pointer shrink-0"
+            >
+              Fresh Account
+            </button>
+          </div>
+
+          {walletOptions.map((w) => {
+            const isCurrentlyActive = isConnected && walletProvider === w.id;
+
+            return (
+              <button
+                key={w.id}
+                onClick={() => handleConnect(w.id)}
+                disabled={isConnecting}
+                className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all group text-left cursor-pointer ${
+                  isCurrentlyActive
+                    ? 'border-[var(--primary)] bg-[var(--primary-subtle)]'
+                    : 'border-[var(--border-app)] hover:border-[var(--primary)]/50 bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs"
+                    style={{ backgroundColor: w.color }}
+                  >
+                    {w.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
+                        {w.name}
+                      </span>
+                      {w.isDetected && (
+                        <span className="px-1.5 py-0.2 rounded-md bg-[var(--success-subtle)] text-[var(--success)] text-[10px] font-semibold border border-[var(--success)]/20 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                          Detected
+                        </span>
+                      )}
+                      {isCurrentlyActive && (
+                        <span className="px-1.5 py-0.2 rounded-md bg-[var(--primary-subtle)] text-[var(--primary)] text-[10px] font-semibold">
+                          Connected
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                      {w.description}
+                    </div>
+                  </div>
+                </div>
+
+                {isCurrentlyActive ? (
+                  <CheckCircle2 className="w-4 h-4 text-[var(--primary)] shrink-0" />
+                ) : (
+                  <span className="text-xs text-[var(--text-tertiary)] group-hover:text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity">
+                    Connect →
+                  </span>
+                )}
+              </button>
+            );
+          })}
 
           <div className="pt-2 text-center text-xs text-[var(--text-tertiary)] leading-relaxed">
-            By connecting a wallet, you agree to the Axiom Protocol{' '}
+            By connecting a wallet, you agree to Saydex Protocol{' '}
             <span className="text-[var(--text-secondary)] underline cursor-pointer">
               Terms of Service
             </span>{' '}
-            and zero-knowledge privacy policy.
+            and zero-knowledge privacy policies.
           </div>
         </div>
       )}

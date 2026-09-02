@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProtocol } from '../../context/ProtocolContext';
+import { useWallet } from '../../context/WalletContext';
 import { Token } from '../../types';
 import { SwapCard } from './SwapCard';
 import { PriceChart } from './PriceChart';
@@ -26,11 +27,90 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 export const SwapTerminalView: React.FC = () => {
-  const { tokens, settings } = useProtocol();
-  const [tokenIn, setTokenIn] = useState<Token>(tokens[0]); // ETH
-  const [tokenOut, setTokenOut] = useState<Token>(tokens[1]); // USDC
+  const { tokens, settings, targetTradeToken } = useProtocol();
+  const { selectedChain } = useWallet();
+  const [tokenIn, setTokenIn] = useState<Token>(() => tokens.find((t) => t.chainId === selectedChain.id) || tokens[0]);
+  const [tokenOut, setTokenOut] = useState<Token>(() => tokens.find((t) => t.chainId === selectedChain.id && t.symbol === 'USDC') || tokens[1]);
   const [amountIn, setAmountIn] = useState<string>('1.0');
   const [isChartOpen, setIsChartOpen] = useState(true);
+
+  // Collapsible Hero Banner with persistent state
+  const [showHeroBanner, setShowHeroBanner] = useState(() => {
+    try {
+      const saved = localStorage.getItem('unx_show_hero_banner');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleHeroBanner = () => {
+    setShowHeroBanner((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('unx_show_hero_banner', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Synchronize when a trade token is selected from Explore or Markets
+  useEffect(() => {
+    if (targetTradeToken) {
+      if (tokenIn.symbol === targetTradeToken.symbol) {
+        const other = tokens.find((t) => t.symbol !== targetTradeToken.symbol && t.chainId === selectedChain.id);
+        if (other) setTokenIn(other);
+      }
+      setTokenOut(targetTradeToken);
+      setTimeout(() => {
+        document.getElementById('swap-terminal-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 60);
+    }
+  }, [targetTradeToken]);
+
+  // Automatically synchronize tokenIn and tokenOut whenever the active network / chain changes
+  useEffect(() => {
+    const nativeSym = selectedChain.nativeCurrency.symbol;
+    const nativeName = selectedChain.nativeCurrency.name;
+
+    const chainTokens = tokens.filter((t) => t.chainId === selectedChain.id);
+    const matchingNative =
+      chainTokens.find(
+        (t) =>
+          t.symbol.toUpperCase() === nativeSym.toUpperCase() ||
+          t.address === '0x0000000000000000000000000000000000000000'
+      ) ||
+      tokens.find((t) => t.symbol.toUpperCase() === nativeSym.toUpperCase() && t.chainId === selectedChain.id) || {
+        address: '0x0000000000000000000000000000000000000000',
+        chainId: selectedChain.id,
+        symbol: nativeSym,
+        name: nativeName,
+        decimals: selectedChain.nativeCurrency.decimals || 18,
+        priceUSD: nativeSym === 'BNB' ? 645.0 : nativeSym === 'AVAX' ? 34.8 : nativeSym === 'POL' ? 0.52 : 3482.5,
+        change24h: 2.5,
+        icon: selectedChain.icon,
+        isVerified: true,
+        isPopular: true,
+      };
+
+    setTokenIn(matchingNative);
+
+    const outCandidates = chainTokens.filter(
+      (t) =>
+        t.symbol.toUpperCase() !== nativeSym.toUpperCase() &&
+        t.address !== '0x0000000000000000000000000000000000000000'
+    );
+    const matchingOut =
+      outCandidates.find((t) => t.symbol.toUpperCase() === 'USDC') ||
+      outCandidates.find((t) => t.symbol.toUpperCase() === 'USDT') ||
+      outCandidates[0] ||
+      tokens.find((t) => t.symbol.toUpperCase() === 'USDC') ||
+      tokens[1];
+
+    if (matchingOut) {
+      setTokenOut(matchingOut);
+    }
+  }, [selectedChain.id, selectedChain.nativeCurrency.symbol, tokens]);
 
   // Settings Modal state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -55,18 +135,49 @@ export const SwapTerminalView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* Interactive Hero Banner */}
-      <HeroSection />
+    <div className="space-y-6 pb-16">
+      {/* Interactive Hero Banner (Collapsible for active traders) */}
+      <AnimatePresence>
+        {showHeroBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden relative"
+          >
+            <HeroSection />
+            <button
+              onClick={toggleHeroBanner}
+              className="absolute top-4 right-4 z-20 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] backdrop-blur-sm transition-all cursor-pointer shadow-xs"
+              title="Minimize banner to focus on trading"
+            >
+              Minimize Banner ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!showHeroBanner && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2">
+          <button
+            onClick={toggleHeroBanner}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-xs text-[var(--text-secondary)] hover:text-[var(--primary)] transition-all cursor-pointer shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
+            <span>Show Protocol Banner</span>
+          </button>
+        </div>
+      )}
 
       {/* Primary Swap Terminal Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div id="swap-terminal-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 scroll-mt-24">
         {/* Terminal Execution & Settings Quick Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">
               <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
-              <span className="font-semibold text-[var(--text-primary)]">Axiom v3 Hybrid Router</span>
+              <span className="font-semibold text-[var(--text-primary)]">Saydex v3 Hybrid Router</span>
             </div>
 
             {/* Clickable Slippage Tolerance pill */}
@@ -149,7 +260,7 @@ export const SwapTerminalView: React.FC = () => {
           </AnimatePresence>
 
           {/* Right / Center: Precision Swap Card Terminal */}
-          <div className="w-full lg:w-[480px] shrink-0 mx-auto">
+          <div id="swap-card-container" className="w-full lg:w-[480px] shrink-0 mx-auto scroll-mt-24">
             <SwapCard
               isChartOpen={isChartOpen}
               onToggleChart={() => setIsChartOpen(!isChartOpen)}

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Token } from '../../types';
 import { useProtocol } from '../../context/ProtocolContext';
 import { useWallet } from '../../context/WalletContext';
-import { getTokensForChain } from '../../data/uniswapTokens';
+import { ALL_CHAINS } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { TokenIcon } from '../common/TokenIcon';
 import {
@@ -21,6 +21,7 @@ import {
   Cpu,
   Coins,
   ExternalLink,
+  Layers as NetworkIcon,
 } from 'lucide-react';
 import { Button } from '../common/Button';
 
@@ -40,18 +41,13 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   selectedToken,
 }) => {
   const { tokens, addToken } = useProtocol();
-  const { walletChainId, selectedChain } = useWallet();
-  const activeChainId = walletChainId ?? selectedChain?.id ?? 1;
-
-  // Adapt token list to current active chain
-  const chainTokens = useMemo(() => {
-    return getTokensForChain(activeChainId);
-  }, [activeChainId]);
-
+  const { getTokenBalance, selectedChain } = useWallet();
   const [searchQuery, setSearchQuery] = useState('');
+  const [chainFilter, setChainFilter] = useState<'selected' | 'all'>('selected');
   const [activeCategory, setActiveCategory] = useState<CategoryTab>('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [warningToken, setWarningToken] = useState<Token | null>(null);
+  const [displayCount, setDisplayCount] = useState(45);
 
   // Custom Token Import State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -59,6 +55,17 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   const [customSymbol, setCustomSymbol] = useState('');
   const [customName, setCustomName] = useState('');
   const [customDecimals, setCustomDecimals] = useState('18');
+
+  // Reset display count when search or category changes
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setDisplayCount(45);
+  };
+
+  const handleCategoryChange = (cat: CategoryTab) => {
+    setActiveCategory(cat);
+    setDisplayCount(45);
+  };
 
   const categories: { id: CategoryTab; label: string; icon?: React.ReactNode }[] = [
     { id: 'all', label: 'All' },
@@ -72,12 +79,30 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   ];
 
   const popularTokens = useMemo(() => {
-    return chainTokens.filter((t) => t.isPopular);
-  }, [chainTokens]);
+    return tokens
+      .filter((t) => {
+        if (!t.isPopular) return false;
+        if (chainFilter === 'selected') {
+          return t.chainId === selectedChain.id || (!t.chainId && !t.address);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const aMatches = a.chainId === selectedChain.id ? 1 : 0;
+        const bMatches = b.chainId === selectedChain.id ? 1 : 0;
+        return bMatches - aMatches;
+      });
+  }, [tokens, chainFilter, selectedChain.id]);
 
   const filteredTokens = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return chainTokens.filter((t) => {
+    const list = tokens.filter((t) => {
+      // Chain filter
+      if (chainFilter === 'selected') {
+        const matchesChain = t.chainId === selectedChain.id || (!t.chainId && !t.address);
+        if (!matchesChain) return false;
+      }
+
       // Search matches
       const matchesSearch =
         !q ||
@@ -95,7 +120,23 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
       if (activeCategory === 'popular') return Boolean(t.isPopular);
       return t.category === activeCategory;
     });
-  }, [chainTokens, searchQuery, activeCategory, verifiedOnly]);
+
+    if (chainFilter === 'all') {
+      return list.sort((a, b) => {
+        const aMatches = a.chainId === selectedChain.id ? 1 : 0;
+        const bMatches = b.chainId === selectedChain.id ? 1 : 0;
+        return bMatches - aMatches;
+      });
+    }
+
+    return list;
+  }, [tokens, searchQuery, activeCategory, verifiedOnly, chainFilter, selectedChain.id]);
+
+  const getChainName = (chainId?: number) => {
+    if (!chainId) return null;
+    const c = ALL_CHAINS.find((ch) => ch.id === chainId);
+    return c ? c.shortName : `Chain ${chainId}`;
+  };
 
   const handleTokenClick = (token: Token) => {
     if (token.riskAudit && !token.isVerified) {
@@ -149,24 +190,64 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
         isOpen={isOpen && !warningToken && !isImportModalOpen}
         onClose={onClose}
         title="Select a Token"
-        subtitle="Sourced from Uniswap Default & Extended Token Lists"
+        subtitle={`Select from ${selectedChain.name} (${selectedChain.shortName}) or all chains`}
         maxWidth="lg"
       >
         <div className="space-y-3.5">
+          {/* Chain Scope Selector Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-xl">
+            <button
+              onClick={() => {
+                setChainFilter('selected');
+                setDisplayCount(45);
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                chainFilter === 'selected'
+                  ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] shadow-xs border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <img
+                src={selectedChain.icon}
+                alt={selectedChain.name}
+                className="w-4 h-4 rounded-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <span>{selectedChain.name} Only</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setChainFilter('all');
+                setDisplayCount(45);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                chainFilter === 'all'
+                  ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] font-semibold shadow-xs border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <NetworkIcon className="w-3.5 h-3.5" />
+              <span>All Networks</span>
+            </button>
+          </div>
+
           {/* Search Input */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
             <input
               type="text"
-              placeholder="Search by token name, symbol, or paste address 0x..."
+              placeholder={`Search name, symbol on ${selectedChain.shortName}, or paste 0x...`}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-24 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] focus:border-[var(--primary)] focus:outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-all font-sans"
               autoFocus
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
               >
                 Clear
@@ -179,7 +260,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
             <span className="text-[11px] text-[var(--text-tertiary)] font-medium mr-1">Popular:</span>
             {popularTokens.slice(0, 7).map((tok) => (
               <button
-                key={tok.symbol}
+                key={`${tok.chainId || 1}-${tok.symbol}`}
                 onClick={() => handleTokenClick(tok)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                   selectedToken?.symbol === tok.symbol
@@ -189,6 +270,11 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
               >
                 <TokenIcon symbol={tok.symbol} icon={tok.icon} size="xs" />
                 <span>{tok.symbol}</span>
+                {tok.chainId && tok.chainId !== selectedChain.id && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-[var(--bg-surface)] text-[var(--text-tertiary)]">
+                    {getChainName(tok.chainId)}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -199,7 +285,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
               {categories.map((cat) => (
                 <button
                   key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
+                  onClick={() => handleCategoryChange(cat.id)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     activeCategory === cat.id
                       ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] font-semibold shadow-xs border border-[var(--border-subtle)]'
@@ -214,7 +300,10 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setVerifiedOnly(!verifiedOnly)}
+                onClick={() => {
+                  setVerifiedOnly(!verifiedOnly);
+                  setDisplayCount(45);
+                }}
                 className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer border ${
                   verifiedOnly
                     ? 'bg-[var(--primary-subtle)] border-[var(--primary)]/40 text-[var(--primary)] font-semibold'
@@ -230,7 +319,9 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
           {/* Token List Counter & Source */}
           <div className="flex items-center justify-between text-[11px] text-[var(--text-tertiary)] px-1">
-            <span>Showing {filteredTokens.length} Uniswap tokens</span>
+            <span>
+              Showing {Math.min(displayCount, filteredTokens.length)} of {filteredTokens.length} tokens on {chainFilter === 'selected' ? selectedChain.shortName : 'all chains'}
+            </span>
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="text-[var(--primary)] hover:underline flex items-center gap-1 cursor-pointer font-medium"
@@ -242,10 +333,11 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
           {/* Token Rows */}
           <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
-            {filteredTokens.map((tok) => {
-              const isSelected = selectedToken?.symbol === tok.symbol;
+            {filteredTokens.slice(0, displayCount).map((tok) => {
+              const isSelected = selectedToken?.symbol === tok.symbol && (tok.chainId === selectedChain.id || !tok.chainId);
               const hasRisk = tok.riskAudit && !tok.isVerified;
               const isPositive = tok.change24h >= 0;
+              const chainName = getChainName(tok.chainId);
 
               return (
                 <button
@@ -260,10 +352,19 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                   <div className="flex items-center gap-3">
                     <TokenIcon symbol={tok.symbol} icon={tok.icon} size="md" />
                     <div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-sm text-[var(--text-primary)]">
                           {tok.symbol}
                         </span>
+                        {chainName && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${
+                            tok.chainId === selectedChain.id
+                              ? 'bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/30 font-semibold'
+                              : 'bg-[var(--bg-subtle)] text-[var(--text-tertiary)] border-[var(--border-subtle)]'
+                          }`}>
+                            {chainName}
+                          </span>
+                        )}
                         {tok.isVerified ? (
                           <ShieldCheck
                             className="w-3.5 h-3.5 text-[var(--primary)] shrink-0"
@@ -293,11 +394,12 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
                   <div className="text-right">
                     <div className="text-sm font-semibold text-[var(--text-primary)] font-mono">
-                      {tok.balance !== undefined
-                        ? tok.balance > 0
-                          ? tok.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })
-                          : '0.00'
-                        : '0.00'}
+                      {(() => {
+                        const bal = getTokenBalance(tok, selectedChain.id);
+                        return bal > 0
+                          ? (bal < 0.001 ? bal.toFixed(6) : bal.toLocaleString(undefined, { maximumFractionDigits: 4 }))
+                          : '0.00';
+                      })()}
                     </div>
                     <div className="flex items-center justify-end gap-1.5 text-xs font-mono">
                       <span className="text-[var(--text-tertiary)]">
@@ -318,6 +420,16 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                 </button>
               );
             })}
+
+            {filteredTokens.length > displayCount && (
+              <button
+                type="button"
+                onClick={() => setDisplayCount((prev) => prev + 50)}
+                className="w-full py-2.5 text-xs font-semibold text-[var(--primary)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] rounded-xl transition-all cursor-pointer text-center"
+              >
+                Show more tokens ({filteredTokens.length - displayCount} remaining)
+              </button>
+            )}
 
             {filteredTokens.length === 0 && (
               <div className="py-12 text-center space-y-3">
@@ -457,7 +569,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
           <div className="space-y-4">
             <div className="bg-[var(--error-subtle)] border border-[var(--error)]/30 rounded-xl p-4">
               <p className="text-xs font-semibold text-[var(--error)] mb-2">
-                Why this token was flagged by Axiom Security Solvers:
+                Why this token was flagged by Saydex Security Solvers:
               </p>
               <ul className="space-y-2 text-xs text-[var(--text-primary)] list-disc pl-4">
                 {warningToken.riskAudit?.auditNotes.map((note, idx) => (

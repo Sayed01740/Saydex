@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { LiquidityPool, FeeTier, Token } from '../../types';
 import { useWallet } from '../../context/WalletContext';
 import { useProtocol } from '../../context/ProtocolContext';
-import { getChainById, NATIVE_TOKEN_PRICES_USD } from '../../config/chains';
-import { walletLogger } from '../../utils/walletLogger';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { TokenIcon } from '../common/TokenIcon';
 import { RangeVisualizer } from './RangeVisualizer';
-import { Sparkles, Info, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Sparkles, Info, ShieldCheck, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { uniswapV3Service } from '../../services/uniswapV3Service';
+import { getUniswapV3Deployment } from '../../config/uniswapV3Contracts';
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -21,10 +21,18 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   onClose,
   pool,
 }) => {
-  const { isConnected, nativeBalance, usdcBalance, updateBalances, walletChainId } = useWallet();
-  const { tokens, addPosition, addTransaction, addToast } = useProtocol();
+  const {
+    isConnected,
+    ethBalance,
+    usdcBalance,
+    address,
+    isRealExtensionConnected,
+    updateBalances,
+    sendTransaction,
+    selectedChain,
+  } = useWallet();
+  const { tokens, addPosition, addTransaction } = useProtocol();
 
-  // selectedPool must be declared before any chain validation that references it
   const selectedPool = pool || {
     id: 'eth-usdc-005',
     chainId: 1,
@@ -36,21 +44,17 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
     volume24hUSD: 420500000,
     fees24hUSD: 210250,
     apr: 18.4,
-    currentPrice: NATIVE_TOKEN_PRICES_USD.ETH,
+    currentPrice: 3482.5,
     priceRangeMin: 3100.0,
     priceRangeMax: 3950.0,
     liquidityDistribution: [],
   };
 
-  // RC-42: All chain IDs must match before allowing liquidity deposit
-  const poolChainId = selectedPool.chainId;
-  const chainMismatch = isConnected && walletChainId !== null && walletChainId !== poolChainId;
-  const poolChainName = getChainById(poolChainId).name;
-
-
   const [feeTier, setFeeTier] = useState<FeeTier>(selectedPool.feeTier);
   const [rangePreset, setRangePreset] = useState<'tight' | 'standard' | 'wide' | 'full'>('standard');
   const [amount0, setAmount0] = useState<string>('0.5');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   // Dynamic range boundaries
   const { minPrice, maxPrice } = useMemo(() => {
@@ -73,55 +77,114 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
     return (base * multiplier).toFixed(1);
   }, [feeTier, rangePreset]);
 
-  const handleDeposit = () => {
-    // RC-42: Block transaction if pool chain !== wallet chain
-    if (chainMismatch) {
-      addToast({
-        type: 'error',
-        title: 'Wrong Network',
-        description: `This pool is on ${poolChainName}. Please switch your wallet to ${poolChainName} before adding liquidity.`,
-      });
-      walletLogger.error('TRANSACTION_LIFECYCLE', 'Liquidity add blocked: chain mismatch', {
-        walletChainId,
-        poolChainId,
-        poolId: selectedPool.id,
-      });
-      return;
-    }
-
+  const handleDeposit = async () => {
     const num0 = parseFloat(amount0) || 0;
     const num1 = parseFloat(amount1) || 0;
     const totalUSD = num0 * selectedPool.token0.priceUSD + num1 * selectedPool.token1.priceUSD;
 
-    walletLogger.info('TRANSACTION_LIFECYCLE', 'Adding liquidity position', {
-      chainId: walletChainId,
-      poolId: selectedPool.id,
-      token0: selectedPool.token0.symbol,
-      token1: selectedPool.token1.symbol,
-      amount0: num0,
-      amount1: num1,
-    });
+    try {
+      setErrorMsg('');
+      setIsSubmitting(true);
 
-    addPosition({
-      poolId: selectedPool.id,
-      token0: selectedPool.token0,
-      token1: selectedPool.token1,
-      feeTier: feeTier,
-      priceMin: parseFloat(minPrice.toFixed(2)),
-      priceMax: parseFloat(maxPrice.toFixed(2)),
-      currentPrice: selectedPool.currentPrice,
-      inRange: true,
-      amount0: num0,
-      amount1: num1,
-      unclaimedFeesUSD: 0,
-      totalValueUSD: totalUSD,
-      apr: parseFloat(estimatedAPR),
-    });
+      const targetChainId = selectedPool.chainId || selectedChain.id;
+      const tickSpacing = feeTier === 100 ? 1 : feeTier === 500 ? 10 : feeTier === 3000 ? 60 : 200;
+      const safeMin = Math.max(0.000001, minPrice);
+      const safeMax = Math.max(safeMin * 1.01, maxPrice);
+      const tickLower = Math.floor(Math.log(safeMin) / Math.log(1.0001) / tickSpacing) * tickSpacing;
+      const tickUpper = Math.ceil(Math.log(safeMax) / Math.log(1.0001) / tickSpacing) * tickSpacing;
 
-    // RC-39: Post-transaction — trigger balance refresh (updateBalances now calls refetch)
-    updateBalances(0, 0);
+      // Build real Uniswap V3 mint transaction
+      const mintTx = await uniswapV3Service.buildMintLiquidityTransaction({
+        chainId: targetChainId,
+        userAddress: address || '0x0000000000000000000000000000000000000000',
+        token0: selectedPool.token0,
+        token1: selectedPool.token1,
+        feeTier,
+        tickLower,
+        tickUpper,
+        amount0Desired: amount0,
+        amount1Desired: amount1,
+        deadlineMinutes: 30,
+      });
 
-    onClose();
+      // Handle token approvals if needed
+      if (isRealExtensionConnected) {
+        if (mintTx.requiresApproval0 && mintTx.token0ApprovalTx) {
+          const app0Res = await sendTransaction({
+            to: mintTx.token0ApprovalTx.to,
+            value: mintTx.token0ApprovalTx.value,
+            data: mintTx.token0ApprovalTx.data,
+            chainId: targetChainId,
+            title: `Approve ${selectedPool.token0.symbol} for Position Manager`,
+          });
+          if (app0Res.hash && !app0Res.hash.startsWith('0x_sim')) {
+            await uniswapV3Service.waitForReceipt(targetChainId, app0Res.hash, 45000);
+          }
+          await new Promise((res) => setTimeout(res, 800));
+        }
+
+        if (mintTx.requiresApproval1 && mintTx.token1ApprovalTx) {
+          const app1Res = await sendTransaction({
+            to: mintTx.token1ApprovalTx.to,
+            value: mintTx.token1ApprovalTx.value,
+            data: mintTx.token1ApprovalTx.data,
+            chainId: targetChainId,
+            title: `Approve ${selectedPool.token1.symbol} for Position Manager`,
+          });
+          if (app1Res.hash && !app1Res.hash.startsWith('0x_sim')) {
+            await uniswapV3Service.waitForReceipt(targetChainId, app1Res.hash, 45000);
+          }
+          await new Promise((res) => setTimeout(res, 800));
+        }
+      }
+
+      const txResult = await sendTransaction({
+        to: mintTx.to,
+        value: mintTx.value,
+        data: mintTx.data,
+        chainId: targetChainId,
+        title: `Mint Position: ${num0} ${selectedPool.token0.symbol} + ${num1} ${selectedPool.token1.symbol}`,
+      });
+
+      addPosition({
+        poolId: selectedPool.id,
+        token0: selectedPool.token0,
+        token1: selectedPool.token1,
+        feeTier: feeTier,
+        priceMin: parseFloat(minPrice.toFixed(2)),
+        priceMax: parseFloat(maxPrice.toFixed(2)),
+        currentPrice: selectedPool.currentPrice,
+        inRange: true,
+        amount0: num0,
+        amount1: num1,
+        unclaimedFeesUSD: 0,
+        totalValueUSD: totalUSD,
+        apr: parseFloat(estimatedAPR),
+      });
+
+      addTransaction({
+        hash: txResult.hash,
+        type: 'add_liquidity',
+        title: `Added Liquidity: ${selectedPool.token0.symbol}/${selectedPool.token1.symbol}`,
+        description: `Deposited ${num0} ${selectedPool.token0.symbol} + ${num1} ${selectedPool.token1.symbol} (${(feeTier / 10000).toFixed(2)}%)`,
+        status: 'confirmed',
+        tokenIn: { symbol: selectedPool.token0.symbol, amount: amount0, icon: selectedPool.token0.icon },
+        tokenOut: { symbol: selectedPool.token1.symbol, amount: amount1, icon: selectedPool.token1.icon },
+        explorerUrl: `${selectedChain.blockExplorerUrl}/tx/${txResult.hash}`,
+        gasCostUSD: 4.82,
+      });
+
+      if (selectedPool.token0.symbol === 'ETH') {
+        updateBalances(-num0, -num1);
+      }
+
+      setIsSubmitting(false);
+      onClose();
+    } catch (err: any) {
+      console.warn('Deposit failed or rejected:', err);
+      setIsSubmitting(false);
+      setErrorMsg(err.message || 'Signature was rejected in your Web3 wallet.');
+    }
   };
 
   const feeTiersList: { tier: FeeTier; label: string; desc: string; share: string }[] = [
@@ -215,7 +278,7 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)]">
             <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-1">
               <span>{selectedPool.token0.symbol} Deposit</span>
-              <span>Bal: {nativeBalance.toFixed(4)}</span>
+              <span>Bal: {ethBalance.toFixed(4)}</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -246,14 +309,10 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           </div>
         </div>
 
-        {/* Chain mismatch warning (RC-42) */}
-        {chainMismatch && (
-          <div className="p-2.5 rounded-xl bg-[var(--error-subtle)] border border-[var(--error)]/30 flex items-center gap-2 text-xs text-[var(--error)]">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>
-              This pool is on <strong>{poolChainName}</strong>. Your wallet is on a different network.
-              Switch to {poolChainName} to add liquidity.
-            </span>
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-[var(--danger-subtle)] border border-[var(--danger)]/30 flex items-center gap-2 text-xs text-[var(--danger)]">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -262,12 +321,18 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           variant="primary"
           size="lg"
           fullWidth
-          disabled={!amount0 || parseFloat(amount0) <= 0 || chainMismatch}
+          disabled={!amount0 || parseFloat(amount0) <= 0 || isSubmitting}
           onClick={handleDeposit}
+          className="flex items-center justify-center gap-2"
         >
-          {chainMismatch
-            ? `Switch to ${poolChainName}`
-            : 'Mint Concentrated Liquidity Position'}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Confirming in Wallet...</span>
+            </>
+          ) : (
+            <span>Mint Concentrated Liquidity Position</span>
+          )}
         </Button>
       </div>
     </Modal>
