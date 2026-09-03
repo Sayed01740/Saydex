@@ -80,41 +80,8 @@ const playAlertChime = () => {
   }
 };
 
-const INITIAL_PRICE_ALERTS: PriceAlert[] = [
-  {
-    id: 'alert-1',
-    tokenInSymbol: 'ETH',
-    tokenOutSymbol: 'USDC',
-    targetPrice: 3550.00,
-    currentPriceAtCreation: 3482.50,
-    condition: 'gte',
-    status: 'active',
-    createdAt: Date.now() - 1000 * 60 * 60 * 2,
-    note: 'Take profit target',
-  },
-  {
-    id: 'alert-2',
-    tokenInSymbol: 'ETH',
-    tokenOutSymbol: 'USDC',
-    targetPrice: 3400.00,
-    currentPriceAtCreation: 3482.50,
-    condition: 'lte',
-    status: 'active',
-    createdAt: Date.now() - 1000 * 60 * 60 * 5,
-    note: 'Dip buy alert',
-  },
-  {
-    id: 'alert-3',
-    tokenInSymbol: 'SAYDEX',
-    tokenOutSymbol: 'ETH',
-    targetPrice: 0.0050,
-    currentPriceAtCreation: 0.00425,
-    condition: 'gte',
-    status: 'active',
-    createdAt: Date.now() - 1000 * 60 * 60 * 12,
-    note: 'Breakout target',
-  },
-];
+// Default initial price alerts (Clean slate for users to create their own custom alerts)
+const INITIAL_PRICE_ALERTS: PriceAlert[] = [];
 
 interface ProtocolContextType {
   tokens: Token[];
@@ -291,7 +258,9 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('saydex_price_alerts_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((a) => !['alert-1', 'alert-2', 'alert-3'].includes(a.id));
+        }
       }
     } catch {}
     return INITIAL_PRICE_ALERTS;
