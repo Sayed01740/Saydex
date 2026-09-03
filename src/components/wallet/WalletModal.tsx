@@ -84,6 +84,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
   const [testSignatureResult, setTestSignatureResult] = useState<{ signature: string; isReal: boolean } | null>(null);
   const [customRpcInput, setCustomRpcInput] = useState('');
   const [isTestingRpcFailover, setIsTestingRpcFailover] = useState(false);
+  const [connectionError, setConnectionError] = useState<{ message: string; downloadUrl?: string; walletName?: string } | null>(null);
 
   const handleTestSignature = async () => {
     try {
@@ -154,9 +155,34 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
   };
 
   const handleConnect = async (provider: WalletProviderType, freshAccounts = false) => {
-    await connectWallet(provider, { requestFreshAccounts: freshAccounts });
-    setShowSwitchList(false);
-    onClose();
+    setConnectionError(null);
+    try {
+      await connectWallet(provider, { requestFreshAccounts: freshAccounts });
+      setShowSwitchList(false);
+      onClose();
+    } catch (err: any) {
+      console.warn('Wallet connection error:', err);
+      const downloadUrls: Record<string, string> = {
+        coinbase: 'https://www.coinbase.com/wallet/downloads',
+        rabby: 'https://rabby.io',
+        metamask: 'https://metamask.io/download/',
+        phantom: 'https://phantom.app/download',
+        ledger: 'https://support.ledger.com/article/4404389606161-Connect-your-Ledger-to-MetaMask',
+      };
+      const names: Record<string, string> = {
+        coinbase: 'Coinbase Wallet',
+        rabby: 'Rabby Wallet',
+        metamask: 'MetaMask',
+        phantom: 'Phantom',
+        ledger: 'Ledger Hardware',
+        walletconnect: 'WalletConnect',
+      };
+      setConnectionError({
+        message: err?.message || `Could not connect to ${names[provider] || provider}.`,
+        downloadUrl: downloadUrls[provider],
+        walletName: names[provider] || provider,
+      });
+    }
   };
 
   const handleDisconnect = () => {
@@ -680,19 +706,40 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
             </div>
           )}
 
-          {/* Fresh Account Selector Prompt */}
-          <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-[var(--text-primary)]">
-              <UserCheck className="w-4 h-4 text-[var(--primary)] shrink-0" />
-              <span>Prompt wallet UI to select a specific account</span>
+          {/* Connection Error Banner / Instructions */}
+          {connectionError && (
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 text-rose-400 font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{connectionError.walletName || 'Connection Notice'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConnectionError(null)}
+                  className="text-rose-400/80 hover:text-rose-300 text-xs cursor-pointer font-bold px-1"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-rose-200/90 leading-relaxed text-[11px]">
+                {connectionError.message}
+              </p>
+              {connectionError.downloadUrl && (
+                <div className="pt-0.5">
+                  <a
+                    href={connectionError.downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500 text-white font-semibold text-xs hover:bg-rose-600 transition-colors"
+                  >
+                    <span>Get / Setup {connectionError.walletName}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => handleConnect('injected', true)}
-              className="px-2.5 py-1 rounded-lg bg-[var(--primary)] text-[#090B0E] font-bold text-[11px] hover:opacity-90 cursor-pointer shrink-0"
-            >
-              Fresh Account
-            </button>
-          </div>
+          )}
 
           {walletOptions.map((w) => {
             const isCurrentlyActive = isConnected && walletProvider === w.id;

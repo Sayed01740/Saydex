@@ -57,6 +57,7 @@ export function getActiveInjectedProvider(preferredType?: WalletProviderType | n
       const found = w.ethereum.providers.find((p: any) => p.isRabby);
       if (found?.request) return found;
     }
+    return null;
   }
 
   // 2. MetaMask (often inside w.ethereum.providers or w.ethereum)
@@ -66,6 +67,7 @@ export function getActiveInjectedProvider(preferredType?: WalletProviderType | n
       if (found?.request) return found;
     }
     if (w.ethereum?.isMetaMask && !w.ethereum?.isRabby) return w.ethereum;
+    return null;
   }
 
   // 3. Coinbase Wallet
@@ -76,15 +78,24 @@ export function getActiveInjectedProvider(preferredType?: WalletProviderType | n
       const found = w.ethereum.providers.find((p: any) => p.isCoinbaseWallet);
       if (found?.request) return found;
     }
+    return null;
   }
 
   // 4. Phantom Wallet
   if (preferredType === 'phantom') {
     if (w.phantom?.ethereum?.request) return w.phantom.ethereum;
+    return null;
   }
 
-  // 5. Fallback: window.ethereum or window.rabby
-  return w.ethereum || w.rabby || w.coinbaseWalletExtension || null;
+  // 5. Injected fallback (only if specific provider not requested or requested 'injected')
+  if (preferredType === 'injected' || !preferredType) {
+    if (w.ethereum?.request) return w.ethereum;
+    if (w.rabby?.request) return w.rabby;
+    if (w.coinbaseWalletExtension?.request) return w.coinbaseWalletExtension;
+    if (w.phantom?.ethereum?.request) return w.phantom.ethereum;
+  }
+
+  return null;
 }
 
 /**
@@ -111,58 +122,6 @@ export function getAllInjectedProviders(): any[] {
 
   return list;
 }
-
-interface WalletPreset {
-  address: string;
-  ensName: string;
-  ethBalance: number;
-  usdcBalance: number;
-}
-
-const WALLET_PRESETS: Record<WalletProviderType, WalletPreset> = {
-  rabby: {
-    address: '0x38D6F3921B5D343b67Ce847c2F1e5D6bE4929810',
-    ensName: 'rabby.saydex.eth',
-    ethBalance: 6.42,
-    usdcBalance: 24500.0,
-  },
-  metamask: {
-    address: '0x71C25e378A9C1284b3e8eD063A4a8996bDf6631E',
-    ensName: 'metamask.saydex.eth',
-    ethBalance: 3.85,
-    usdcBalance: 12400.5,
-  },
-  coinbase: {
-    address: '0x92AE1a40398F657519bCe1953fC1f3A8849fFa97',
-    ensName: 'coinbase.saydex.eth',
-    ethBalance: 8.12,
-    usdcBalance: 35000.0,
-  },
-  walletconnect: {
-    address: '0x5B4136C70d0E2903820FcaFdDF56Bcf800F174B8',
-    ensName: 'mobile.saydex.eth',
-    ethBalance: 2.15,
-    usdcBalance: 8200.0,
-  },
-  phantom: {
-    address: '0x44Fe853A4753551528Ec96C72b78f441C2A5f448',
-    ensName: 'phantom.saydex.eth',
-    ethBalance: 4.5,
-    usdcBalance: 15600.0,
-  },
-  ledger: {
-    address: '0x1943A45C3358055610214Ddb2aD348E0D7101502',
-    ensName: 'vault.saydex.eth',
-    ethBalance: 15.75,
-    usdcBalance: 78000.0,
-  },
-  injected: {
-    address: '0xA82F72e9D349581A7b91d46c82dB49eC91D4B892',
-    ensName: 'alex.saydex.eth',
-    ethBalance: 4.825,
-    usdcBalance: 14850.2,
-  },
-};
 
 export interface TransactionSignedEvent {
   hash: string;
@@ -939,32 +898,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If provider was not found and user requested a real extension, do NOT pretend with demo profile
-      if (provider === 'metamask' || provider === 'rabby' || provider === 'coinbase' || provider === 'phantom') {
-        const errorMsg = `No ${provider.toUpperCase()} extension found in your browser. Please ensure the extension is installed, enabled, and unlocked.`;
-        walletLogger.error('PROVIDER_SELECTION', errorMsg);
-        throw new Error(errorMsg);
+      // If provider was not found or not connected, throw clear descriptive error
+      if (provider === 'ledger') {
+        throw new Error('To use Ledger, please connect your hardware device via MetaMask or Rabby (Menu -> Connect Hardware Wallet).');
       }
-
-      // Simulated / Demo Profile connection only for fallback
-      await new Promise((res) => setTimeout(res, 300));
-      const preset = WALLET_PRESETS[provider] || WALLET_PRESETS.rabby;
-
-      walletLogger.info('PROVIDER_SELECTION', `Loaded simulated demo profile for ${provider} (${preset.address.slice(0, 6)}...).`);
-      setWalletProvider(provider);
-      setAddress(preset.address);
-      setEnsName(preset.ensName);
-      setEthBalance(preset.ethBalance);
-      setUsdcBalance(preset.usdcBalance);
-      setIsConnected(true);
-      setIsRealExtensionConnected(false);
-
-      localStorage.setItem(STORAGE_KEY_CONNECTED, 'true');
-      localStorage.setItem(STORAGE_KEY_PROVIDER, provider);
-      localStorage.setItem(STORAGE_KEY_ADDRESS, preset.address);
-      localStorage.setItem(STORAGE_KEY_ENS, preset.ensName);
+      if (provider === 'walletconnect') {
+        throw new Error('Please open Saydex directly inside your mobile wallet browser (MetaMask, Trust, Rainbow) or install a browser extension.');
+      }
       
-      refreshBalances(true, selectedChain.id, preset.address);
+      const providerNames: Record<string, string> = {
+        metamask: 'MetaMask',
+        rabby: 'Rabby Wallet',
+        coinbase: 'Coinbase Wallet',
+        phantom: 'Phantom',
+        injected: 'Web3',
+      };
+      const name = providerNames[provider] || provider.toUpperCase();
+      const errorMsg = `No ${name} extension found in your browser. Please ensure the extension is installed, enabled, and unlocked.`;
+      walletLogger.error('PROVIDER_SELECTION', errorMsg);
+      throw new Error(errorMsg);
     } finally {
       setIsConnecting(false);
     }
