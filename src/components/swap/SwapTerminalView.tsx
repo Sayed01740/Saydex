@@ -4,25 +4,10 @@ import { useWallet } from '../../context/WalletContext';
 import { Token } from '../../types';
 import { SwapCard } from './SwapCard';
 import { PriceChart } from './PriceChart';
-import { TradeRouteVisualizer } from './TradeRouteVisualizer';
 import { RecentTradesTable } from './RecentTradesTable';
 import { PriceAlertsManager } from './PriceAlertsManager';
 import { SetPriceAlertModal } from './SetPriceAlertModal';
 import { SwapSettingsModal } from './SwapSettingsModal';
-import { TokenIcon } from '../common/TokenIcon';
-import {
-  ShieldCheck,
-  Zap,
-  Sparkles,
-  Activity,
-  Layers,
-  Target,
-  Clock,
-  Sliders,
-  SlidersHorizontal,
-  Info,
-  ChevronRight,
-} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const SwapTerminalView: React.FC = () => {

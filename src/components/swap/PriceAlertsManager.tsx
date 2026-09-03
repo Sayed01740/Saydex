@@ -4,19 +4,11 @@ import { useProtocol } from '../../context/ProtocolContext';
 import { TokenIcon } from '../common/TokenIcon';
 import { Button } from '../common/Button';
 import {
-  Bell,
   Target,
   Zap,
   Trash2,
-  TrendingUp,
-  TrendingDown,
-  CheckCircle2,
-  Clock,
   ArrowRight,
   Plus,
-  RotateCcw,
-  Sparkles,
-  Info,
   ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
