@@ -26,7 +26,7 @@ export type WalletProviderType = 'metamask' | 'rabby' | 'coinbase' | 'walletconn
  * - Plain decimal numbers (1, 11155111)
  * - Plain decimal strings ("1", "11155111")
  */
-export function parseChainId(rawId: any): number | null {
+function parseChainId(rawId: any): number | null {
   if (rawId === null || rawId === undefined) return null;
   if (typeof rawId === 'number') return isNaN(rawId) || rawId <= 0 ? null : rawId;
   if (typeof rawId === 'string') {
@@ -45,7 +45,7 @@ export function parseChainId(rawId: any): number | null {
  * Robust injected Web3 provider resolver.
  * Accurately finds MetaMask, Rabby, Coinbase, Phantom, or default injected provider.
  */
-export function getActiveInjectedProvider(preferredType?: WalletProviderType | null): any {
+function getActiveInjectedProvider(preferredType?: WalletProviderType | null): any {
   if (typeof window === 'undefined') return null;
   const w = window as any;
 
@@ -102,7 +102,7 @@ export function getActiveInjectedProvider(preferredType?: WalletProviderType | n
  * Collect all active Web3 provider objects installed in the browser.
  * Used for universal event listener attachment (chainChanged, accountsChanged).
  */
-export function getAllInjectedProviders(): any[] {
+function getAllInjectedProviders(): any[] {
   if (typeof window === 'undefined') return [];
   const w = window as any;
   const list: any[] = [];
