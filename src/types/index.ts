@@ -76,7 +76,7 @@ export interface Token {
   isVerified: boolean;
   isPopular?: boolean;
   category?: 'defi' | 'stablecoin' | 'layer2' | 'lst' | 'ai' | 'meme' | 'native';
-  tokenListSource?: 'Uniswap Default' | 'Uniswap Extended' | 'CoinGecko' | 'Custom Imported';
+  tokenListSource?: 'Uniswap Default' | 'Uniswap Extended' | 'CoinGecko' | 'Custom Imported' | 'Uniswap Sepolia Verified' | 'Base Sepolia Verified' | 'Arbitrum Sepolia Verified' | 'OP Sepolia Verified' | 'Unichain Verified' | string;
   riskAudit?: TokenRiskAudit;
 }
 

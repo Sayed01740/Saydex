@@ -91,6 +91,30 @@ export const SwapTerminalView: React.FC = () => {
     }
   }, [selectedChain.id, selectedChain.nativeCurrency.symbol, tokens]);
 
+  // Keep active selected token prices and 24h change synchronized with live tokens array
+  useEffect(() => {
+    if (tokenIn) {
+      const liveIn = tokens.find(
+        (t) =>
+          t.symbol.toUpperCase() === tokenIn.symbol.toUpperCase() &&
+          (t.chainId === tokenIn.chainId || (!t.address && !tokenIn.address))
+      );
+      if (liveIn && (liveIn.priceUSD !== tokenIn.priceUSD || liveIn.change24h !== tokenIn.change24h)) {
+        setTokenIn((prev) => ({ ...prev, priceUSD: liveIn.priceUSD, change24h: liveIn.change24h }));
+      }
+    }
+    if (tokenOut) {
+      const liveOut = tokens.find(
+        (t) =>
+          t.symbol.toUpperCase() === tokenOut.symbol.toUpperCase() &&
+          (t.chainId === tokenOut.chainId || (!t.address && !tokenOut.address))
+      );
+      if (liveOut && (liveOut.priceUSD !== tokenOut.priceUSD || liveOut.change24h !== tokenOut.change24h)) {
+        setTokenOut((prev) => ({ ...prev, priceUSD: liveOut.priceUSD, change24h: liveOut.change24h }));
+      }
+    }
+  }, [tokens]);
+
   // Settings Modal state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 

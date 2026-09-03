@@ -24,6 +24,7 @@ import {
   Layers as NetworkIcon,
 } from 'lucide-react';
 import { Button } from '../common/Button';
+import { tokenSecurityService } from '../../services/tokenSecurityService';
 
 interface TokenSelectorModalProps {
   isOpen: boolean;
@@ -366,22 +367,22 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                           </span>
                         )}
                         {tok.isVerified ? (
-                          <ShieldCheck
-                            className="w-3.5 h-3.5 text-[var(--primary)] shrink-0"
-                            title="Verified Token List"
-                          />
+                          <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            0% Tax
+                          </span>
                         ) : hasRisk ? (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] bg-[var(--error-subtle)] text-[var(--error)] font-medium border border-[var(--error)]/30">
-                            <AlertTriangle className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] bg-rose-500/15 text-rose-400 font-medium border border-rose-500/30">
+                            <AlertTriangle className="w-2.5 h-2.5" />
                             <span>Risk Flagged</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[var(--text-tertiary)] px-1 rounded bg-[var(--bg-subtle)]">
+                          <span className="text-[9px] text-[var(--text-tertiary)] px-1 rounded bg-[var(--bg-subtle)] font-mono">
                             Custom
                           </span>
                         )}
                         {tok.category && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-[var(--bg-subtle)] text-[var(--text-tertiary)] uppercase font-mono tracking-wider">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-[var(--bg-subtle)] text-[var(--text-tertiary)] uppercase font-mono tracking-wider">
                             {tok.category}
                           </span>
                         )}

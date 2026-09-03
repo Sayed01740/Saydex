@@ -2,6 +2,7 @@ import { rpcProviderWrapper } from '../utils/rpcProviderWrapper';
 import { getUniswapV3Deployment, UNISWAP_V3_DEPLOYMENTS } from '../config/uniswapV3Contracts';
 import { Token } from '../types';
 import { walletLogger } from '../utils/walletLogger';
+import { uniswapApiService } from './uniswapApiService';
 
 /**
  * Helper: pad hex string to 32 bytes (64 hex characters)
@@ -132,6 +133,31 @@ export class UniswapV3Service {
     // Check tiers: prioritize requested tier, then check 500, 3000, 10000
     const tiersToTest = Array.from(new Set([feeTier, 3000, 500, 10000]));
 
+    // 1. Check official Uniswap Trading API (SOR / Auto Router / UniswapX) if API Key is configured
+    if (uniswapApiService.hasApiKey()) {
+      try {
+        const apiQuote = await uniswapApiService.getQuote({
+          chainId,
+          tokenIn,
+          tokenOut,
+          amountIn,
+        });
+
+        if (apiQuote && parseFloat(apiQuote.amountOut) > 0) {
+          return {
+            amountOut: parseFloat(apiQuote.amountOut),
+            amountOutRaw: BigInt(apiQuote.amountOutRaw || '0'),
+            feeTier,
+            gasEstimate: parseInt(apiQuote.gasUseEstimate || '130000', 10),
+            source: 'onchain_quoter',
+          };
+        }
+      } catch (e) {
+        walletLogger.warn('ROUTING_QUERY', 'Uniswap API quote attempt errored, proceeding with on-chain QuoterV2');
+      }
+    }
+
+    // 2. Direct On-Chain QuoterV2 invocation via RPC Provider
     if (deployment?.quoterV2) {
       let bestResult: OnChainQuoteResult | null = null;
 

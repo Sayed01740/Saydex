@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { BrandLogo } from '../common/BrandLogo';
 import { Button } from '../common/Button';
 import { WalletModal } from '../wallet/WalletModal';
+import { WalletIcon } from '../wallet/WalletIcon';
 import { ChainsModal } from '../chains/ChainsModal';
 import { SwapSettingsModal } from '../swap/SwapSettingsModal';
 import { ALL_CHAINS } from '../../config/chains';
@@ -38,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
     ensName,
     selectedChain,
     detectedChainId,
+    walletProvider,
     ethBalance,
     switchChain,
     formatAddress,
@@ -208,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                 onClick={() => setIsWalletModalOpen(true)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all text-xs font-semibold text-[var(--text-primary)] cursor-pointer shadow-xs"
               >
-                <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse shrink-0" />
+                <WalletIcon type={walletProvider || 'injected'} size="sm" className="rounded-md" />
                 <span className="hidden md:inline text-[var(--text-secondary)] font-mono text-[11px]">
                   {ethBalance.toFixed(3)} {selectedChain.nativeCurrency.symbol}
                 </span>

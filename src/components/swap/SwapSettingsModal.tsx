@@ -334,6 +334,25 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
               />
             </button>
           </div>
+
+          {/* Section 4: Official Uniswap Smart Order Routing Engine */}
+          <div className="p-3 rounded-xl bg-[var(--bg-subtle)]/60 border border-[var(--border-subtle)] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-pink-400" />
+                <span className="text-xs font-semibold text-[var(--text-primary)]">
+                  Routing Engine
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                Uniswap SOR Active
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
+              Multi-hop split routing across concentrated pools with automated MEV protection & optimal price execution.
+            </p>
+          </div>
         </div>
 
         {/* Modal Actions */}

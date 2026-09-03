@@ -6,6 +6,7 @@ import { ALL_CHAINS } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { TokenIcon } from '../common/TokenIcon';
+import { WalletIcon } from './WalletIcon';
 import {
   Copy,
   ExternalLink,
@@ -225,9 +226,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
           <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] rounded-2xl p-4 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/5 border border-[var(--primary)]/30 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-[var(--primary)]" />
-                </div>
+                <WalletIcon type={walletProvider || 'injected'} size="lg" className="rounded-xl shadow-sm" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-[var(--text-primary)]">
@@ -709,12 +708,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                     : 'border-[var(--border-app)] hover:border-[var(--primary)]/50 bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)]'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs"
-                    style={{ backgroundColor: w.color }}
-                  >
-                    {w.name.slice(0, 2).toUpperCase()}
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center p-1 shrink-0 shadow-xs">
+                    <WalletIcon type={w.id} size="lg" className="w-8 h-8" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">

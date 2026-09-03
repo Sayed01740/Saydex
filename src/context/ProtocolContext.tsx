@@ -33,6 +33,7 @@ import { generatePermit2EIP712Payload } from '../utils/universalRouterEncoder';
 import { walletLogger } from '../utils/walletLogger';
 import { useWallet } from './WalletContext';
 import { poolService } from '../services/poolService';
+import { livePriceService } from '../services/livePriceService';
 
 export interface ToastMessage {
   id: string;
@@ -184,9 +185,36 @@ const ProtocolContext = createContext<ProtocolContextType | undefined>(undefined
 
 export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const { selectedChain } = useWallet();
-  const [tokens, setTokens] = useState<Token[]>(TOKENS);
+  const [tokens, setTokens] = useState<Token[]>(() => livePriceService.enrichTokensWithLivePrices(TOKENS));
   const [pools, setPools] = useState<LiquidityPool[]>(MOCK_POOLS);
   const [isLoadingPools, setIsLoadingPools] = useState(false);
+
+  // Real-time live token price synchronization across all chains
+  useEffect(() => {
+    let mounted = true;
+
+    const syncLivePrices = async () => {
+      try {
+        await livePriceService.fetchPrices(TOKENS);
+        if (mounted) {
+          setTokens((prev) => livePriceService.enrichTokensWithLivePrices(prev));
+        }
+      } catch (err) {
+        console.warn('[ProtocolContext] Failed to sync live prices:', err);
+      }
+    };
+
+    // Initial immediate fetch
+    syncLivePrices();
+
+    // 15-second background real-time polling
+    const priceInterval = setInterval(syncLivePrices, 15000);
+
+    return () => {
+      mounted = false;
+      clearInterval(priceInterval);
+    };
+  }, []);
 
   // Dynamically load real pools when active chain changes
   useEffect(() => {

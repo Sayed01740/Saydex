@@ -8,7 +8,8 @@ export type LogCategory =
   | 'BALANCE_QUERY'
   | 'TRANSACTION_LIFECYCLE'
   | 'RPC_DISPATCH'
-  | 'RPC_FAILOVER';
+  | 'RPC_FAILOVER'
+  | 'ROUTING_QUERY';
 
 export interface WalletTraceLog {
   id: string;

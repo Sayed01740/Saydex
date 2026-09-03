@@ -3,6 +3,7 @@ import { Chain, ChainId, Token, PublicClient } from '../types';
 import { SUPPORTED_CHAINS } from '../data/mockData';
 import { ALL_CHAINS, getChainById } from '../config/chains';
 import { UNISWAP_TOKENS } from '../data/uniswapTokens';
+import { livePriceService } from '../services/livePriceService';
 import {
   fetchAllMultiChainBalances,
   ChainBalanceSummary,
@@ -465,7 +466,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const { tokenBalances: tb, chainSummaries: cs, totalPortfolioUSD: total } =
           await fetchAllMultiChainBalances(
             targetAddress,
-            UNISWAP_TOKENS,
+            livePriceService.enrichTokensWithLivePrices(UNISWAP_TOKENS),
             activeCid,
             isRealRef.current,
             providerCid,
