@@ -81,8 +81,8 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
           </div>
         </div>
 
-        {/* Top Controls */}
-        <div className="flex items-center gap-2">
+        {/* Top Controls (Mobile-optimized full-width flex layout) */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           {/* Status Tabs */}
           <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
             <button
@@ -122,10 +122,10 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
             variant="primary"
             size="sm"
             onClick={() => onOpenSetAlertModal()}
-            className="gap-1.5 shadow-xs"
+            className="gap-1.5 shadow-xs shrink-0 whitespace-nowrap"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New Alert</span>
+            <span>New Alert</span>
           </Button>
         </div>
       </div>
@@ -296,10 +296,10 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
               variant="primary"
               size="sm"
               onClick={() => onOpenSetAlertModal()}
-              className="gap-1.5 mt-1"
+              className="gap-1.5 mt-2 inline-flex items-center justify-center whitespace-nowrap px-4 py-2 font-semibold"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Set Alert</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Set Price Alert</span>
             </Button>
           </div>
         )}
