@@ -526,13 +526,15 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           </div>
         </div>
 
-        {/* Security Audit Badge for Selected Token */}
-        <div className="flex items-center justify-between px-1 -mt-1 mb-3 text-[11px]">
-          <div className="flex items-center gap-1.5 text-emerald-400">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="font-semibold">GoPlus Security: 0% Tax • Verified Contract</span>
+        {/* Security Audit Badge for Selected Token (Cleanly spaced container) */}
+        <div className="my-2.5 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/15 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-[11px] font-semibold">GoPlus Security: 0% Tax • Verified</span>
           </div>
-          <span className="text-[10px] text-[var(--text-tertiary)] font-mono">Honeypot: Passed</span>
+          <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-full font-semibold">
+            Honeypot: Passed ✓
+          </span>
         </div>
 
         {/* LIMIT ORDER CONTROLS (Only visible in Limit Mode) */}

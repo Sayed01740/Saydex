@@ -207,8 +207,8 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     // Initial immediate fetch
     syncLivePrices();
 
-    // 15-second background real-time polling
-    const priceInterval = setInterval(syncLivePrices, 15000);
+    // 25-second background real-time polling (balanced performance & low CPU/battery consumption)
+    const priceInterval = setInterval(syncLivePrices, 25000);
 
     return () => {
       mounted = false;

@@ -89,7 +89,7 @@ export const SwapTerminalView: React.FC = () => {
     if (matchingOut) {
       setTokenOut(matchingOut);
     }
-  }, [selectedChain.id, selectedChain.nativeCurrency.symbol, tokens]);
+  }, [selectedChain.id, selectedChain.nativeCurrency.symbol]);
 
   // Keep active selected token prices and 24h change synchronized with live tokens array
   useEffect(() => {
@@ -99,7 +99,7 @@ export const SwapTerminalView: React.FC = () => {
           t.symbol.toUpperCase() === tokenIn.symbol.toUpperCase() &&
           (t.chainId === tokenIn.chainId || (!t.address && !tokenIn.address))
       );
-      if (liveIn && (liveIn.priceUSD !== tokenIn.priceUSD || liveIn.change24h !== tokenIn.change24h)) {
+      if (liveIn && Math.abs(liveIn.priceUSD - tokenIn.priceUSD) > 0.0001) {
         setTokenIn((prev) => ({ ...prev, priceUSD: liveIn.priceUSD, change24h: liveIn.change24h }));
       }
     }
@@ -109,7 +109,7 @@ export const SwapTerminalView: React.FC = () => {
           t.symbol.toUpperCase() === tokenOut.symbol.toUpperCase() &&
           (t.chainId === tokenOut.chainId || (!t.address && !tokenOut.address))
       );
-      if (liveOut && (liveOut.priceUSD !== tokenOut.priceUSD || liveOut.change24h !== tokenOut.change24h)) {
+      if (liveOut && Math.abs(liveOut.priceUSD - tokenOut.priceUSD) > 0.0001) {
         setTokenOut((prev) => ({ ...prev, priceUSD: liveOut.priceUSD, change24h: liveOut.change24h }));
       }
     }
