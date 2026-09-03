@@ -75,8 +75,8 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
                 {activeCount} Active
               </span>
             </div>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Live automated triggers notifying you when market pairs cross your target thresholds.
+            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+              Automated notifications when pairs reach your target price.
             </p>
           </div>
         </div>
@@ -109,7 +109,7 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
               onClick={() => setFilter('triggered')}
               className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 filter === 'triggered'
-                  ? 'bg-[var(--bg-surface)] text-[var(--success)] shadow-xs'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
               }`}
             >
@@ -149,11 +149,7 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 relative overflow-hidden ${
-                      isTriggered
-                        ? 'bg-[#10B981]/5 border-[#10B981]/30 shadow-2xs'
-                        : 'bg-[var(--bg-surface-elevated)] border-[var(--border-app)] hover:border-[var(--border-strong)]'
-                    }`}
+                    className="p-4 rounded-xl border bg-[var(--bg-surface-elevated)] border-[var(--border-app)] hover:border-[var(--border-strong)] transition-all flex flex-col justify-between gap-3 relative overflow-hidden"
                   >
                     {/* Top Row: Pair & Status */}
                     <div>
@@ -178,110 +174,103 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
                           </span>
                         </div>
 
-                        {/* Status Badge */}
-                        {isTriggered ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 shrink-0">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Reached</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20 shrink-0">
-                            <Clock className="w-3 h-3 animate-pulse" />
-                            <span>Monitoring</span>
-                          </span>
-                        )}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase ${
+                            isTriggered
+                              ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
+                              : 'bg-[var(--bg-subtle)] text-[var(--primary)] border border-[var(--primary)]/20'
+                          }`}
+                        >
+                          {isTriggered ? 'Triggered' : 'Active'}
+                        </span>
                       </div>
 
-                      {/* Note if present */}
+                      {/* Note if available */}
                       {alert.note && (
-                        <p className="text-[11px] text-[var(--text-secondary)] mt-1.5 italic line-clamp-1">
+                        <p className="text-xs text-[var(--text-tertiary)] mt-1.5 line-clamp-1 italic">
                           "{alert.note}"
                         </p>
                       )}
                     </div>
 
-                    {/* Target Price & Current Price Comparison Box */}
+                    {/* Middle: Target Price & Current Price */}
                     <div className="p-2.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-[var(--text-tertiary)] flex items-center gap-1">
-                          <Target className="w-3 h-3 text-[var(--primary)]" />
-                          <span>Target:</span>
-                        </span>
-                        <span className="font-bold text-[var(--text-primary)]">
-                          {alert.condition === 'gte' ? '≥ ' : '≤ '}
-                          {alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 5 })}{' '}
-                          {alert.tokenOutSymbol}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[var(--text-tertiary)]">Target Condition</span>
+                        <span className="font-mono font-bold text-[var(--text-primary)]">
+                          {alert.condition === 'gte' ? '≥' : '≤'} {alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} {alert.tokenOutSymbol}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-[var(--text-tertiary)]">Current:</span>
-                        <span className="text-[var(--text-secondary)]">
-                          {currentRate.toLocaleString(undefined, { maximumFractionDigits: 5 })}{' '}
-                          {alert.tokenOutSymbol}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[var(--text-tertiary)]">Current Rate</span>
+                        <span className="font-mono text-[var(--text-secondary)]">
+                          1 {alert.tokenInSymbol} = {currentRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} {alert.tokenOutSymbol}
                         </span>
                       </div>
 
-                      {/* Distance metric indicator */}
-                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[var(--border-subtle)] font-mono">
-                        <span className="text-[var(--text-tertiary)]">Distance:</span>
-                        <span
-                          className={`font-semibold flex items-center gap-0.5 ${
-                            isTriggered
-                              ? 'text-[var(--success)]'
-                              : Math.abs(diffPct) < 2
-                              ? 'text-[var(--warning)] font-bold'
-                              : 'text-[var(--text-secondary)]'
-                          }`}
-                        >
-                          {diffPct >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                          <span>
-                            {diffPct >= 0 ? '+' : ''}
-                            {diffPct.toFixed(2)}% away
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Actions */}
-                    <div className="flex items-center justify-between gap-1.5 pt-1">
-                      {/* Simulate Hit (for testing) */}
-                      {!isTriggered ? (
-                        <button
-                          type="button"
-                          onClick={() => simulatePriceAlertTrigger(alert.id)}
-                          title="Simulate price reaching this target now"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--primary-subtle)] hover:text-[var(--primary)] border border-[var(--border-subtle)] text-[11px] font-medium text-[var(--text-secondary)] transition-colors cursor-pointer"
-                        >
-                          <Zap className="w-3 h-3 text-[var(--primary)]" />
-                          <span>Simulate Hit</span>
-                        </button>
-                      ) : (
-                        <div className="text-[11px] text-[var(--success)] font-mono flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          <span>Triggered {alert.triggeredAt ? new Date(alert.triggeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}</span>
+                      {/* Distance Percentage Bar */}
+                      {!isTriggered && (
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between text-[10px] text-[var(--text-tertiary)] font-mono mb-1">
+                            <span>Distance</span>
+                            <span className={diffPct > 0 ? 'text-[var(--primary)]' : 'text-amber-400'}>
+                              {diffPct > 0 ? `+${diffPct.toFixed(2)}%` : `${diffPct.toFixed(2)}%`}
+                            </span>
+                          </div>
+                          <div className="w-full h-1 bg-[var(--border-subtle)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[var(--primary)] rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.max(5, Math.min(100, 100 - Math.abs(diffPct)))}%`,
+                              }}
+                            />
+                          </div>
                         </div>
                       )}
+                    </div>
+
+                    {/* Bottom: Action Buttons */}
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <div className="text-[10px] text-[var(--text-tertiary)] font-mono">
+                        {isTriggered && alert.triggeredAt ? (
+                          <span>Hit {new Date(alert.triggeredAt).toLocaleTimeString()}</span>
+                        ) : (
+                          <span>Set {new Date(alert.createdAt).toLocaleDateString()}</span>
+                        )}
+                      </div>
 
                       <div className="flex items-center gap-1.5">
-                        {/* Swap This Pair Button */}
+                        {/* Instant Test / Trigger Button */}
+                        {alert.status === 'active' && (
+                          <button
+                            type="button"
+                            onClick={() => simulatePriceAlertTrigger(alert.id)}
+                            className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--primary-subtle)] text-[var(--text-tertiary)] hover:text-[var(--primary)] transition-all cursor-pointer"
+                            title="Simulate / Trigger this alert now"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Trade Pair Button */}
                         {onSelectPair && (
                           <button
                             type="button"
                             onClick={() => onSelectPair(alert.tokenInSymbol, alert.tokenOutSymbol)}
-                            title="Load this pair into swap card"
-                            className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--primary-subtle)] hover:bg-[var(--primary)] text-[var(--primary)] hover:text-[#090B0E] text-xs font-semibold transition-all cursor-pointer"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Swap</span>
+                            <ArrowRight className="w-3 h-3" />
                           </button>
                         )}
 
-                        {/* Delete alert */}
+                        {/* Delete Alert Button */}
                         <button
                           type="button"
                           onClick={() => removePriceAlert(alert.id)}
-                          title="Remove alert"
-                          className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--error-subtle)] hover:text-[var(--error)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-all cursor-pointer"
+                          title="Delete Alert"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -293,15 +282,15 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
             </AnimatePresence>
           </div>
         ) : (
-          <div className="py-10 text-center max-w-sm mx-auto space-y-3">
-            <div className="w-10 h-10 mx-auto rounded-full bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-tertiary)]">
-              <Target className="w-5 h-5" />
+          <div className="py-8 text-center max-w-sm mx-auto space-y-2.5">
+            <div className="w-9 h-9 mx-auto rounded-full bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-tertiary)]">
+              <Target className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-              No target price alerts found
+              No target price alerts
             </h4>
-            <p className="text-xs text-[var(--text-secondary)]">
-              Set target price notifications for any token pair to receive automatic in-app toasts and audio alerts when your desired price is reached.
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Set target price alerts for any token pair to get instant notifications when your desired rate is reached.
             </p>
             <Button
               variant="primary"
@@ -310,21 +299,10 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
               className="gap-1.5 mt-1"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Set First Target Alert</span>
+              <span>Set Alert</span>
             </Button>
           </div>
         )}
-      </div>
-
-      {/* Informational Sub-footer */}
-      <div className="p-3 bg-[var(--bg-subtle)] border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[var(--text-tertiary)] gap-2">
-        <div className="flex items-center gap-1.5">
-          <Info className="w-3.5 h-3.5 text-[var(--primary)]" />
-          <span>Alerts continuously monitor live mempool exchange rates and trigger in real time.</span>
-        </div>
-        <div className="font-mono">
-          {activeCount} active / {priceAlerts.length} total alerts
-        </div>
       </div>
     </div>
   );
