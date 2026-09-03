@@ -35,48 +35,7 @@ class LimitOrdersService {
       }
     } catch {}
 
-    // Initialize with a few realistic demo orders if empty
-    if (this.orders.length === 0) {
-      this.orders = [
-        {
-          id: 'order_demo_1',
-          userAddress: '0x38D6F3921B5D343b67Ce847c2F1e5D6bE4929810',
-          chainId: 1,
-          tokenIn: {
-            address: '0x0000000000000000000000000000000000000000',
-            chainId: 1,
-            symbol: 'ETH',
-            name: 'Ether',
-            decimals: 18,
-            priceUSD: 2424.65,
-            change24h: 1.96,
-            icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
-            isVerified: true,
-          },
-          tokenOut: {
-            address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-            chainId: 1,
-            symbol: 'USDC',
-            name: 'USD Coin',
-            decimals: 6,
-            priceUSD: 1.0,
-            change24h: 0.01,
-            icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-            isVerified: true,
-          },
-          amountIn: '1.5',
-          minAmountOut: '3825.00',
-          targetPrice: 2550.0,
-          currentPriceAtCreation: 2424.65,
-          condition: 'gte',
-          status: 'OPEN',
-          createdAt: Date.now() - 3600000 * 4,
-          expiresAt: Date.now() + 86400000 * 6,
-        },
-      ];
-      this.save();
-    }
-
+    // Start with clean slate for real user limit orders
     this.startPriceMonitor();
   }
 
