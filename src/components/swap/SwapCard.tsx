@@ -513,28 +513,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             <span className="text-[var(--text-tertiary)] font-mono">
               ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[11px] font-mono text-[var(--success)] flex items-center gap-1">
-              {quote.quoteSource === 'onchain_quoter' ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Uniswap V3 On-Chain</span>
-                </>
-              ) : (
-                'Best Protocol Route'
-              )}
-            </span>
           </div>
-        </div>
-
-        {/* Security Audit Badge for Selected Token (Cleanly spaced container) */}
-        <div className="my-2.5 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/15 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-            <span className="text-[11px] font-semibold">GoPlus Security: 0% Tax • Verified</span>
-          </div>
-          <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-full font-semibold">
-            Honeypot: Passed ✓
-          </span>
         </div>
 
         {/* LIMIT ORDER CONTROLS (Only visible in Limit Mode) */}
