@@ -286,7 +286,16 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [activeTransaction, setActiveTransaction] = useState<ActiveTransactionMonitor | null>(null);
   const activeMonitorRef = useRef<ActiveTransactionMonitor | null>(null);
   const [launchpadProjects, setLaunchpadProjects] = useState<LaunchpadProject[]>(MOCK_LAUNCHPAD);
-  const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>(INITIAL_PRICE_ALERTS);
+  const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>(() => {
+    try {
+      const saved = localStorage.getItem('saydex_price_alerts_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_PRICE_ALERTS;
+  });
   const [tokenJars, setTokenJars] = useState<Record<number, TokenJarState>>(INITIAL_TOKEN_JARS);
   const [feeAdapters, setFeeAdapters] = useState<FeeSourceAdapter[]>(INITIAL_FEE_ADAPTERS);
   const [firepitAuctions, setFirepitAuctions] = useState<Record<number, FirepitAuction>>(INITIAL_FIREPIT_AUCTIONS);
@@ -299,6 +308,13 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const alertsRef = useRef<PriceAlert[]>(priceAlerts);
   alertsRef.current = priceAlerts;
+
+  // Persist price alerts to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('saydex_price_alerts_v1', JSON.stringify(priceAlerts));
+    } catch {}
+  }, [priceAlerts]);
 
   const [settings, setSettings] = useState<UserSettings>({
     slippageTolerance: 0.5,
