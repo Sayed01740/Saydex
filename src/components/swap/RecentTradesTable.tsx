@@ -21,6 +21,7 @@ import {
   Layers,
   ArrowUpRight,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ALL_CHAINS } from '../../config/chains';
@@ -38,6 +39,7 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTx, setSelectedTx] = useState<ProtocolTransaction | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Helper to get chain label
   const getChainName = (chainId?: number) => {
@@ -98,37 +100,38 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
   const handleRepeatSwap = (tx: ProtocolTransaction) => {
     if (onSelectPair && tx.tokenIn && tx.tokenOut) {
       onSelectPair(tx.tokenIn.symbol, tx.tokenOut.symbol, tx.tokenIn.amount);
-      // Smoothly scroll to swap terminal if needed
-      window.scrollTo({ top: 350, behavior: 'smooth' });
     }
   };
 
-  // Helper to retrieve token icon from symbol
-  const getTokenIcon = (symbol?: string, defaultIcon?: string) => {
-    if (!symbol) return defaultIcon || '';
-    const found = tokens.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
-    return found?.icon || defaultIcon || '';
-  };
-
-  // Helper to get estimated USD value
+  // Helper to get USD value for a trade
   const getTradeUSDValue = (tx: ProtocolTransaction) => {
-    if (!tx.tokenIn) return null;
-    const found = tokens.find((t) => t.symbol.toUpperCase() === tx.tokenIn?.symbol.toUpperCase());
-    const amount = parseFloat(tx.tokenIn.amount?.replace(/,/g, '') || '0');
-    if (found && amount > 0) {
-      return (amount * found.priceUSD).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+    if (tx.tokenIn?.amount && tx.tokenIn?.symbol) {
+      const tok = tokens.find((t) => t.symbol.toUpperCase() === tx.tokenIn?.symbol.toUpperCase());
+      if (tok?.priceUSD) {
+        const amt = parseFloat(tx.tokenIn.amount.replace(/,/g, ''));
+        if (!isNaN(amt) && amt > 0) {
+          return (amt * tok.priceUSD).toFixed(2);
+        }
+      }
     }
     return null;
   };
 
+  // Helper to get token icon safely
+  const getTokenIcon = (symbol?: string, fallbackIcon?: string) => {
+    if (!symbol) return fallbackIcon;
+    const found = tokens.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
+    return found?.icon || fallbackIcon;
+  };
+
   return (
-    <div id="recent-trades-section" className="w-full mt-8">
-      <div className="bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden">
-        {/* Header Controls */}
-        <div className="p-4 sm:p-5 border-b border-[var(--border-app)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div id="recent-trades-section" className="w-full mt-6">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden transition-all">
+        {/* Clickable Header for Collapsible / Minimize */}
+        <div
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-[var(--bg-subtle)]/40 transition-colors select-none"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[var(--primary-subtle)] text-[var(--primary)] shrink-0">
               <Receipt className="w-5 h-5" />
@@ -143,116 +146,140 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
                   {swapTrades.length} {swapTrades.length === 1 ? 'Trade' : 'Trades'}
                 </span>
               </div>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 hidden sm:block">
                 Recent swap transactions on your connected wallet.
               </p>
             </div>
           </div>
 
-          {/* Filter Pills & Search (Responsive mobile wrapping) */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
-            {/* Search Input */}
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search token or hash..."
-                className="w-full sm:w-44 pl-8 pr-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] transition-all font-mono"
-              />
-            </div>
-
-            <div className="flex items-center justify-between sm:justify-start gap-2">
-              {/* Network Filter Badges */}
-              <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
-                <button
-                  onClick={() => setNetworkFilter('all')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    networkFilter === 'all'
-                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
-                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  All Chains
-                </button>
-                <button
-                  onClick={() => setNetworkFilter('current')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    networkFilter === 'current'
-                      ? 'bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs'
-                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {selectedChain.name.split(' ')[0]}
-                </button>
-              </div>
-
-              {/* Status Filter Badges */}
-              <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
-                <button
-                  onClick={() => setStatusFilter('all')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    statusFilter === 'all'
-                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
-                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setStatusFilter('confirmed')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    statusFilter === 'confirmed'
-                      ? 'bg-[var(--bg-surface)] text-[var(--success)] shadow-xs'
-                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  Done
-                </button>
-                <button
-                  onClick={() => setStatusFilter('pending')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    statusFilter === 'pending'
-                      ? 'bg-[var(--bg-surface)] text-[var(--warning)] shadow-xs'
-                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  Pending
-                </button>
-              </div>
-
-              {/* Clear History Button */}
-              {swapTrades.length > 0 && (
-                <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to clear your local trade history?')) {
-                      clearTransactions();
-                    }
-                  }}
-                  title="Clear trade history"
-                  className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-rose-500 border border-[var(--border-app)] hover:border-rose-500/30 transition-all cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              className="p-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+              title={isExpanded ? 'Minimize / Collapse' : 'Expand / Open'}
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
           </div>
         </div>
 
-        {/* Table Content */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)] text-[var(--text-tertiary)] uppercase font-semibold text-[10px] tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Token Pair & Network</th>
-                <th className="py-3 px-4">Swapped (In ➔ Out)</th>
-                <th className="py-3 px-4 hidden md:table-cell">Execution Rate</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Time</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
+        {/* Collapsible Content Body */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden border-t border-[var(--border-app)]"
+            >
+              {/* Filter Pills & Search */}
+              <div className="p-3 sm:p-4 bg-[var(--bg-subtle)]/40 border-b border-[var(--border-subtle)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                {/* Search Input */}
+                <div className="relative flex-1 sm:max-w-xs">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search token or hash..."
+                    className="w-full pl-8 pr-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] transition-all font-mono"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-start gap-2">
+                  {/* Network Filter Badges */}
+                  <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
+                    <button
+                      onClick={() => setNetworkFilter('all')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        networkFilter === 'all'
+                          ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      All Chains
+                    </button>
+                    <button
+                      onClick={() => setNetworkFilter('current')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        networkFilter === 'current'
+                          ? 'bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {selectedChain.name.split(' ')[0]}
+                    </button>
+                  </div>
+
+                  {/* Status Filter Badges */}
+                  <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        statusFilter === 'all'
+                          ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('confirmed')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        statusFilter === 'confirmed'
+                          ? 'bg-[var(--bg-surface)] text-[var(--success)] shadow-xs'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      Done
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('pending')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        statusFilter === 'pending'
+                          ? 'bg-[var(--bg-surface)] text-[var(--warning)] shadow-xs'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      Pending
+                    </button>
+                  </div>
+
+                  {/* Clear History Button */}
+                  {swapTrades.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to clear your local trade history?')) {
+                          clearTransactions();
+                        }
+                      }}
+                      title="Clear trade history"
+                      className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-rose-500/10 text-[var(--text-tertiary)] hover:text-rose-500 border border-[var(--border-app)] hover:border-rose-500/30 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Table Content */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)] text-[var(--text-tertiary)] uppercase font-semibold text-[10px] tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Token Pair & Network</th>
+                      <th className="py-3 px-4">Swapped (In ➔ Out)</th>
+                      <th className="py-3 px-4 hidden md:table-cell">Execution Rate</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Time</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
             <tbody className="divide-y divide-[var(--border-subtle)] font-mono">
               {filteredTrades.length > 0 ? (
                 filteredTrades.map((tx) => {
@@ -448,6 +475,9 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
             Showing {filteredTrades.length} of {swapTrades.length} recorded swaps
           </div>
         </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Trade Receipt Modal */}

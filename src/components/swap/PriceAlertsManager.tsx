@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Sparkles,
   Info,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -31,6 +32,7 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
 }) => {
   const { priceAlerts, tokens, removePriceAlert, simulatePriceAlertTrigger } = useProtocol();
   const [filter, setFilter] = useState<'all' | 'active' | 'triggered'>('all');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const filteredAlerts = useMemo(() => {
     return priceAlerts.filter((alert) => {
@@ -58,9 +60,12 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
   };
 
   return (
-    <div id="price-alerts-manager" className="w-full bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden">
-      {/* Header */}
-      <div className="p-4 sm:p-5 border-b border-[var(--border-app)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div id="price-alerts-manager" className="w-full bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden transition-all">
+      {/* Clickable Header for Collapsible / Minimize */}
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--bg-subtle)]/40 transition-colors select-none"
+      >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-[var(--primary-subtle)] text-[var(--primary)] shrink-0">
             <Target className="w-5 h-5" />
@@ -75,60 +80,90 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
                 {activeCount} Active
               </span>
             </div>
-            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+            <p className="text-xs text-[var(--text-tertiary)] mt-0.5 hidden sm:block">
               Automated notifications when pairs reach your target price.
             </p>
           </div>
         </div>
 
-        {/* Top Controls (Mobile-optimized full-width flex layout) */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          {/* Status Tabs */}
-          <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                filter === 'all'
-                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              All ({priceAlerts.length})
-            </button>
-            <button
-              onClick={() => setFilter('active')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                filter === 'active'
-                  ? 'bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Active ({activeCount})
-            </button>
-            <button
-              onClick={() => setFilter('triggered')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                filter === 'triggered'
-                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Triggered
-            </button>
-          </div>
-
-          {/* New Alert Button */}
+        {/* Action Controls & Dropdown Chevron */}
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <Button
             variant="primary"
             size="sm"
-            onClick={() => onOpenSetAlertModal()}
-            className="gap-1.5 shadow-xs shrink-0 whitespace-nowrap"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSetAlertModal();
+            }}
+            className="gap-1.5 shadow-xs shrink-0 whitespace-nowrap text-xs font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Alert</span>
           </Button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="p-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+            title={isExpanded ? 'Minimize / Collapse' : 'Expand / Open'}
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+          </button>
         </div>
       </div>
+
+      {/* Collapsible Content Body */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden border-t border-[var(--border-app)]"
+          >
+            {/* Filter Sub-bar */}
+            <div className="px-4 sm:px-5 py-3 bg-[var(--bg-subtle)]/50 border-b border-[var(--border-subtle)] flex items-center justify-between">
+              <div className="flex items-center p-1 bg-[var(--bg-subtle)] rounded-lg border border-[var(--border-app)] text-xs font-semibold">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    filter === 'all'
+                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  All ({priceAlerts.length})
+                </button>
+                <button
+                  onClick={() => setFilter('active')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    filter === 'active'
+                      ? 'bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs'
+                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Active ({activeCount})
+                </button>
+                <button
+                  onClick={() => setFilter('triggered')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    filter === 'triggered'
+                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                      : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Triggered
+                </button>
+              </div>
+
+              <span className="text-xs text-[var(--text-tertiary)] font-mono">
+                {filteredAlerts.length} {filteredAlerts.length === 1 ? 'alert' : 'alerts'}
+              </span>
+            </div>
 
       {/* Alerts Grid / List */}
       <div className="p-4 sm:p-5">
@@ -304,6 +339,9 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
           </div>
         )}
       </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
