@@ -134,7 +134,7 @@ interface ProtocolContextType {
   clearTransactions: () => void;
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
-  addPosition: (pos: Omit<UserPosition, 'id' | 'createdAt'>) => void;
+  addPosition: (pos: Omit<UserPosition, 'id' | 'createdAt'> & { customId?: string }) => void;
   removePosition: (positionId: string) => void;
   claimPositionFees: (positionId: string) => void;
   participateInLaunchpad: (projectId: string, amountUSD: number) => void;
@@ -680,10 +680,10 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     setActiveView('swap');
   };
 
-  const addPosition = (pos: Omit<UserPosition, 'id' | 'createdAt'>) => {
+  const addPosition = (pos: Omit<UserPosition, 'id' | 'createdAt'> & { customId?: string }) => {
     const newPos: UserPosition = {
       ...pos,
-      id: `pos-${Date.now()}`,
+      id: pos.customId || `pos-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
     setUserPositions((prev) => {

@@ -218,22 +218,9 @@ const STORAGE_KEY_IS_REAL = 'saydex_wallet_is_real';
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [address, setAddress] = useState<string | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_ADDRESS);
-    // Purge simulated preset addresses so the user is not stuck in demo mode
-    if (saved && Object.values(WALLET_PRESETS).some((p) => p.address.toLowerCase() === saved.toLowerCase())) {
-      localStorage.removeItem(STORAGE_KEY_ADDRESS);
-      localStorage.removeItem(STORAGE_KEY_CONNECTED);
-      localStorage.removeItem(STORAGE_KEY_IS_REAL);
-      localStorage.removeItem(STORAGE_KEY_PROVIDER);
-      return null;
-    }
-    return saved || null;
+    return localStorage.getItem(STORAGE_KEY_ADDRESS) || null;
   });
   const [isConnected, setIsConnected] = useState<boolean>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_ADDRESS);
-    if (saved && Object.values(WALLET_PRESETS).some((p) => p.address.toLowerCase() === saved.toLowerCase())) {
-      return false;
-    }
     return localStorage.getItem(STORAGE_KEY_CONNECTED) === 'true';
   });
   const [isConnecting, setIsConnecting] = useState<boolean>(false);

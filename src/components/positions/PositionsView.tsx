@@ -47,6 +47,13 @@ export const PositionsView: React.FC = () => {
         title: `Collect Fees: $${feesUSD.toFixed(2)}`,
       });
 
+      if (tx.hash && !tx.hash.startsWith('0x_sim')) {
+        const receipt = await uniswapV3Service.waitForReceipt(targetChainId, tx.hash, 65000);
+        if (receipt && (receipt.status === '0x0' || receipt.status === 0)) {
+          throw new Error(`Fee collection reverted on-chain (Tx: ${tx.hash.slice(0, 10)}...).`);
+        }
+      }
+
       claimPositionFees(posId);
       addTransaction({
         hash: tx.hash,
@@ -110,11 +117,21 @@ export const PositionsView: React.FC = () => {
       try {
         setIsProcessing(true);
         const targetChainId = selectedPosToManage.token0.chainId || selectedChain.id;
+
+        // Query real on-chain liquidity if available
+        let liqToDecrease = '1000000000000';
+        try {
+          const onChainLiq = await uniswapV3Service.getOnChainPositionLiquidity(targetChainId, selectedPosToManage.id);
+          if (onChainLiq > 0n) {
+            liqToDecrease = onChainLiq.toString();
+          }
+        } catch {}
+
         const decTx = uniswapV3Service.buildDecreaseLiquidityTransaction({
           chainId: targetChainId,
           userAddress: address || '0x0000000000000000000000000000000000000000',
           tokenId: selectedPosToManage.id,
-          liquidity: '1000000000000',
+          liquidity: liqToDecrease,
           deadlineMinutes: 30,
         });
 
@@ -125,6 +142,13 @@ export const PositionsView: React.FC = () => {
           chainId: targetChainId,
           title: `Withdraw Position #${selectedPosToManage.id}`,
         });
+
+        if (tx.hash && !tx.hash.startsWith('0x_sim')) {
+          const receipt = await uniswapV3Service.waitForReceipt(targetChainId, tx.hash, 65000);
+          if (receipt && (receipt.status === '0x0' || receipt.status === 0)) {
+            throw new Error(`Withdrawal transaction reverted on-chain (Tx: ${tx.hash.slice(0, 10)}...).`);
+          }
+        }
 
         removePosition(selectedPosToManage.id);
         addTransaction({

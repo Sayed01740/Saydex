@@ -154,7 +154,19 @@ export const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
         title: `Mint Position: ${num0} ${selectedPool.token0.symbol} + ${num1} ${selectedPool.token1.symbol}`,
       });
 
+      let onChainTokenId: string | null = null;
+      if (txResult.hash && !txResult.hash.startsWith('0x_sim')) {
+        const receipt = await uniswapV3Service.waitForReceipt(targetChainId, txResult.hash, 65000);
+        if (receipt) {
+          if (receipt.status === '0x0' || receipt.status === 0) {
+            throw new Error(`Position mint reverted on-chain (Tx: ${txResult.hash.slice(0, 10)}...).`);
+          }
+          onChainTokenId = uniswapV3Service.parseTokenIdFromReceipt(receipt);
+        }
+      }
+
       addPosition({
+        customId: onChainTokenId || undefined,
         poolId: selectedPool.id,
         token0: selectedPool.token0,
         token1: selectedPool.token1,

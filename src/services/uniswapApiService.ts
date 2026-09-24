@@ -4,9 +4,9 @@ import { walletLogger } from '../utils/walletLogger';
 export interface UniswapQuoteRequest {
   type: 'EXACT_INPUT' | 'EXACT_OUTPUT';
   amount: string;
-  tokenInAddress: string;
+  tokenIn: string;
   tokenInChainId: number;
-  tokenOutAddress: string;
+  tokenOut: string;
   tokenOutChainId: number;
   swapper?: string;
   slippageTolerance?: number;
@@ -25,6 +25,7 @@ export interface UniswapQuoteResponse {
   priceImpact?: number;
   source: 'uniswap_api' | 'uniswap_x' | 'sor_auto_router';
   portionAmount?: string;
+  rawQuote?: any;
 }
 
 export interface UniswapSwapRequest {
@@ -108,17 +109,19 @@ class UniswapApiService {
       ? '0x0000000000000000000000000000000000000000'
       : params.tokenOut.address;
 
+    const swapperAddr = params.recipient && params.recipient.startsWith('0x') && params.recipient.length === 42
+      ? params.recipient
+      : '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+
     const body: UniswapQuoteRequest = {
       type: 'EXACT_INPUT',
       amount: amountInRaw,
-      tokenInAddress: addrIn,
+      tokenIn: addrIn,
       tokenInChainId: params.chainId,
-      tokenOutAddress: addrOut,
+      tokenOut: addrOut,
       tokenOutChainId: params.chainId,
-      swapper: params.recipient || '0x0000000000000000000000000000000000000000',
+      swapper: swapperAddr,
       slippageTolerance: params.slippageTolerance || 0.5,
-      protocols: ['V2', 'V3'],
-      routingPreference: 'BEST_PRICE',
     };
 
     try {
@@ -144,8 +147,9 @@ class UniswapApiService {
       const json = await res.json();
       const quoteData = json.quote || json;
 
-      if (quoteData && quoteData.amount) {
-        const rawOut = quoteData.amount;
+      const rawOut = quoteData?.output?.amount || quoteData?.amountOut || quoteData?.amount;
+
+      if (rawOut && BigInt(rawOut) > 0n) {
         const formattedOut = Number(BigInt(rawOut)) / 10 ** decimalsOut;
 
         walletLogger.info(
@@ -154,15 +158,16 @@ class UniswapApiService {
         );
 
         return {
-          quoteId: quoteData.quoteId || 'uniswap_sor_' + Date.now(),
+          quoteId: quoteData.quoteId || json.requestId || 'uniswap_sor_' + Date.now(),
           amountOut: formattedOut.toString(),
-          amountOutRaw: rawOut,
+          amountOutRaw: rawOut.toString(),
           gasFeeUSD: quoteData.gasFeeUSD,
           gasUseEstimate: quoteData.gasUseEstimate,
           route: quoteData.route || [],
           routeString: quoteData.routeString || 'Uniswap V3 Auto Router SOR',
-          priceImpact: parseFloat(quoteData.priceImpact) || 0,
+          priceImpact: typeof quoteData.priceImpact === 'number' ? quoteData.priceImpact : parseFloat(quoteData.priceImpact) || 0,
           source: json.routing === 'DUTCH_LIMIT_ORDER' ? 'uniswap_x' : 'sor_auto_router',
+          rawQuote: quoteData,
         };
       }
     } catch (err: any) {

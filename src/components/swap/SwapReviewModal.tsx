@@ -165,7 +165,22 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
       setStatus('pending');
       markTransactionPending(txId);
 
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      // Await real on-chain confirmation if broadcasted to blockchain
+      if (txResult.hash && !txResult.hash.startsWith('0x_sim')) {
+        walletLogger.info(
+          'TRANSACTION_LIFECYCLE',
+          `Waiting for swap transaction ${txResult.hash} to be mined on Chain ${targetChainId}...`
+        );
+        const receipt = await uniswapV3Service.waitForReceipt(targetChainId, txResult.hash, 65000);
+        if (receipt) {
+          if (receipt.status === '0x0' || receipt.status === 0) {
+            throw new Error(`Transaction reverted on-chain (Tx: ${txResult.hash.slice(0, 10)}...). Slippage exceeded or insufficient liquidity.`);
+          }
+          walletLogger.info('TRANSACTION_LIFECYCLE', `Swap transaction confirmed in block ${receipt.blockNumber}!`);
+        }
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      }
 
       // STEP 3: Confirmed on-chain
       setStatus('confirmed');

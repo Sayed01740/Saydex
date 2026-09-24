@@ -460,6 +460,34 @@ export class UniswapV3Service {
   }
 
   /**
+   * Query real on-chain position details from NonfungiblePositionManager
+   */
+  public async getOnChainPositionLiquidity(chainId: number, tokenId: string | number): Promise<bigint> {
+    const deployment = getUniswapV3Deployment(chainId) || UNISWAP_V3_DEPLOYMENTS[11155111];
+    const npmAddress = deployment.nonfungiblePositionManager;
+    const numTokenId = BigInt(parseInt(String(tokenId).replace(/\D/g, '')) || 1);
+
+    // positions(uint256) selector: 0x99fbab88
+    const callData = `0x99fbab88${pad32Bytes(numTokenId)}`;
+    try {
+      const res = await rpcProviderWrapper.call(chainId, {
+        to: npmAddress,
+        data: callData,
+      });
+
+      if (res && res.length >= 2 + 64 * 8) {
+        // Return tuple: word 7 (0-indexed) is uint128 liquidity
+        const clean = res.replace(/^0x/, '');
+        const liquidityHex = clean.slice(64 * 7, 64 * 8);
+        return BigInt('0x' + liquidityHex);
+      }
+    } catch (e) {
+      walletLogger.warn('BALANCE_QUERY', `Failed reading on-chain liquidity for tokenId #${tokenId}: ${e}`);
+    }
+    return 0n;
+  }
+
+  /**
    * Build Uniswap V3 Decrease Liquidity Calldata (NonfungiblePositionManager.decreaseLiquidity)
    */
   public buildDecreaseLiquidityTransaction(params: {
@@ -493,6 +521,50 @@ export class UniswapV3Service {
       data,
       value: '0x0',
     };
+  }
+
+  /**
+   * Extract minted ERC-721 tokenId from Uniswap NonfungiblePositionManager receipt logs
+   */
+  public parseTokenIdFromReceipt(receipt: any): string | null {
+    if (!receipt || !Array.isArray(receipt.logs)) return null;
+
+    // 1. Check ERC-721 Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+    const ZERO_ADDRESS_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+    for (const log of receipt.logs) {
+      if (
+        log.topics &&
+        log.topics[0]?.toLowerCase() === TRANSFER_TOPIC.toLowerCase() &&
+        log.topics[1]?.toLowerCase() === ZERO_ADDRESS_TOPIC.toLowerCase() &&
+        log.topics[3]
+      ) {
+        try {
+          const tokenIdDec = BigInt(log.topics[3]).toString(10);
+          if (tokenIdDec && tokenIdDec !== '0') {
+            walletLogger.info('TRANSACTION_LIFECYCLE', `Discovered minted Uniswap V3 NFT Token ID: #${tokenIdDec}`);
+            return tokenIdDec;
+          }
+        } catch {}
+      }
+    }
+
+    // 2. Check IncreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)
+    const INCREASE_LIQ_TOPIC = '0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f';
+    for (const log of receipt.logs) {
+      if (log.topics && log.topics[0]?.toLowerCase() === INCREASE_LIQ_TOPIC.toLowerCase() && log.topics[1]) {
+        try {
+          const tokenIdDec = BigInt(log.topics[1]).toString(10);
+          if (tokenIdDec && tokenIdDec !== '0') {
+            walletLogger.info('TRANSACTION_LIFECYCLE', `Discovered Uniswap V3 Token ID from IncreaseLiquidity: #${tokenIdDec}`);
+            return tokenIdDec;
+          }
+        } catch {}
+      }
+    }
+
+    return null;
   }
 }
 
