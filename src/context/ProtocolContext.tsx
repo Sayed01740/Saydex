@@ -123,9 +123,9 @@ interface ProtocolContextType {
   markTransactionFailed: (txId: string, errorMessage: string) => void;
   clearActiveTransaction: () => void;
 
-  signPermit2Approval: (tokenSymbol: string, amount?: string) => void;
+  signPermit2Approval: (tokenSymbol: string, amount?: string, realSignature?: string, spenderAddress?: string) => void;
   revokePermit2Approval: (tokenSymbol: string) => void;
-  executeUniversalRouterCalldata: (commandsHex: string, inputsCount: number, summary: string) => void;
+  executeUniversalRouterCalldata: (commandsHex: string, inputsCount: number, summary: string, txHash?: string, realGasUsed?: number) => void;
   sweepFeesToJar: (adapterId: string, chainId: number) => void;
   burnUniInFirepit: (chainId: number, uniAmount: number) => void;
   updateFeePolicyFraction: (feeTier: number, fraction: number) => void;
@@ -277,6 +277,8 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const alertsRef = useRef<PriceAlert[]>(priceAlerts);
   alertsRef.current = priceAlerts;
+  const tokensRef = useRef<Token[]>(tokens);
+  tokensRef.current = tokens;
 
   // Persist price alerts to localStorage
   useEffect(() => {
@@ -536,66 +538,96 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     setActiveTransaction(null);
   };
 
-  // Check price alerts whenever prices tick (gentle 25s cadence, paused when backgrounded)
+  // Check price alerts whenever prices tick (live 20s cadence, paused when backgrounded)
   useEffect(() => {
-    const interval = setInterval(() => {
+    let isCancelled = false;
+
+    const runPriceTick = async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      
-      const triggeredAlerts: { alert: PriceAlert; currentRate: number }[] = [];
 
-      setTokens((prev) => {
-        const nextTokens = prev.map((tok) => {
-          if (tok.symbol === 'USDC' || tok.symbol === 'USDT' || tok.symbol === 'DAI') return tok;
-          const deltaPercent = (Math.random() - 0.495) * 0.15;
-          const newPrice = parseFloat((tok.priceUSD * (1 + deltaPercent / 100)).toFixed(tok.priceUSD > 10 ? 2 : 4));
-          return {
-            ...tok,
-            priceUSD: newPrice,
-            change24h: parseFloat((tok.change24h + deltaPercent * 0.2).toFixed(2)),
-          };
-        });
+      try {
+        // Fetch genuine live prices across DeFiLlama and Binance feeds
+        await livePriceService.fetchPrices(tokensRef.current, false);
+        if (isCancelled) return;
 
-        // Evaluate active price alerts
-        const currentAlerts = alertsRef.current;
-        currentAlerts.forEach((alert) => {
-          if (alert.status !== 'active') return;
-          const inToken = nextTokens.find((t) => t.symbol.toUpperCase() === alert.tokenInSymbol.toUpperCase());
-          const outToken = nextTokens.find((t) => t.symbol.toUpperCase() === alert.tokenOutSymbol.toUpperCase());
-          if (!inToken || !outToken) return;
+        const triggeredAlerts: { alert: PriceAlert; currentRate: number }[] = [];
 
-          const currentRate = (inToken.priceUSD || 1) / Math.max(0.000001, outToken.priceUSD || 1);
-          const isTriggered =
-            (alert.condition === 'gte' && currentRate >= alert.targetPrice) ||
-            (alert.condition === 'lte' && currentRate <= alert.targetPrice);
-
-          if (isTriggered) {
-            triggeredAlerts.push({ alert, currentRate });
-          }
-        });
-
-        return nextTokens;
-      });
-
-      // Execute alert side-effects safely outside the state reducer
-      if (triggeredAlerts.length > 0) {
-        triggeredAlerts.forEach(({ alert, currentRate }) => {
-          setPriceAlerts((prevAlerts) =>
-            prevAlerts.map((a) =>
-              a.id === alert.id ? { ...a, status: 'triggered', triggeredAt: Date.now() } : a
-            )
-          );
-          playAlertChime();
-          addToast({
-            type: 'success',
-            title: `🎯 Target Price Hit: ${alert.tokenInSymbol}/${alert.tokenOutSymbol}`,
-            description: `Target rate reached: 1 ${alert.tokenInSymbol} = ${currentRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${alert.tokenOutSymbol} (Condition: ${alert.condition === 'gte' ? '≥' : '≤'} ${alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })})`,
-            actionText: 'Swap Now',
+        setTokens((prev) => {
+          const nextTokens = prev.map((tok) => {
+            const cached = livePriceService.getCachedPrice(tok);
+            if (cached && cached.priceUSD > 0) {
+              return {
+                ...tok,
+                priceUSD: cached.priceUSD,
+                change24h: cached.change24h ?? tok.change24h,
+              };
+            }
+            return tok;
           });
-        });
-      }
-    }, 25000);
 
-    return () => clearInterval(interval);
+          // Evaluate active price alerts
+          const currentAlerts = alertsRef.current;
+          currentAlerts.forEach((alert) => {
+            if (alert.status !== 'active') return;
+            const inToken = nextTokens.find((t) => t.symbol.toUpperCase() === alert.tokenInSymbol.toUpperCase());
+            const outToken = nextTokens.find((t) => t.symbol.toUpperCase() === alert.tokenOutSymbol.toUpperCase());
+            if (!inToken || !outToken) return;
+
+            const currentRate = (inToken.priceUSD || 1) / Math.max(0.000001, outToken.priceUSD || 1);
+            const isTriggered =
+              (alert.condition === 'gte' && currentRate >= alert.targetPrice) ||
+              (alert.condition === 'lte' && currentRate <= alert.targetPrice);
+
+            if (isTriggered) {
+              triggeredAlerts.push({ alert, currentRate });
+            }
+          });
+
+          return nextTokens;
+        });
+
+        // Execute alert side-effects safely outside the state reducer
+        if (triggeredAlerts.length > 0) {
+          triggeredAlerts.forEach(({ alert, currentRate }) => {
+            setPriceAlerts((prevAlerts) =>
+              prevAlerts.map((a) =>
+                a.id === alert.id ? { ...a, status: 'triggered', triggeredAt: Date.now() } : a
+              )
+            );
+            playAlertChime();
+
+            // Native Browser Push Notification
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(`🎯 Target Price Hit: ${alert.tokenInSymbol}/${alert.tokenOutSymbol}`, {
+                  body: `Target rate reached: 1 ${alert.tokenInSymbol} = ${currentRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${alert.tokenOutSymbol}`,
+                  icon: '/favicon.ico',
+                });
+              } catch (e) {
+                console.warn('Native notification error:', e);
+              }
+            }
+
+            addToast({
+              type: 'success',
+              title: `🎯 Target Price Hit: ${alert.tokenInSymbol}/${alert.tokenOutSymbol}`,
+              description: `Target rate reached: 1 ${alert.tokenInSymbol} = ${currentRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${alert.tokenOutSymbol} (Condition: ${alert.condition === 'gte' ? '≥' : '≤'} ${alert.targetPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })})`,
+              actionText: 'Swap Now',
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('[ProtocolContext] Live price tick error:', err);
+      }
+    };
+
+    const interval = setInterval(runPriceTick, 20000);
+    runPriceTick();
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const addPriceAlert = (alert: Omit<PriceAlert, 'id' | 'createdAt' | 'status'>) => {
@@ -931,13 +963,25 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const signPermit2Approval = (tokenSymbol: string, amount: string = '115792089237316195423570985008687907853269984665640564039457584007913129639935') => {
+  const signPermit2Approval = (
+    tokenSymbol: string,
+    amount: string = '1461501637330902918203684832716283019655932542975',
+    realSignature?: string,
+    spenderAddress?: string
+  ) => {
     const targetToken = tokens.find((t) => t.symbol === tokenSymbol) || {
       address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
       symbol: tokenSymbol,
     } as Token;
 
-    const signature = generatePermit2EIP712Payload(targetToken, '0x66a9893cC07D91D95644AEDD05d03f95e1dBA8Af', amount);
+    const signature = generatePermit2EIP712Payload(
+      targetToken,
+      spenderAddress || '0x66a9893cC07D91D95644AEDD05d03f95e1dBA8Af',
+      amount,
+      0,
+      43200,
+      realSignature
+    );
 
     setPermit2Signatures((prev) => [signature, ...prev]);
     setPermit2Allowances((prev) =>
@@ -957,7 +1001,7 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
 
     addToast({
       type: 'success',
-      title: 'Permit2 Signature Generated (Gasless)',
+      title: 'Permit2 Signature Recorded (Gasless)',
       description: `EIP-712 Permit2 authorization signed for ${tokenSymbol}. Zero gas spent.`,
     });
   };
@@ -987,17 +1031,19 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const executeUniversalRouterCalldata = (
     commandsHex: string,
     inputsCount: number,
-    summary: string
+    summary: string,
+    txHash?: string,
+    realGasUsed?: number
   ) => {
-    const randomHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
     const cleanHex = commandsHex.startsWith('0x') ? commandsHex.slice(2) : commandsHex;
     const commandCount = Math.floor(cleanHex.length / 2);
-    const gasUsed = 21000 + commandCount * 32000;
+    const gasUsed = realGasUsed || (21000 + commandCount * 32000);
     const gasSavingsUSD = Number((commandCount * 3.45).toFixed(2));
+    const effectiveHash = txHash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
     const result: UniversalRouterExecutionResult = {
       id: `exec-${Date.now()}`,
-      hash: `${randomHash.slice(0, 6)}...${randomHash.slice(-4)}`,
+      hash: effectiveHash.length > 14 ? `${effectiveHash.slice(0, 8)}...${effectiveHash.slice(-6)}` : effectiveHash,
       commandsHex,
       commandCount,
       inputsCount,
@@ -1013,7 +1059,7 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     addToast({
       type: 'success',
       title: 'Universal Router Executed',
-      description: `Executed ${commandCount} atomic commands via execute(). Saved ~$${gasSavingsUSD} in gas!`,
+      description: `Executed ${commandCount} atomic commands on-chain via execute(). Saved ~$${gasSavingsUSD} in gas!`,
     });
   };
 

@@ -1,5 +1,6 @@
 import { Token } from '../types';
 import { livePriceService } from './livePriceService';
+import { uniswapV3Service } from './uniswapV3Service';
 
 export interface LimitOrder {
   id: string;
@@ -12,10 +13,11 @@ export interface LimitOrder {
   targetPrice: number; // In terms of tokenOut per tokenIn or USD
   currentPriceAtCreation: number;
   condition: 'gte' | 'lte'; // greater than or equal (take profit) or less than or equal (buy dip)
-  status: 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
+  status: 'OPEN' | 'READY' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
   createdAt: number;
   expiresAt: number;
   signature?: string;
+  signedAt?: number;
   filledAt?: number;
   txHash?: string;
 }
@@ -35,7 +37,7 @@ class LimitOrdersService {
       }
     } catch {}
 
-    // Start with clean slate for real user limit orders
+    // Start background monitor matching active limit orders against live market prices
     this.startPriceMonitor();
   }
 
@@ -64,7 +66,7 @@ class LimitOrdersService {
   }
 
   public getOpenOrders(userAddress?: string): LimitOrder[] {
-    return this.getOrders(userAddress).filter((o) => o.status === 'OPEN');
+    return this.getOrders(userAddress).filter((o) => o.status === 'OPEN' || o.status === 'READY');
   }
 
   public createLimitOrder(order: Omit<LimitOrder, 'id' | 'createdAt' | 'status'>): LimitOrder {
@@ -82,12 +84,66 @@ class LimitOrdersService {
 
   public cancelOrder(orderId: string): boolean {
     const order = this.orders.find((o) => o.id === orderId);
-    if (order && order.status === 'OPEN') {
+    if (order && (order.status === 'OPEN' || order.status === 'READY')) {
       order.status = 'CANCELLED';
       this.save();
       return true;
     }
     return false;
+  }
+
+  /**
+   * Executes a limit order on-chain using Uniswap V3 Router with user's wallet
+   */
+  public async executeOrderOnChain(
+    orderId: string,
+    sendTransactionFn: (tx: any) => Promise<any>,
+    chainId: number
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return { success: false, error: 'Order not found' };
+    if (order.status !== 'OPEN' && order.status !== 'READY') {
+      return { success: false, error: `Order is already ${order.status.toLowerCase()}` };
+    }
+
+    try {
+      const swapTx = await uniswapV3Service.buildSwapTransaction({
+        chainId,
+        userAddress: order.userAddress,
+        tokenIn: order.tokenIn,
+        tokenOut: order.tokenOut,
+        amountIn: order.amountIn,
+        minAmountOut: order.minAmountOut,
+        slippagePercent: 1.0,
+      });
+
+      const txResult = await sendTransactionFn({
+        to: swapTx.to,
+        value: swapTx.value,
+        data: swapTx.data,
+        title: `Execute Limit Order: ${order.amountIn} ${order.tokenIn.symbol} → ${order.tokenOut.symbol}`,
+      });
+
+      const txHash = txResult?.hash || (typeof txResult === 'string' ? txResult : null);
+      if (!txHash) {
+        throw new Error('Transaction submission failed to return a hash');
+      }
+
+      const receipt = await uniswapV3Service.waitForReceipt(chainId, txHash);
+      if (receipt.status === 0 || receipt.status === '0x0') {
+        throw new Error('Execution transaction reverted on-chain');
+      }
+
+      order.status = 'FILLED';
+      order.filledAt = Date.now();
+      order.txHash = receipt.transactionHash || txHash;
+      this.save();
+
+      return { success: true, txHash: order.txHash };
+    } catch (err: any) {
+      console.error('[LimitOrdersService] On-chain execution failed:', err);
+      return { success: false, error: err.message || 'On-chain execution failed' };
+    }
   }
 
   /**
@@ -110,21 +166,26 @@ class LimitOrdersService {
           return;
         }
 
-        // Get latest price for tokenIn
-        const livePriceData = livePriceService.getCachedPrice(order.tokenIn);
-        const currentPrice = livePriceData?.priceUSD || order.tokenIn.priceUSD || 0;
+        // Get latest price for tokenIn & tokenOut
+        const inPriceData = livePriceService.getCachedPrice(order.tokenIn);
+        const outPriceData = livePriceService.getCachedPrice(order.tokenOut);
 
-        if (currentPrice <= 0) return;
+        const inPrice = inPriceData?.priceUSD || order.tokenIn.priceUSD || 0;
+        const outPrice = outPriceData?.priceUSD || order.tokenOut.priceUSD || 1;
+
+        if (inPrice <= 0) return;
+
+        // Current exchange rate (tokenOut per tokenIn)
+        const currentRate = inPrice / Math.max(0.000001, outPrice);
 
         // Check if condition triggered
         const triggered =
-          (order.condition === 'gte' && currentPrice >= order.targetPrice) ||
-          (order.condition === 'lte' && currentPrice <= order.targetPrice);
+          (order.condition === 'gte' && (currentRate >= order.targetPrice || inPrice >= order.targetPrice)) ||
+          (order.condition === 'lte' && (currentRate <= order.targetPrice || inPrice <= order.targetPrice));
 
         if (triggered) {
-          order.status = 'FILLED';
-          order.filledAt = now;
-          order.txHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+          // Mark order as READY for on-chain execution
+          order.status = 'READY';
           hasUpdates = true;
         }
       });
@@ -137,3 +198,4 @@ class LimitOrdersService {
 }
 
 export const limitOrdersService = new LimitOrdersService();
+

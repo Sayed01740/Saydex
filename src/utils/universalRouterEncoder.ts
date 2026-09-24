@@ -490,8 +490,9 @@ export function buildSwapUniversalRouterExecution(
   const ethPriceUSD = 3450;
   const gasSavingsUSD = (gasSavingsGwei * 25 * 1e-9) * ethPriceUSD;
 
-  // Synthesize execute(bytes commands, bytes[] inputs, uint256 deadline) selector: 0x3593564c
-  const fullCalldataHex = `0x3593564c${commandsHex.slice(2)}${inputsHexArray.join('')}`;
+  // Byte-accurate EVM ABI encoding for execute(bytes commands, bytes[] inputs, uint256 deadline)
+  const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 mins
+  const fullCalldataHex = encodeUniversalRouterExecute(commandsHex, inputsHexArray, deadline);
 
   return {
     commandsHex,
@@ -502,6 +503,64 @@ export function buildSwapUniversalRouterExecution(
     traditionalGasEstimate,
     gasSavingsUSD,
   };
+}
+
+/**
+ * Encodes calldata for Universal Router execute(bytes commands, bytes[] inputs, uint256 deadline)
+ * Function selector: 0x3593564c
+ */
+export function encodeUniversalRouterExecute(
+  commandsHex: string,
+  inputsHexArray: string[],
+  deadline: number = Math.floor(Date.now() / 1000) + 1800
+): string {
+  const pad32 = (hex: string) => {
+    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+    return clean.padStart(64, '0');
+  };
+
+  const padRight32 = (hex: string) => {
+    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const targetLen = Math.ceil(clean.length / 64) * 64 || 64;
+    return clean.padEnd(targetLen, '0');
+  };
+
+  const cleanCommands = commandsHex.startsWith('0x') ? commandsHex.slice(2) : commandsHex;
+  const commandsBytesLen = cleanCommands.length / 2;
+  const commandsPadded = padRight32(cleanCommands);
+
+  // Head 0: offset to commands. Tuple has 3 args => 3 * 32 = 96 = 0x60
+  const offsetCommands = 96;
+  const commandsDataSize = 32 + commandsPadded.length / 2;
+  // Head 1: offset to inputs dynamic array
+  const offsetInputs = offsetCommands + commandsDataSize;
+  // Head 2: uint256 deadline
+  const deadlineHex = pad32(BigInt(deadline).toString(16));
+
+  const commandsPart = pad32(commandsBytesLen.toString(16)) + commandsPadded;
+
+  // Encode inputs (bytes[])
+  const inputsCount = inputsHexArray.length;
+  const inputsCountHex = pad32(inputsCount.toString(16));
+
+  let currentElemOffset = inputsCount * 32;
+  let offsetsHex = '';
+  let elementsDataHex = '';
+
+  for (let i = 0; i < inputsCount; i++) {
+    offsetsHex += pad32(currentElemOffset.toString(16));
+    const elemClean = inputsHexArray[i].startsWith('0x') ? inputsHexArray[i].slice(2) : inputsHexArray[i];
+    const elemLen = elemClean.length / 2;
+    const elemPadded = padRight32(elemClean);
+    const elemData = pad32(elemLen.toString(16)) + elemPadded;
+    elementsDataHex += elemData;
+    currentElemOffset += elemData.length / 2;
+  }
+
+  const inputsPart = inputsCountHex + offsetsHex + elementsDataHex;
+  const headHex = pad32(offsetCommands.toString(16)) + pad32(offsetInputs.toString(16)) + deadlineHex;
+
+  return '0x3593564c' + headHex + commandsPart + inputsPart;
 }
 
 /**
@@ -534,20 +593,82 @@ export function disassembleCommandsHex(commandsHex: string): UniversalRouterComm
 }
 
 /**
- * Generates an EIP-712 typed signature for Permit2.
+ * Creates EIP-712 structured data for Permit2 (PermitSingle)
+ */
+export function createPermit2TypedData(
+  token: Token,
+  spender: string,
+  chainId: number,
+  amount: string = '1461501637330902918203684832716283019655932542975', // max uint160
+  nonce: number = 0,
+  expirationSeconds: number = 86400 * 30, // 30 days
+  sigDeadlineMinutes: number = 60
+) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expiration = nowSec + expirationSeconds;
+  const sigDeadline = nowSec + sigDeadlineMinutes * 60;
+
+  return {
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' },
+      ],
+      PermitSingle: [
+        { name: 'details', type: 'PermitDetails' },
+        { name: 'spender', type: 'address' },
+        { name: 'sigDeadline', type: 'uint256' },
+      ],
+      PermitDetails: [
+        { name: 'token', type: 'address' },
+        { name: 'amount', type: 'uint160' },
+        { name: 'expiration', type: 'uint48' },
+        { name: 'nonce', type: 'uint48' },
+      ],
+    },
+    primaryType: 'PermitSingle',
+    domain: {
+      name: 'Permit2',
+      chainId,
+      verifyingContract: PERMIT2_CONTRACT_ADDRESS,
+    },
+    message: {
+      details: {
+        token: token.address,
+        amount,
+        expiration,
+        nonce,
+      },
+      spender,
+      sigDeadline,
+    },
+  };
+}
+
+/**
+ * Formats a Permit2 EIP-712 signature object from real signature or typed payload.
  */
 export function generatePermit2EIP712Payload(
   token: Token,
   spender: string,
-  amount: string = '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+  amount: string = '1461501637330902918203684832716283019655932542975',
   nonce: number = 0,
-  deadlineMinutes: number = 43200 // 30 days
+  deadlineMinutes: number = 43200, // 30 days
+  realSignature?: string
 ): Permit2EIP712Signature {
   const deadline = Math.floor(Date.now() / 1000) + deadlineMinutes * 60;
-  const r = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-  const s = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-  const v = Math.random() > 0.5 ? 27 : 28;
-  const signatureHex = `${r}${s.slice(2)}${v.toString(16)}`;
+
+  let r = '0x' + '0'.repeat(64);
+  let s = '0x' + '0'.repeat(64);
+  let v = 27;
+  let signatureHex = realSignature || '';
+
+  if (realSignature && realSignature.startsWith('0x') && realSignature.length === 132) {
+    r = '0x' + realSignature.slice(2, 66);
+    s = '0x' + realSignature.slice(66, 130);
+    v = parseInt(realSignature.slice(130, 132), 16);
+  }
 
   return {
     tokenAddress: token.address,

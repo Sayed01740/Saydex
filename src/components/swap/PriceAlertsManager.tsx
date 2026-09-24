@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PriceAlert, Token } from '../../types';
 import { useProtocol } from '../../context/ProtocolContext';
 import { TokenIcon } from '../common/TokenIcon';
@@ -10,6 +10,8 @@ import {
   ArrowRight,
   Plus,
   ChevronDown,
+  Bell,
+  Volume2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -25,6 +27,20 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
   const { priceAlerts, tokens, removePriceAlert, simulatePriceAlertTrigger } = useProtocol();
   const [filter, setFilter] = useState<'all' | 'active' | 'triggered'>('all');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<string>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+
+  const handleRequestPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        setNotificationPermission(perm);
+      } catch (err) {
+        console.warn('Failed to request notification permission:', err);
+      }
+    }
+  };
 
   const filteredAlerts = useMemo(() => {
     return priceAlerts.filter((alert) => {
@@ -157,6 +173,23 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
               </span>
             </div>
 
+            {/* Desktop Push Notification Permission Banner */}
+            {notificationPermission !== 'granted' && typeof window !== 'undefined' && 'Notification' in window && (
+              <div className="mx-4 sm:mx-5 my-2.5 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 text-indigo-300">
+                  <Bell className="w-4 h-4 shrink-0 text-indigo-400" />
+                  <span>Enable desktop push notifications for instant real-time market price alerts even when tab is in background.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRequestPermission}
+                  className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer transition-all shadow-sm"
+                >
+                  Enable Push Notifications
+                </button>
+              </div>
+            )}
+
       {/* Alerts Grid / List */}
       <div className="p-4 sm:p-5">
         {filteredAlerts.length > 0 ? (
@@ -268,15 +301,15 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        {/* Instant Test / Trigger Button */}
+                        {/* Audio Chime & Trigger Test */}
                         {alert.status === 'active' && (
                           <button
                             type="button"
                             onClick={() => simulatePriceAlertTrigger(alert.id)}
                             className="p-1.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--primary-subtle)] text-[var(--text-tertiary)] hover:text-[var(--primary)] transition-all cursor-pointer"
-                            title="Simulate / Trigger this alert now"
+                            title="Test Audio Chime & Notification for this alert"
                           >
-                            <Zap className="w-3.5 h-3.5" />
+                            <Volume2 className="w-3.5 h-3.5" />
                           </button>
                         )}
 

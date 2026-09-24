@@ -14,6 +14,8 @@ import {
   encodeCommandsByteString,
   disassembleCommandsHex,
   buildSwapUniversalRouterExecution,
+  encodeUniversalRouterExecute,
+  createPermit2TypedData,
 } from '../../utils/universalRouterEncoder';
 import { MOCK_NFT_ITEMS } from '../../data/universalRouterData';
 import { Button } from '../common/Button';
@@ -179,14 +181,22 @@ export const UniversalRouterView: React.FC = () => {
       const summary = pipelineSteps.map((s) => s.name).join(' -> ');
       
       const routerAddress = currentDeployment.routerAddress;
+      const deadline = Math.floor(Date.now() / 1000) + 1800;
+      const calldata = encodeUniversalRouterExecute(
+        compiledCommandsHex,
+        pipelineSteps.map((s) => s.inputBytesHex),
+        deadline
+      );
+
       const tx = await sendTransaction({
         to: routerAddress,
         value: '0x0',
-        data: `0x3593564c${compiledCommandsHex.replace('0x', '')}`,
-        title: `Universal Router: ${pipelineSteps.length} Opcodes`,
+        data: calldata,
+        title: `Universal Router: ${pipelineSteps.length} Opcodes (execute)`,
       });
 
-      executeUniversalRouterCalldata(compiledCommandsHex, pipelineSteps.length, summary);
+      const txHash = tx?.hash || (typeof tx === 'string' ? tx : undefined);
+      executeUniversalRouterCalldata(compiledCommandsHex, pipelineSteps.length, summary, txHash, totalGas);
       setIsExecutingPipeline(false);
     } catch (err: any) {
       console.warn('Pipeline execution rejected:', err);
@@ -203,16 +213,25 @@ export const UniversalRouterView: React.FC = () => {
     try {
       setIsExecutingAtomicNft(true);
       const summary = `PERMIT2_PERMIT -> V3_SWAP (${nftPayToken} -> WETH) -> ${selectedNft.marketplace} (${selectedNft.collectionName} ${selectedNft.tokenId}) -> SWEEP`;
-      const randomCommands = '0x0200210b';
+      const nftCommands = '0x0200210b';
+      const deadline = Math.floor(Date.now() / 1000) + 1800;
+      const nftInputs = [
+        '0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000000000',
+        '0x00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000de0b6b3a7640000',
+        '0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000',
+        '0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000',
+      ];
+      const calldata = encodeUniversalRouterExecute(nftCommands, nftInputs, deadline);
       
       const tx = await sendTransaction({
         to: currentDeployment.routerAddress,
         value: '0x0',
-        data: '0x3593564c0200210b',
+        data: calldata,
         title: `Atomic NFT Swap: ${selectedNft.collectionName} #${selectedNft.tokenId}`,
       });
 
-      executeUniversalRouterCalldata(randomCommands, 4, summary);
+      const txHash = tx?.hash || (typeof tx === 'string' ? tx : undefined);
+      executeUniversalRouterCalldata(nftCommands, 4, summary, txHash, 142000);
       setIsExecutingAtomicNft(false);
       addToast({
         type: 'success',
@@ -233,45 +252,21 @@ export const UniversalRouterView: React.FC = () => {
   const handleSignPermit2WithWallet = async (tokenSymbol: string) => {
     try {
       setIsSigningPermit2(true);
-      const typedData = {
-        types: {
-          EIP712Domain: [
-            { name: 'name', type: 'string' },
-            { name: 'chainId', type: 'uint256' },
-            { name: 'verifyingContract', type: 'address' },
-          ],
-          PermitSingle: [
-            { name: 'details', type: 'PermitDetails' },
-            { name: 'spender', type: 'address' },
-            { name: 'sigDeadline', type: 'uint256' },
-          ],
-          PermitDetails: [
-            { name: 'token', type: 'address' },
-            { name: 'amount', type: 'uint160' },
-            { name: 'expiration', type: 'uint48' },
-            { name: 'nonce', type: 'uint48' },
-          ],
-        },
-        primaryType: 'PermitSingle',
-        domain: {
-          name: 'Permit2',
-          chainId: selectedChainId,
-          verifyingContract: PERMIT2_CONTRACT_ADDRESS,
-        },
-        message: {
-          details: {
-            token: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-            amount: '1461501637330902918203684832716283019655932542975',
-            expiration: Math.floor(Date.now() / 1000) + 86400 * 30,
-            nonce: 0,
-          },
-          spender: currentDeployment.routerAddress,
-          sigDeadline: Math.floor(Date.now() / 1000) + 3600,
-        },
-      };
+      const targetToken = tokens.find((t) => t.symbol === tokenSymbol) || {
+        address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        symbol: tokenSymbol,
+        name: tokenSymbol,
+        decimals: 18,
+      } as any;
 
-      await signTypedDataV4(typedData);
-      signPermit2Approval(tokenSymbol);
+      const typedData = createPermit2TypedData(
+        targetToken,
+        currentDeployment.routerAddress,
+        selectedChainId
+      );
+
+      const signResult = await signTypedDataV4(typedData);
+      signPermit2Approval(tokenSymbol, undefined, signResult.signature, currentDeployment.routerAddress);
       setIsSigningPermit2(false);
     } catch (err: any) {
       console.warn('Permit2 signing rejected:', err);

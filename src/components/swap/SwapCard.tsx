@@ -57,6 +57,8 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 }) => {
   const {
     isConnected,
+    address,
+    signTypedDataV4,
     ethBalance,
     usdcBalance,
     getTokenBalance,
@@ -165,6 +167,86 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   const [limitCondition, setLimitCondition] = useState<'gte' | 'lte'>('gte');
   const [limitExpiryDays, setLimitExpiryDays] = useState<number>(7);
   const [isLimitSuccess, setIsLimitSuccess] = useState(false);
+  const [isSigningLimitOrder, setIsSigningLimitOrder] = useState(false);
+
+  const handlePlaceLimitOrder = async () => {
+    if (!amountIn || parseFloat(amountIn) <= 0 || !limitTargetPrice) return;
+    if (!address) {
+      setIsWalletModalOpen(true);
+      return;
+    }
+
+    setIsSigningLimitOrder(true);
+    try {
+      const targetNum = parseFloat(limitTargetPrice) || (tokenIn.priceUSD * 1.05);
+      const estOut = (parseFloat(amountIn) * targetNum).toFixed(4);
+      const expiryTimestamp = limitExpiryDays > 0 ? Date.now() + limitExpiryDays * 86400000 : 0;
+
+      const typedData = {
+        types: {
+          EIP712Domain: [
+            { name: 'name', type: 'string' },
+            { name: 'version', type: 'string' },
+            { name: 'chainId', type: 'uint256' },
+            { name: 'verifyingContract', type: 'address' },
+          ],
+          LimitOrder: [
+            { name: 'maker', type: 'address' },
+            { name: 'tokenIn', type: 'address' },
+            { name: 'tokenOut', type: 'address' },
+            { name: 'amountIn', type: 'string' },
+            { name: 'minAmountOut', type: 'string' },
+            { name: 'targetPrice', type: 'string' },
+            { name: 'condition', type: 'string' },
+            { name: 'nonce', type: 'uint256' },
+            { name: 'deadline', type: 'uint256' },
+          ],
+        },
+        primaryType: 'LimitOrder',
+        domain: {
+          name: 'Saydex Limit Orders',
+          version: '1',
+          chainId: selectedChain.id,
+          verifyingContract: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
+        },
+        message: {
+          maker: address,
+          tokenIn: tokenIn.address,
+          tokenOut: tokenOut.address,
+          amountIn,
+          minAmountOut: estOut,
+          targetPrice: targetNum.toString(),
+          condition: limitCondition,
+          nonce: Date.now(),
+          deadline: expiryTimestamp > 0 ? Math.floor(expiryTimestamp / 1000) : Math.floor(Date.now() / 1000) + 86400 * 30,
+        },
+      };
+
+      const sigResult = await signTypedDataV4(typedData);
+
+      limitOrdersService.createLimitOrder({
+        userAddress: address,
+        chainId: selectedChain.id,
+        tokenIn,
+        tokenOut,
+        amountIn,
+        minAmountOut: estOut,
+        targetPrice: targetNum,
+        currentPriceAtCreation: tokenIn.priceUSD || 0,
+        condition: limitCondition,
+        expiresAt: expiryTimestamp,
+        signature: sigResult.signature,
+        signedAt: sigResult.signedAt,
+      });
+
+      setIsLimitSuccess(true);
+      setTimeout(() => setIsLimitSuccess(false), 3500);
+    } catch (err: any) {
+      console.error('Limit order signing cancelled or rejected:', err);
+    } finally {
+      setIsSigningLimitOrder(false);
+    }
+  };
 
   // Debounced live on-chain quoting effect against QuoterV2
   useEffect(() => {
@@ -629,28 +711,16 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!amountIn || parseFloat(amountIn) <= 0 || !limitTargetPrice}
-            onClick={() => {
-              const targetNum = parseFloat(limitTargetPrice) || (tokenIn.priceUSD * 1.05);
-              const estOut = (parseFloat(amountIn) * targetNum).toFixed(2);
-              limitOrdersService.createLimitOrder({
-                userAddress: '0x38D6F3921B5D343b67Ce847c2F1e5D6bE4929810',
-                chainId: selectedChain.id,
-                tokenIn,
-                tokenOut,
-                amountIn,
-                minAmountOut: estOut,
-                targetPrice: targetNum,
-                currentPriceAtCreation: tokenIn.priceUSD || 2424.65,
-                condition: limitCondition,
-                expiresAt: limitExpiryDays > 0 ? Date.now() + limitExpiryDays * 86400000 : 0,
-              });
-              setIsLimitSuccess(true);
-              setTimeout(() => setIsLimitSuccess(false), 3000);
-            }}
+            disabled={!amountIn || parseFloat(amountIn) <= 0 || !limitTargetPrice || isSigningLimitOrder}
+            onClick={handlePlaceLimitOrder}
             className="mt-1 bg-indigo-500 hover:bg-indigo-400 text-white font-bold gap-2"
           >
-            {isLimitSuccess ? (
+            {isSigningLimitOrder ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Signing via Wallet (EIP-712)...</span>
+              </>
+            ) : isLimitSuccess ? (
               <>
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Limit Order Placed Gaslessly!</span>
