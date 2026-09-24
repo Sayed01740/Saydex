@@ -303,7 +303,7 @@ export class UniswapV3Service {
     // exactInputSingle params:
     // (address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)
     // selector: 0x04e45aaf
-    const recipient = isNativeOut ? '0x0000000000000000000000000000000000000002' : params.userAddress; // 2 indicates SwapRouter router unwraps WETH to user
+    const recipient = isNativeOut ? routerAddress : params.userAddress;
     const exactInputSingleParams = `${padAddress(tokenInAddress)}${padAddress(tokenOutAddress)}${pad32Bytes(fee)}${padAddress(recipient)}${pad32Bytes(rawAmountIn)}${pad32Bytes(rawMinAmountOut)}${pad32Bytes(0)}`;
     const exactInputSingleCall = `0x04e45aaf${exactInputSingleParams}`;
 
