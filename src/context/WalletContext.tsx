@@ -351,13 +351,33 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setWalletLogs(walletLogger.getLogs());
   }, []);
 
-  const disconnectWallet = useCallback(() => {
+  const disconnectWallet = useCallback(async () => {
     walletLogger.info('PROVIDER_SELECTION', 'Disconnecting wallet and resetting local session.');
+
+    // Revoke wallet permissions if extension supports EIP-2255
+    if (typeof window !== 'undefined') {
+      try {
+        const eth = getActiveInjectedProvider(walletProvider);
+        if (eth?.request) {
+          await eth.request({
+            method: 'wallet_revokePermissions',
+            params: [{ eth_accounts: {} }],
+          });
+        }
+      } catch (err) {
+        // Ignored if wallet doesn't support revokePermissions
+      }
+    }
+
     setIsConnected(false);
     setAddress(null);
     setEnsName(null);
     setWalletProvider(null);
     setIsRealExtensionConnected(false);
+    setDetectedChainId(null);
+    detectedChainIdRef.current = null;
+    addressRef.current = null;
+    isRealRef.current = false;
     setEthBalance(0);
     setUsdcBalance(0);
     setTokenBalances({});
@@ -369,7 +389,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEY_ADDRESS);
     localStorage.removeItem(STORAGE_KEY_ENS);
     localStorage.removeItem(STORAGE_KEY_IS_REAL);
-  }, []);
+  }, [walletProvider]);
 
   /**
    * Refactored Balance Detection Engine:
@@ -545,9 +565,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
               });
           } else {
             walletLogger.info('PROVIDER_DISCOVERY', 'No pre-authorized accounts returned by provider. Awaiting explicit user connection.');
-            // Clear detectedChainId when no account is connected so false mismatch warnings are never shown
+            setIsConnected(false);
+            setAddress(null);
+            setIsRealExtensionConnected(false);
             setDetectedChainId(null);
             detectedChainIdRef.current = null;
+            addressRef.current = null;
+            isRealRef.current = false;
+            setEthBalance(0);
+            setUsdcBalance(0);
+            setTokenBalances({});
+            setChainSummaries({});
+            setTotalPortfolioUSD(0);
+            localStorage.removeItem(STORAGE_KEY_CONNECTED);
+            localStorage.removeItem(STORAGE_KEY_ADDRESS);
           }
         })
         .catch((err: any) => {
@@ -682,6 +713,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // Helper to query token balance for any token object or symbol
   const getTokenBalance = useCallback(
     (tokenOrSymbol: string | Token, chainId?: number): number => {
+      // If wallet is not connected, user balance is strictly 0.00
+      if (!addressRef.current || !isConnected) {
+        return 0;
+      }
+
       const targetChainId = chainId || (typeof tokenOrSymbol === 'object' && tokenOrSymbol.chainId ? tokenOrSymbol.chainId : selectedChain.id);
       
       let tokenKey = '';
@@ -702,7 +738,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           (sym === 'SEP' && targetChainId === 11155111);
 
         if (isNative) {
-          return chainSummaries[targetChainId]?.nativeBalance ?? (targetChainId === selectedChain.id ? ethBalance : (isRealExtensionConnected ? 0 : (tokenOrSymbol.balance || 0)));
+          return chainSummaries[targetChainId]?.nativeBalance ?? (targetChainId === selectedChain.id ? ethBalance : 0);
         }
 
         tokenKey = `${targetChainId}:${tokenOrSymbol.address.toLowerCase()}`;
@@ -741,13 +777,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (typeof tokenOrSymbol === 'object' && !isRealExtensionConnected && tokenOrSymbol.balance !== undefined) {
-        return tokenOrSymbol.balance;
-      }
-
       return 0;
     },
-    [tokenBalances, chainSummaries, selectedChain, ethBalance, isRealExtensionConnected]
+    [tokenBalances, chainSummaries, selectedChain, ethBalance, isConnected]
   );
 
   const getNativeBalanceForChain = useCallback(

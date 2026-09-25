@@ -315,7 +315,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                   Multi-Chain Net Worth
                 </span>
                 <p className="text-xl font-bold text-[var(--text-primary)] font-mono">
-                  ${(totalPortfolioUSD > 0 ? totalPortfolioUSD : ethBalance * 3482.5 + usdcBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${(totalPortfolioUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
               <div className="text-right">

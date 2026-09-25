@@ -23,35 +23,8 @@ export interface TokenBalanceResult {
   formatted: string;
 }
 
-// Known simulated preset addresses
-const DEMO_PRESET_ADDRESSES = new Set([
-  '0x38D6F3921B5D343b67Ce847c2F1e5D6bE4929810'.toLowerCase(),
-  '0x71C25e378A9C1284b3e8eD063A4a8996bDf6631E'.toLowerCase(),
-  '0x92AE1a40398F657519bCe1953fC1f3A8849fFa97'.toLowerCase(),
-  '0x5B4136C70d0E2903820FcaFdDF56Bcf800F174B8'.toLowerCase(),
-  '0x44Fe853A4753551528Ec96C72b78f441C2A5f448'.toLowerCase(),
-  '0x1943A45C3358055610214Ddb2aD348E0D7101502'.toLowerCase(),
-  '0xA82F72e9D349581A7b91d46c82dB49eC91D4B892'.toLowerCase(),
-]);
-
 // Resilient public RPC endpoints per chain
 export const CHAIN_RPC_FALLBACKS: Record<number, string[]> = DEFAULT_NETWORK_RPCS;
-
-// Fallback balance templates ONLY for simulated demo profiles
-export const PRESET_CHAIN_BALANCES: Record<string, Record<number, { native: number; tokens: Record<string, number> }>> = {
-  default: {
-    1: { native: 4.825, tokens: { USDC: 14850.2, USDT: 2400.0, WBTC: 0.42, UNI: 350.0, DAI: 500.0, SAYDEX: 12500.0 } },
-    42161: { native: 2.15, tokens: { ARB: 3400.0, USDC: 4200.0, WETH: 1.8 } },
-    8453: { native: 1.45, tokens: { USDC: 3100.0, AERO: 1850.0, DEGEN: 45000.0 } },
-    10: { native: 0.85, tokens: { OP: 800.0, USDC: 1500.0 } },
-    137: { native: 1850.0, tokens: { POL: 1500.0, USDC: 2200.0 } },
-    56: { native: 3.5, tokens: { BNB: 3.5, CAKE: 450.0, BUSD: 1200.0 } },
-    43114: { native: 45.2, tokens: { AVAX: 45.2, USDC: 1800.0 } },
-    11155111: { native: 10.5, tokens: { SEP: 10.5, UNI: 100.0 } },
-    130: { native: 1.2, tokens: { UNI: 50.0, USDC: 1000.0 } },
-    1301: { native: 1.2, tokens: { UNI: 50.0, USDC: 1000.0 } },
-  },
-};
 
 // Blocklist known restricted/paid/rate-limited RPC domains
 const RESTRICTED_RPC_PATTERNS = ['drpc.org', 'drpc.io', 'infura.io/v3/YOUR', 'alchemy.com/v2/YOUR'];
@@ -135,13 +108,11 @@ export async function fetchAllMultiChainBalances(
   const chainSummaries: Record<number, ChainBalanceSummary> = {};
 
   const cleanAddress = address.trim();
-  const isDemo = !isLiveExtension && DEMO_PRESET_ADDRESSES.has(cleanAddress.toLowerCase());
 
-  walletLogger.info('BALANCE_QUERY', `Initiating multi-chain balance query for ${cleanAddress.slice(0, 8)}...`, {
+  walletLogger.info('BALANCE_QUERY', `Initiating 100% on-chain balance query for ${cleanAddress.slice(0, 8)}...`, {
     activeChainId,
     walletProviderChainId,
     isLiveExtension,
-    isDemo,
   });
 
   // Validate chain alignment with provider
@@ -219,13 +190,7 @@ export async function fetchAllMultiChainBalances(
       bal = await fetchNativeBalanceRpc(rpcEndpoints, cleanAddress, signal, chain.id);
     }
 
-    // If simulated demo profile and offline/unreachable, fallback to preset
-    if (bal === null && isDemo) {
-      const fallbackData = PRESET_CHAIN_BALANCES.default[chain.id];
-      bal = fallbackData ? fallbackData.native : 0;
-    }
-
-    // For real wallets, default unresolved balance to 0, not mock data
+    // Default unresolved or null balance strictly to 0
     const finalBal = bal !== null && !isNaN(bal) ? bal : 0;
     const nativePrice = nativePrices[chain.nativeCurrency.symbol] || 3482.5;
     const usdVal = finalBal * nativePrice;
@@ -262,27 +227,23 @@ export async function fetchAllMultiChainBalances(
   // Curated major token symbols to query actively on real chains
   const MAJOR_SYMBOLS = new Set(['USDC', 'USDT', 'WETH', 'WBTC', 'UNI', 'DAI', 'LINK', 'AAVE', 'AERO', 'ARB', 'OP', 'POL', 'BNB', 'AVAX', 'CAKE', 'DEGEN', 'SAYDEX']);
 
-  // For demo accounts, populate from presets/mock; for real wallets, prioritize activeChain tokens to prevent network starvation
-  const tokensToQuery = isDemo
-    ? tokens
-    : tokens.filter((t) => t.chainId === activeChainId && (MAJOR_SYMBOLS.has(t.symbol.toUpperCase()) || (t.balance && t.balance > 0)));
+  // Query tokens belonging to the active chain
+  const tokensToQuery = tokens.filter((t) => t.chainId === activeChainId);
 
-  // Initialize all tokens in the directory with default zero/demo state
+  // Initialize all tokens in the directory with 0 balance
   tokens.forEach((token) => {
     const tokenKey = `${token.chainId}:${(token.address || token.symbol).toLowerCase()}`;
     const symbolKey = `${token.chainId}:${token.symbol.toUpperCase()}`;
-    const defaultBal = isDemo ? (token.balance ?? 0) : 0;
-    const usdVal = defaultBal * (token.priceUSD || 1);
+    const defaultBal = 0;
+    const usdVal = 0;
 
     const initRes: TokenBalanceResult = {
       key: tokenKey,
       symbol: token.symbol,
       chainId: token.chainId,
-      balance: defaultBal,
-      balanceUSD: usdVal,
-      formatted: defaultBal > 0
-        ? (defaultBal < 0.001 ? defaultBal.toFixed(6) : defaultBal.toLocaleString(undefined, { maximumFractionDigits: 4 }))
-        : '0.00',
+      balance: 0,
+      balanceUSD: 0,
+      formatted: '0.00',
     };
     tokenBalances[tokenKey] = initRes;
     tokenBalances[symbolKey] = initRes;
@@ -301,7 +262,7 @@ export async function fetchAllMultiChainBalances(
 
     // Native token representation
     if (!token.address || token.address === '0x0000000000000000000000000000000000000000') {
-      bal = chainSummaries[token.chainId]?.nativeBalance ?? (isDemo ? (token.balance || 0) : 0);
+      bal = chainSummaries[token.chainId]?.nativeBalance ?? 0;
     } else {
       // Query token balance via injected provider first if on the same chain (10x faster, zero rate limits)
       if (isLiveExtension && typeof window !== 'undefined') {
@@ -322,24 +283,14 @@ export async function fetchAllMultiChainBalances(
             // fallback to public rpc
           }
         }
-
-        if (bal === null) {
-          bal = await fetchTokenBalanceRpc(rpcEndpoints, token.address, cleanAddress, token.decimals, signal, token.chainId);
-        }
       }
-      
-      if (bal === null && isDemo) {
-        // Fallback to preset token balance ONLY for demo accounts
-        const fallbackTokens = PRESET_CHAIN_BALANCES.default[token.chainId]?.tokens;
-        if (fallbackTokens && fallbackTokens[token.symbol] !== undefined) {
-          bal = fallbackTokens[token.symbol];
-        } else {
-          bal = token.balance ?? 0;
-        }
+
+      if (bal === null) {
+        bal = await fetchTokenBalanceRpc(rpcEndpoints, token.address, cleanAddress, token.decimals, signal, token.chainId);
       }
     }
 
-    const safeBal = bal !== null && !isNaN(bal) ? bal : (isDemo ? (token.balance ?? 0) : 0);
+    const safeBal = bal !== null && !isNaN(bal) ? bal : 0;
     const usdVal = safeBal * (token.priceUSD || 1);
 
     const tokenKey = `${token.chainId}:${(token.address || token.symbol).toLowerCase()}`;
@@ -379,15 +330,16 @@ export async function fetchAllMultiChainBalances(
     }
   };
 
-  // Run in concurrent batches of 4 to prevent network socket starvation
+  // Wait for native balances first so native calculations are ready
+  await Promise.allSettled(chainBalancePromises);
+
+  // Run token balance queries in concurrent batches of 4
   const BATCH_SIZE = 4;
   for (let i = 0; i < tokensToQuery.length; i += BATCH_SIZE) {
     if (signal?.aborted) break;
     const batch = tokensToQuery.slice(i, i + BATCH_SIZE);
     await Promise.allSettled(batch.map(processSingleToken));
   }
-
-  await Promise.allSettled(chainBalancePromises);
 
   // Compute grand total
   let totalPortfolioUSD = 0;
