@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
       <header className="sticky top-0 z-40 w-full border-b border-[var(--border-app)] bg-[var(--bg-app)]/85 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Brand & Main Navigation */}
-          <div className="flex items-center gap-8 sm:gap-10">
+          <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 shrink-0">
             <button
               onClick={() => setActiveView('swap')}
               className="cursor-pointer focus:outline-none shrink-0"
@@ -118,14 +118,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
             </button>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1 shrink-0">
               {primaryNavItems.map((item) => {
                 const isActive = activeView === item.id || (item.id === 'pools' && activeView === 'positions');
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
                       isActive
                         ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] border border-[var(--border-strong)] font-semibold shadow-xs'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
@@ -139,17 +139,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
           </div>
 
           {/* Right: Network Selector, Wallet, Theme & Controls */}
-          <div className="flex items-center gap-2.5">
-            {/* Live Testnet Indicator Pill */}
-            {selectedChain.testnet && (
-              <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] font-mono text-amber-400 font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span>Testnet</span>
-              </div>
-            )}
-
-            {/* Live Block Pulse & Network Gas Ticker (Desktop) */}
-            <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-tertiary)] font-mono">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Live Block Pulse & Network Gas Ticker (Desktop only on wide screens) */}
+            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-tertiary)] font-mono shrink-0">
               <div className="flex items-center gap-1.5 pr-1.5 border-r border-[var(--border-subtle)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] text-[var(--text-secondary)]">#{blockNumber.toLocaleString()}</span>
@@ -163,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
             {/* Global Search / Command Palette Trigger (Cmd+K) */}
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+              className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all cursor-pointer shrink-0"
               title="Open Command Palette (Ctrl+K / Cmd+K)"
             >
               <Command className="w-3.5 h-3.5 text-[var(--primary)]" />
@@ -172,9 +164,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                 ⌘K
               </kbd>
             </button>
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="hidden lg:flex xl:hidden p-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all cursor-pointer shrink-0"
+              title="Open Command Palette (Ctrl+K / Cmd+K)"
+            >
+              <Command className="w-3.5 h-3.5 text-[var(--primary)]" />
+            </button>
 
-            {/* Network Selector Dropdown */}
-            <div className="relative">
+            {/* Network Selector Dropdown with Integrated Testnet Badge */}
+            <div className="relative shrink-0">
               <button
                 onClick={() => {
                   if (window.innerWidth < 640) {
@@ -186,14 +185,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
                   isChainMismatch
                     ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                    : selectedChain.testnet
+                    ? 'bg-amber-500/10 border-amber-500/35 hover:border-amber-500/60 text-[var(--text-primary)]'
                     : 'bg-[var(--bg-surface-elevated)] border-[var(--border-app)] hover:border-[var(--border-strong)] text-[var(--text-primary)]'
                 }`}
-                title="Select Blockchain Network"
+                title={`Selected Network: ${selectedChain.name}${selectedChain.testnet ? ' (Testnet)' : ''}`}
               >
-                <div className="w-4 h-4 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/40 flex items-center justify-center text-[9px] font-mono font-bold text-[var(--primary)] shrink-0">
-                  {selectedChain.shortName.charAt(0)}
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/40 flex items-center justify-center text-[9px] font-mono font-bold text-[var(--primary)] shrink-0">
+                    {selectedChain.shortName.charAt(0)}
+                  </div>
+                  {selectedChain.testnet && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[var(--bg-surface)] animate-pulse" />
+                  )}
                 </div>
-                <span className="hidden sm:inline">{selectedChain.shortName}</span>
+                <span className="hidden sm:inline font-semibold">{selectedChain.shortName}</span>
+                {selectedChain.testnet && (
+                  <span className="hidden md:inline-flex items-center px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-mono font-bold uppercase tracking-wider">
+                    Testnet
+                  </span>
+                )}
                 {isChainMismatch && <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />}
                 <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
               </button>

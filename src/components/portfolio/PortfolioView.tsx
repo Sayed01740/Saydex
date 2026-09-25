@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Copy,
   Check,
+  AlertCircle,
 } from 'lucide-react';
 import { ALL_CHAINS } from '../../config/chains';
 import { WalletModal } from '../wallet/WalletModal';
@@ -29,6 +30,7 @@ export const PortfolioView: React.FC = () => {
     formatAddress,
     tokenBalances,
     fixWalletRpc,
+    switchChain,
   } = useWallet();
 
   const { tokens, userPositions, transactions, setActiveView } = useProtocol();
@@ -148,6 +150,31 @@ export const PortfolioView: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Testnet Network Status Notice */}
+      {selectedChain.testnet && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5 sm:mt-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-semibold text-amber-200">
+                Connected to {selectedChain.name} (Testnet)
+              </span>
+              <p className="text-[11px] text-amber-300/80 mt-0.5">
+                Balances and liquidity positions reflect testnet assets only with zero real monetary value.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => switchChain(1)}
+            className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition-colors cursor-pointer shrink-0"
+          >
+            Switch to Mainnet
+          </button>
+        </div>
+      )}
 
       {/* Disconnected State (Uniswap-style) */}
       {!isConnected ? (

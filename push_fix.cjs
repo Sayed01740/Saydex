@@ -12,7 +12,7 @@ async function main() {
   
   // commit
   try {
-    execSync('git commit -m "feat: complete audit and cleanup of all mock blockchain data to 100% authentic on-chain Uniswap v3"', { cwd: dir, stdio: 'inherit' });
+    execSync('git commit -m "fix(ui): eliminate testnet badge collision with Portfolio nav tab and add native testnet banner in Portfolio"', { cwd: dir, stdio: 'inherit' });
   } catch (e) {
     console.log('Commit note:', e.message);
   }
