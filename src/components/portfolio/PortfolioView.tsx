@@ -121,7 +121,7 @@ export const PortfolioView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
             Portfolio Terminal
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -264,7 +264,7 @@ export const PortfolioView: React.FC = () => {
               </div>
 
               <div>
-                <h2 className="text-3xl font-bold font-mono text-[var(--text-primary)]">
+                <h2 className="text-3xl sm:text-4xl font-extrabold font-mono tracking-tight text-[var(--text-primary)]">
                   ${totalNetWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h2>
                 <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] font-mono mt-1">

@@ -498,12 +498,14 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         )}
 
         {/* Input: Token In Terminal */}
-        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] focus-within:border-[var(--primary)]/60 rounded-xl p-3.5 transition-all">
-          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2">
-            <span>You Pay</span>
-            <div className="flex items-center gap-1.5 font-mono">
-              <span>Balance:</span>
-              <span className="text-[var(--text-primary)] font-semibold">
+        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] focus-within:border-[var(--primary)]/60 rounded-2xl p-4 transition-all">
+          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2.5">
+            <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+              You Pay
+            </span>
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <span className="text-[var(--text-tertiary)]">Balance:</span>
+              <span className="text-[var(--text-primary)] font-bold">
                 {userBalanceIn.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenIn.symbol}
               </span>
             </div>
@@ -515,26 +517,26 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               placeholder="0.0"
               value={amountIn}
               onChange={(e) => handleAmountChange(e.target.value)}
-              className="w-full bg-transparent font-mono text-2xl font-bold text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none"
+              className="w-full bg-transparent font-mono text-3xl font-extrabold tracking-tight text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none"
               min="0"
               step="any"
             />
 
             <button
               onClick={() => setSelectorTarget('in')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--border-strong)] transition-all cursor-pointer shrink-0 shadow-xs"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shrink-0 shadow-xs"
             >
               <TokenIcon symbol={tokenIn.symbol} icon={tokenIn.icon} size="sm" />
-              <span className="font-semibold text-sm text-[var(--text-primary)]">
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
                 {tokenIn.symbol}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
             </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border-subtle)] text-xs">
-            <span className="text-[var(--text-tertiary)] font-mono">
-              ≈ ${(parseFloat(amountIn || '0') * tokenIn.priceUSD).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
+            <span className="text-[var(--text-tertiary)] font-mono font-medium">
+              ≈ ${(parseFloat(amountIn || '0') * tokenIn.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
 
             {/* Percentage shortcuts */}
@@ -548,7 +550,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
                 <button
                   key={p.label}
                   onClick={() => handlePercentInput(p.val)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] spring-tactile cursor-pointer"
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wide bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] spring-tactile cursor-pointer"
                 >
                   {p.label}
                 </button>
@@ -558,11 +560,11 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         </div>
 
         {/* Flip Token Trigger Button */}
-        <div className="flex justify-center -my-3 relative z-10">
+        <div className="flex justify-center -my-3.5 relative z-10">
           <motion.button
             onClick={handleFlipTokens}
             animate={{ rotate: isFlipping ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.16 }}
             className="w-9 h-9 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] flex items-center justify-center shadow-md transition-colors cursor-pointer"
             title="Invert swap direction"
           >
@@ -571,19 +573,21 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         </div>
 
         {/* Input: Token Out Terminal */}
-        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] rounded-xl p-3.5 transition-all">
-          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2">
-            <span>You Receive (Estimated)</span>
-            <div className="flex items-center gap-1.5 font-mono">
-              <span>Balance:</span>
-              <span className="text-[var(--text-primary)] font-semibold">
+        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] rounded-2xl p-4 transition-all">
+          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2.5">
+            <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+              You Receive (Estimated)
+            </span>
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              <span className="text-[var(--text-tertiary)]">Balance:</span>
+              <span className="text-[var(--text-primary)] font-bold">
                 {userBalanceOut.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenOut.symbol}
               </span>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="w-full font-mono text-2xl font-bold text-[var(--primary)] select-all truncate flex items-center gap-2">
+            <div className="w-full font-mono text-3xl font-extrabold tracking-tight text-[var(--primary)] select-all truncate flex items-center gap-2">
               {isQuoting ? (
                 <div className="h-8 w-44 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shimmer-wave flex items-center px-2">
                   <span className="text-xs font-sans text-[var(--text-tertiary)] flex items-center gap-1.5">
@@ -598,19 +602,19 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
             <button
               onClick={() => setSelectorTarget('out')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--border-strong)] transition-all cursor-pointer shrink-0 shadow-xs"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shrink-0 shadow-xs"
             >
               <TokenIcon symbol={tokenOut.symbol} icon={tokenOut.icon} size="sm" />
-              <span className="font-semibold text-sm text-[var(--text-primary)]">
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
                 {tokenOut.symbol}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
             </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border-subtle)] text-xs">
-            <span className="text-[var(--text-tertiary)] font-mono">
-              ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
+            <span className="text-[var(--text-tertiary)] font-mono font-medium">
+              ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>

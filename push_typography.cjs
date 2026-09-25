@@ -10,7 +10,7 @@ async function main() {
   execSync('git add -A', { cwd: dir, stdio: 'inherit' });
   
   try {
-    execSync('git commit -m "refactor(ui): streamline navbar, remove visual clutter and empty card noise, optimize animations for ultra-smooth 60fps performance"', { cwd: dir, stdio: 'inherit' });
+    execSync('git commit -m "style(typography): upgrade UI typography with Geist, Inter, Plus Jakarta Sans, tabular numbers, and luxury micro-labels"', { cwd: dir, stdio: 'inherit' });
   } catch (e) {
     console.log('Commit note:', e.message);
   }

@@ -221,16 +221,18 @@ export const ExploreView: React.FC = () => {
                     </div>
                   </td>
 
-                  <td className="py-3 px-4 text-right font-mono font-semibold text-[var(--text-primary)]">
+                  <td className="py-3 px-4 text-right font-mono font-bold tracking-tight text-[var(--text-primary)]">
                     ${tok.priceUSD < 0.01
                       ? tok.priceUSD.toFixed(6)
                       : tok.priceUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                   </td>
 
-                  <td className="py-3 px-4 text-right font-mono font-semibold">
+                  <td className="py-3 px-4 text-right font-mono">
                     <span
-                      className={`inline-flex items-center gap-0.5 ${
-                        tok.change24h >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'
+                      className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold ${
+                        tok.change24h >= 0
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                       }`}
                     >
                       {tok.change24h >= 0 ? '+' : ''}{tok.change24h}%
