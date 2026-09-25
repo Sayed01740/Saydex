@@ -124,6 +124,10 @@ export const RecentTradesTable: React.FC<RecentTradesTableProps> = ({ onSelectPa
     return found?.icon || fallbackIcon;
   };
 
+  if (swapTrades.length === 0) {
+    return null;
+  }
+
   return (
     <div id="recent-trades-section" className="w-full mt-6">
       <div className="bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden transition-all">

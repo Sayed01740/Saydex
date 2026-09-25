@@ -67,6 +67,10 @@ export const PriceAlertsManager: React.FC<PriceAlertsManagerProps> = ({
     return tokens.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
   };
 
+  if (priceAlerts.length === 0) {
+    return null;
+  }
+
   return (
     <div id="price-alerts-manager" className="w-full bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl shadow-xs overflow-hidden transition-all">
       {/* Clickable Header for Collapsible / Minimize */}

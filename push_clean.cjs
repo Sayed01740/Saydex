@@ -7,17 +7,14 @@ const { execSync } = require('child_process');
 async function main() {
   const dir = path.resolve('F:/Unx');
   
-  // stage all changes
   execSync('git add -A', { cwd: dir, stdio: 'inherit' });
   
-  // commit
   try {
-    execSync('git commit -m "fix(ui): eliminate testnet badge collision with Portfolio nav tab and add native testnet banner in Portfolio"', { cwd: dir, stdio: 'inherit' });
+    execSync('git commit -m "refactor(ui): streamline navbar, remove visual clutter and empty card noise, optimize animations for ultra-smooth 60fps performance"', { cwd: dir, stdio: 'inherit' });
   } catch (e) {
     console.log('Commit note:', e.message);
   }
 
-  // get gh auth token
   const token = execSync('gh auth token', { encoding: 'utf8' }).trim();
   if (!token) {
     throw new Error('No GH token available');

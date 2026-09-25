@@ -16,13 +16,6 @@ export const Footer: React.FC = () => {
           <span className="text-[var(--border-strong)] hidden sm:inline">•</span>
 
           <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-            <Activity className="w-3.5 h-3.5 text-[var(--primary)]" />
-            <span>Block #21,849,214</span>
-          </div>
-
-          <span className="text-[var(--border-strong)] hidden sm:inline">•</span>
-
-          <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
             <ShieldCheck className="w-3.5 h-3.5 text-[var(--primary)]" />
             <span>MEV Protected Router</span>
           </div>
