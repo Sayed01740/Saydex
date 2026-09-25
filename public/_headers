@@ -1,0 +1,12 @@
+# Global Cloudflare Edge security & performance headers
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Robots-Tag: index, follow
+
+# Static Assets Cache Optimization for Cloudflare Global CDN
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

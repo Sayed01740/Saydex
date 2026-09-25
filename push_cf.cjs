@@ -7,14 +7,10 @@ async function main() {
   const token = execSync('gh auth token').toString().trim();
   console.log('GitHub token acquired.');
 
-  if (fs.existsSync('scratch_push.js')) {
-    fs.unlinkSync('scratch_push.js');
-  }
-
   execSync('git add -A');
   console.log('Staged files.');
 
-  execSync('git commit -m "feat: Add 100% Uniswap-like Custom EVM Chain integration with live RPC ping and EIP-3085 sync"');
+  execSync('git commit -m "feat: Add full Cloudflare integration (Pages config, edge headers, redirects, wrangler deploy scripts)"');
   console.log('Committed changes.');
 
   const pushResult = await git.push({
@@ -27,8 +23,8 @@ async function main() {
   });
   console.log('Push result:', pushResult);
 
-  if (fs.existsSync('scratch_push.cjs')) {
-    fs.unlinkSync('scratch_push.cjs');
+  if (fs.existsSync('push_cf.cjs')) {
+    fs.unlinkSync('push_cf.cjs');
   }
 }
 
