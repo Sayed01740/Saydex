@@ -33,6 +33,7 @@ import { LimitOrdersManager } from './LimitOrdersManager';
 import { FiatOnRampModal } from '../common/FiatOnRampModal';
 import { limitOrdersService } from '../../services/limitOrdersService';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
+import { audioFeedback } from '../../utils/audioFeedback';
 
 interface SwapCardProps {
   onToggleChart?: () => void;
@@ -342,6 +343,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   const isInsufficientBalance = isConnected && parseFloat(amountIn || '0') > userBalanceIn;
 
   const handleFlipTokens = () => {
+    audioFeedback.playFlip();
     setIsFlipping(true);
     setTimeout(() => {
       const prevIn = tokenIn;
@@ -354,6 +356,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   };
 
   const handleSelectToken = (selected: Token) => {
+    audioFeedback.playClick();
     if (selectorTarget === 'in') {
       if (selected.symbol === tokenOut.symbol) {
         setTokenOut(tokenIn);
@@ -370,6 +373,12 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   };
 
   const handlePercentInput = (pct: number) => {
+    audioFeedback.playClick();
+    if (userBalanceIn <= 0) {
+      setAmountIn('0');
+      if (onAmountInChanged) onAmountInChanged('0');
+      return;
+    }
     const val = (userBalanceIn * pct).toFixed(tokenIn.decimals > 8 ? 4 : 2);
     setAmountIn(val);
     if (onAmountInChanged) onAmountInChanged(val);
@@ -382,8 +391,13 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
   return (
     <>
-      <div className="w-full max-w-[480px] mx-auto bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl p-4 sm:p-5 shadow-[var(--shadow-card)] transition-all">
-        {/* Header: Tab Switcher (Swap vs Limit vs Buy with Card), Chart toggle, Settings */}
+      <div className="relative w-full max-w-[480px] mx-auto">
+        {/* Ambient Aurora Glow Backdrop */}
+        <div className="aurora-glow-cyan w-64 h-64 -top-10 -left-10 opacity-70 pointer-events-none" />
+        <div className="aurora-glow-indigo w-64 h-64 -bottom-10 -right-10 opacity-60 pointer-events-none" />
+
+        <div className="relative w-full glass-panel rounded-3xl p-4 sm:p-5 shadow-[var(--shadow-card)] transition-all">
+          {/* Header: Tab Switcher (Swap vs Limit vs Buy with Card), Chart toggle, Settings */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-subtle)]">
             <button
@@ -528,12 +542,13 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               {[
                 { label: '25%', val: 0.25 },
                 { label: '50%', val: 0.5 },
+                { label: '75%', val: 0.75 },
                 { label: 'MAX', val: 1.0 },
               ].map((p) => (
                 <button
                   key={p.label}
                   onClick={() => handlePercentInput(p.val)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-all cursor-pointer"
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] spring-tactile cursor-pointer"
                 >
                   {p.label}
                 </button>
@@ -570,10 +585,12 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           <div className="flex items-center justify-between gap-3">
             <div className="w-full font-mono text-2xl font-bold text-[var(--primary)] select-all truncate flex items-center gap-2">
               {isQuoting ? (
-                <span className="text-sm font-sans font-medium text-[var(--text-tertiary)] flex items-center gap-1.5 animate-pulse">
-                  <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />
-                  <span>Fetching QuoterV2 route...</span>
-                </span>
+                <div className="h-8 w-44 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shimmer-wave flex items-center px-2">
+                  <span className="text-xs font-sans text-[var(--text-tertiary)] flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary)]" />
+                    <span>Best route...</span>
+                  </span>
+                </div>
               ) : (
                 quote.amountOut
               )}
@@ -663,10 +680,22 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         {tradeMode === 'swap' && (
           <div className="my-3 space-y-2">
             <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] px-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[var(--text-tertiary)]">Rate</span>
                 <span className="font-mono font-medium text-[var(--text-primary)]">
                   1 {tokenIn.symbol} = {quote.executionPrice.toFixed(4)} {tokenOut.symbol}
+                </span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold ${
+                    quote.priceImpact < 0.05
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : quote.priceImpact < 0.5
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                  }`}
+                  title="Estimated Price Impact against market pool reserves"
+                >
+                  {quote.priceImpact < 0.01 ? '<0.01%' : `${quote.priceImpact.toFixed(2)}%`} Impact
                 </span>
               </div>
               {onOpenSetAlertModal && (
@@ -748,6 +777,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               : 'Review Swap'}
           </Button>
         )}
+        </div>
       </div>
 
       {/* Render Active Limit Orders below the card when on Limit Mode */}

@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   Check,
+  Copy,
   Plus,
   ArrowDownRight,
   ArrowUpRight,
@@ -27,6 +28,7 @@ import {
 import { Button } from '../common/Button';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
 import { tokenDiscoveryService } from '../../services/tokenDiscoveryService';
+import { audioFeedback } from '../../utils/audioFeedback';
 
 interface TokenSelectorModalProps {
   isOpen: boolean;
@@ -53,6 +55,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   const [displayCount, setDisplayCount] = useState(45);
   const [isResolvingOnChain, setIsResolvingOnChain] = useState(false);
   const [discoveredToken, setDiscoveredToken] = useState<Token | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Custom Token Import State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -191,6 +194,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   };
 
   const handleTokenClick = (token: Token) => {
+    audioFeedback.playClick();
     if (token.riskAudit && !token.isVerified) {
       setWarningToken(token);
       return;
@@ -220,7 +224,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
       icon: '',
       priceUSD: 1.0,
       change24h: 0.0,
-      balance: 1000.0,
+      balance: 0,
       volume24hUSD: 50000,
       isVerified: false,
       category: 'defi',
@@ -314,10 +318,10 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
               <button
                 key={`${tok.chainId || 1}-${tok.symbol}`}
                 onClick={() => handleTokenClick(tok)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium spring-tactile cursor-pointer ${
                   selectedToken?.symbol === tok.symbol
                     ? 'bg-[var(--primary-subtle)] border-[var(--primary)]/50 text-[var(--primary)] font-semibold shadow-xs'
-                    : 'bg-[var(--bg-subtle)] border-[var(--border-app)] text-[var(--text-primary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-hover)]'
+                    : 'bg-[var(--bg-subtle)] border-[var(--border-app)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--bg-surface-hover)]'
                 }`}
               >
                 <TokenIcon symbol={tok.symbol} icon={tok.icon} size="xs" />
@@ -453,19 +457,37 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                 <button
                   key={`${tok.chainId}-${tok.address}-${tok.symbol}`}
                   onClick={() => handleTokenClick(tok)}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left cursor-pointer border ${
+                  className={`w-full group flex items-center justify-between p-2.5 rounded-xl transition-all text-left cursor-pointer border ${
                     isSelected
                       ? 'bg-[var(--primary-subtle)] border-[var(--primary)]/40 shadow-xs'
                       : 'hover:bg-[var(--bg-surface-hover)] border-transparent hover:border-[var(--border-subtle)]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <TokenIcon symbol={tok.symbol} icon={tok.icon} size="md" />
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-sm text-[var(--text-primary)]">
                           {tok.symbol}
                         </span>
+                        {tok.address && tok.address !== '0x0000000000000000000000000000000000000000' && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(tok.address);
+                              setCopiedAddress(tok.address);
+                              setTimeout(() => setCopiedAddress(null), 1500);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                            title="Copy Contract Address"
+                          >
+                            {copiedAddress === tok.address ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </span>
+                        )}
                         {chainName && (
                           <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${
                             tok.chainId === selectedChain.id

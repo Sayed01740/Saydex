@@ -23,7 +23,13 @@ import {
   Network,
   Flame,
   AlertCircle,
+  Command,
+  Zap,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
+import { CommandPaletteModal } from '../common/CommandPaletteModal';
+import { audioFeedback } from '../../utils/audioFeedback';
 
 interface NavbarProps {
   onOpenSettings?: () => void;
@@ -50,7 +56,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
   const [isChainModalOpen, setIsChainModalOpen] = useState(false);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(() => audioFeedback.getEnabled());
+  const [blockNumber, setBlockNumber] = useState(21894120);
   const [availableChains, setAvailableChains] = useState<Chain[]>(getAllChains());
+
+  // Global Cmd+K / Ctrl+K keyboard shortcut
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Live block ticker simulation
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setBlockNumber((prev) => prev + 1);
+    }, 12000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const toggleSound = () => {
+    const next = !isSoundEnabled;
+    setIsSoundEnabled(next);
+    audioFeedback.setEnabled(next);
+    if (next) audioFeedback.playClick();
+  };
 
   React.useEffect(() => {
     const handleSync = () => {
@@ -112,11 +148,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
               </div>
             )}
 
-            {/* Live Network Gas Indicator (Desktop) */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-tertiary)] font-mono">
-              <Fuel className="w-3.5 h-3.5 text-[var(--primary)]" />
-              <span>{selectedChain.gasPriceGwei} Gwei</span>
+            {/* Live Block Pulse & Network Gas Ticker (Desktop) */}
+            <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs text-[var(--text-tertiary)] font-mono">
+              <div className="flex items-center gap-1.5 pr-1.5 border-r border-[var(--border-subtle)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[11px] text-[var(--text-secondary)]">#{blockNumber.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-1 text-[var(--primary)] font-semibold">
+                <Zap className="w-3 h-3 text-amber-400" />
+                <span>{selectedChain.gasPriceGwei} Gwei</span>
+              </div>
             </div>
+
+            {/* Global Search / Command Palette Trigger (Cmd+K) */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+              title="Open Command Palette (Ctrl+K / Cmd+K)"
+            >
+              <Command className="w-3.5 h-3.5 text-[var(--primary)]" />
+              <span>Search</span>
+              <kbd className="px-1 py-0.2 rounded bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] font-mono text-[10px]">
+                ⌘K
+              </kbd>
+            </button>
 
             {/* Network Selector Dropdown */}
             <div className="relative">
@@ -253,6 +308,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
               </Button>
             )}
 
+            {/* Audio Feedback Toggle */}
+            <button
+              onClick={toggleSound}
+              className={`p-2 rounded-xl border border-[var(--border-app)] transition-colors cursor-pointer ${
+                isSoundEnabled
+                  ? 'text-[var(--primary)] bg-[var(--primary-subtle)]'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
+              }`}
+              title={`Tactile Sound Feedback: ${isSoundEnabled ? 'ON' : 'OFF'}`}
+            >
+              {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -294,6 +362,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
       <SwapSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      {/* Global Command Palette Modal (Cmd+K) */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
       />
     </>
   );
