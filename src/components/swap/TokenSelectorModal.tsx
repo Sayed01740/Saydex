@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Token } from '../../types';
 import { useProtocol } from '../../context/ProtocolContext';
 import { useWallet } from '../../context/WalletContext';
@@ -22,9 +22,11 @@ import {
   Coins,
   ExternalLink,
   Layers as NetworkIcon,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
+import { tokenDiscoveryService } from '../../services/tokenDiscoveryService';
 
 interface TokenSelectorModalProps {
   isOpen: boolean;
@@ -49,6 +51,8 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [warningToken, setWarningToken] = useState<Token | null>(null);
   const [displayCount, setDisplayCount] = useState(45);
+  const [isResolvingOnChain, setIsResolvingOnChain] = useState(false);
+  const [discoveredToken, setDiscoveredToken] = useState<Token | null>(null);
 
   // Custom Token Import State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -56,6 +60,49 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
   const [customSymbol, setCustomSymbol] = useState('');
   const [customName, setCustomName] = useState('');
   const [customDecimals, setCustomDecimals] = useState('18');
+
+  // Trigger on-chain token discovery across networks when a 42-char address is entered
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!/^0x[a-f0-9]{40}$/i.test(q)) {
+      setDiscoveredToken(null);
+      setIsResolvingOnChain(false);
+      return;
+    }
+
+    const alreadyInList = tokens.some((t) => t.address && t.address.toLowerCase() === q);
+    if (alreadyInList) {
+      setDiscoveredToken(null);
+      setIsResolvingOnChain(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsResolvingOnChain(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const found = await tokenDiscoveryService.resolveToken(
+          q,
+          chainFilter === 'selected' ? selectedChain.id : undefined
+        );
+        if (!isCancelled) {
+          setDiscoveredToken(found);
+        }
+      } catch (err) {
+        console.warn('Failed to resolve token on-chain:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsResolvingOnChain(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, tokens, selectedChain.id, chainFilter]);
 
   // Reset display count when search or category changes
   const handleSearchChange = (val: string) => {
@@ -97,9 +144,11 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
   const filteredTokens = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
+    const isAddressQuery = /^0x[a-f0-9]{40}$/i.test(q);
+
     const list = tokens.filter((t) => {
-      // Chain filter
-      if (chainFilter === 'selected') {
+      // Chain filter: If user is searching an exact address or 'all' is selected, don't restrict to selectedChain!
+      if (chainFilter === 'selected' && !isAddressQuery) {
         const matchesChain = t.chainId === selectedChain.id || (!t.chainId && !t.address);
         if (!matchesChain) return false;
       }
@@ -107,22 +156,24 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
       // Search matches
       const matchesSearch =
         !q ||
-        t.symbol.toLowerCase().includes(q) ||
-        t.name.toLowerCase().includes(q) ||
-        t.address.toLowerCase().includes(q);
+        (t.symbol && t.symbol.toLowerCase().includes(q)) ||
+        (t.name && t.name.toLowerCase().includes(q)) ||
+        (t.address && t.address.toLowerCase().includes(q));
 
       if (!matchesSearch) return false;
 
-      // Verified toggle
-      if (verifiedOnly && !t.isVerified) return false;
+      // Verified toggle: only apply if not specifically searching by address
+      if (verifiedOnly && !t.isVerified && !isAddressQuery) return false;
 
-      // Category tab
+      // Category tab: when user is actively searching, do NOT restrict by category
+      if (q) return true;
+
       if (activeCategory === 'all') return true;
       if (activeCategory === 'popular') return Boolean(t.isPopular);
       return t.category === activeCategory;
     });
 
-    if (chainFilter === 'all') {
+    if (chainFilter === 'all' || isAddressQuery) {
       return list.sort((a, b) => {
         const aMatches = a.chainId === selectedChain.id ? 1 : 0;
         const bMatches = b.chainId === selectedChain.id ? 1 : 0;
@@ -334,6 +385,64 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
           {/* Token Rows */}
           <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
+            {/* Live On-Chain Discovery Loading State */}
+            {isResolvingOnChain && (
+              <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 flex items-center justify-center gap-2.5 my-1.5 animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                <span className="text-xs font-medium text-indigo-300">
+                  Scanning blockchain & multi-chain DEX registry for contract...
+                </span>
+              </div>
+            )}
+
+            {/* Discovered On-Chain Token Card */}
+            {discoveredToken && (
+              <div className="p-3.5 rounded-xl border-2 border-[var(--primary)] bg-[var(--primary-subtle)]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm my-1.5">
+                <div className="flex items-center gap-3">
+                  <TokenIcon symbol={discoveredToken.symbol} icon={discoveredToken.icon} size="md" />
+                  <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-sm text-[var(--text-primary)]">
+                        {discoveredToken.symbol}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/30">
+                        {tokenDiscoveryService.getChainName(discoveredToken.chainId)}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-semibold">
+                        Live On-Chain Found
+                      </span>
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate max-w-xs">
+                      {discoveredToken.name} • {discoveredToken.address.slice(0, 8)}...{discoveredToken.address.slice(-6)}
+                    </div>
+                    {discoveredToken.priceUSD > 0 && (
+                      <div className="text-xs font-mono text-[var(--text-primary)] mt-0.5">
+                        ${discoveredToken.priceUSD < 0.01 ? discoveredToken.priceUSD.toFixed(6) : discoveredToken.priceUSD.toLocaleString()}
+                        {discoveredToken.change24h !== 0 && (
+                          <span className={`ml-1.5 text-[10px] font-semibold ${discoveredToken.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {discoveredToken.change24h >= 0 ? '+' : ''}{discoveredToken.change24h.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    addToken(discoveredToken);
+                    onSelectToken(discoveredToken);
+                    onClose();
+                  }}
+                  className="gap-1.5 font-bold shrink-0 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Import & Select</span>
+                </Button>
+              </div>
+            )}
             {filteredTokens.slice(0, displayCount).map((tok) => {
               const isSelected = selectedToken?.symbol === tok.symbol && (tok.chainId === selectedChain.id || !tok.chainId);
               const hasRisk = tok.riskAudit && !tok.isVerified;
