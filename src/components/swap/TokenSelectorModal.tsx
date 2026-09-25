@@ -29,6 +29,7 @@ import { Button } from '../common/Button';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
 import { tokenDiscoveryService } from '../../services/tokenDiscoveryService';
 import { audioFeedback } from '../../utils/audioFeedback';
+import { TokenSecurityBadge } from './TokenSecurityBadge';
 
 interface TokenSelectorModalProps {
   isOpen: boolean;
@@ -416,6 +417,9 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                         Live On-Chain Found
                       </span>
                     </div>
+                    <div className="mt-1">
+                      <TokenSecurityBadge token={discoveredToken} chainId={discoveredToken.chainId || selectedChain.id} variant="chips" />
+                    </div>
                     <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate max-w-xs">
                       {discoveredToken.name} • {discoveredToken.address.slice(0, 8)}...{discoveredToken.address.slice(-6)}
                     </div>
@@ -497,21 +501,11 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
                             {chainName}
                           </span>
                         )}
-                        {tok.isVerified ? (
-                          <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <ShieldCheck className="w-2.5 h-2.5" />
-                            0% Tax
-                          </span>
-                        ) : hasRisk ? (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] bg-rose-500/15 text-rose-400 font-medium border border-rose-500/30">
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            <span>Risk Flagged</span>
-                          </span>
-                        ) : (
-                          <span className="text-[9px] text-[var(--text-tertiary)] px-1 rounded bg-[var(--bg-subtle)] font-mono">
-                            Custom
-                          </span>
-                        )}
+                        <TokenSecurityBadge
+                          token={tok}
+                          chainId={tok.chainId || selectedChain.id}
+                          variant="compact"
+                        />
                         {tok.category && (
                           <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-[var(--bg-subtle)] text-[var(--text-tertiary)] uppercase font-mono tracking-wider">
                             {tok.category}

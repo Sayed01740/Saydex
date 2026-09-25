@@ -3,6 +3,7 @@ import { useProtocol } from '../../context/ProtocolContext';
 import { Token } from '../../types';
 import { TokenIcon } from '../common/TokenIcon';
 import { Button } from '../common/Button';
+import { TokenSecurityBadge } from '../swap/TokenSecurityBadge';
 import {
   Search,
   TrendingUp,
@@ -203,13 +204,7 @@ export const ExploreView: React.FC = () => {
                           <span className="font-bold text-sm text-[var(--text-primary)]">
                             {tok.symbol}
                           </span>
-                          {tok.isVerified ? (
-                            <ShieldCheck className="w-3.5 h-3.5 text-[var(--primary)]" />
-                          ) : (
-                            <span className="text-[9px] px-1 rounded bg-[var(--bg-subtle)] text-[var(--text-tertiary)]">
-                              Custom
-                            </span>
-                          )}
+                          <TokenSecurityBadge token={tok} chainId={tok.chainId || 1} variant="compact" />
                           {tok.category && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--bg-subtle)] text-[var(--text-tertiary)] uppercase font-mono">
                               {tok.category}

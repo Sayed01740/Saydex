@@ -34,6 +34,7 @@ import { FiatOnRampModal } from '../common/FiatOnRampModal';
 import { limitOrdersService } from '../../services/limitOrdersService';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
 import { audioFeedback } from '../../utils/audioFeedback';
+import { TokenSecurityBadge } from './TokenSecurityBadge';
 
 interface SwapCardProps {
   onToggleChart?: () => void;
@@ -522,16 +523,19 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               step="any"
             />
 
-            <button
-              onClick={() => setSelectorTarget('in')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shrink-0 shadow-xs"
-            >
-              <TokenIcon symbol={tokenIn.symbol} icon={tokenIn.icon} size="sm" />
-              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-                {tokenIn.symbol}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <TokenSecurityBadge token={tokenIn} chainId={selectedChain.id} variant="compact" />
+              <button
+                onClick={() => setSelectorTarget('in')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shadow-xs"
+              >
+                <TokenIcon symbol={tokenIn.symbol} icon={tokenIn.icon} size="sm" />
+                <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
+                  {tokenIn.symbol}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
@@ -600,16 +604,19 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               )}
             </div>
 
-            <button
-              onClick={() => setSelectorTarget('out')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shrink-0 shadow-xs"
-            >
-              <TokenIcon symbol={tokenOut.symbol} icon={tokenOut.icon} size="sm" />
-              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-                {tokenOut.symbol}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <TokenSecurityBadge token={tokenOut} chainId={selectedChain.id} variant="compact" />
+              <button
+                onClick={() => setSelectorTarget('out')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shadow-xs"
+              >
+                <TokenIcon symbol={tokenOut.symbol} icon={tokenOut.icon} size="sm" />
+                <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
+                  {tokenOut.symbol}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
@@ -727,6 +734,9 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             <span>Insufficient {tokenIn.symbol} balance for this swap.</span>
           </div>
         )}
+
+        {/* Token Security Bar */}
+        <TokenSecurityBadge token={tokenOut} chainId={selectedChain.id} variant="bar" className="mb-3" />
 
         {/* Primary Action Button (Swap vs Limit) */}
         {!isConnected ? (
