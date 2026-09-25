@@ -10,7 +10,7 @@ async function main() {
   execSync('git add -A');
   console.log('Staged files.');
 
-  execSync('git commit -m "feat: Add full Cloudflare integration (Pages config, edge headers, redirects, wrangler deploy scripts)"');
+  execSync('git commit -m "fix(branding): Add high-contrast light mode SVG logo and dynamic theme switching in BrandLogo"');
   console.log('Committed changes.');
 
   const pushResult = await git.push({
@@ -23,8 +23,8 @@ async function main() {
   });
   console.log('Push result:', pushResult);
 
-  if (fs.existsSync('push_cf.cjs')) {
-    fs.unlinkSync('push_cf.cjs');
+  if (fs.existsSync('push_logo.cjs')) {
+    fs.unlinkSync('push_logo.cjs');
   }
 }
 

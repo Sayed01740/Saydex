@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -7,6 +8,8 @@ interface BrandLogoProps {
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 'md', showText = false, className = '' }) => {
+  const { theme } = useTheme();
+
   const logoHeights = {
     sm: 'h-8',
     md: 'h-[42px] sm:h-[46px]',
@@ -14,11 +17,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 'md', showText = fa
     xl: 'h-16',
   };
 
+  const logoSrc = theme === 'light' ? '/SAYDEX_logo_light.svg' : '/SAYDEX_logo.svg';
+
   return (
     <div className={`inline-flex items-center gap-2 select-none group ${className}`}>
       <img
-        src="/SAYDEX_logo.svg"
+        src={logoSrc}
         alt="SAYDEX"
+        key={theme}
         className={`${logoHeights[size]} w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]`}
       />
       {showText && (
