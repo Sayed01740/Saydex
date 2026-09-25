@@ -46,96 +46,52 @@ export function calculateTradeRoutes(
   // Determine intermediary bridging token for multi-hop
   const intermediaryToken = symIn === 'ETH' || symOut === 'ETH' ? 'USDC' : 'WETH';
 
-  // Strategy 1: Smart Split Routing (Optimal Price & Low Impact)
+  // Strategy 1: Optimal On-Chain Pool Route (via Uniswap V3 QuoterV2)
   const smartSplitHops: RouteHop[] = isDirectPair
     ? [
         {
-          protocol: 'Saydex Concentrated v3',
+          protocol: 'Uniswap V3 Pool',
           poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
-          percentage: 70,
+          percentage: 100,
           fromToken: symIn,
           toToken: symOut,
           feeTier: '0.05%',
-          poolLiquidityUSD: '$428.5M',
+          poolLiquidityUSD: 'Deep On-Chain Liquidity',
           hopSteps: [
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Saydex v3 Pool (0.05%)',
+              protocol: 'Uniswap V3 Pool (0.05%)',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
-            },
-          ],
-        },
-        {
-          protocol: 'Saydex StableSwap / Curve',
-          poolAddress: '0x3416cf6c708da44db26246036dd72e2938de866b',
-          percentage: 30,
-          fromToken: symIn,
-          toToken: symOut,
-          feeTier: '0.01%',
-          poolLiquidityUSD: '$189.2M',
-          hopSteps: [
-            {
-              fromToken: symIn,
-              toToken: symOut,
-              protocol: 'Saydex Stable Pool (0.01%)',
-              feeTier: '0.01%',
-              poolAddress: '0x3416cf6c708da44db26246036dd72e2938de866b',
             },
           ],
         },
       ]
     : [
         {
-          protocol: 'Saydex Concentrated v3',
+          protocol: 'Uniswap V3 Multi-Hop',
           poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
-          percentage: 65,
+          percentage: 100,
           fromToken: symIn,
           toToken: symOut,
           feeTier: '0.05% + 0.05%',
           intermediateTokens: [intermediaryToken],
-          poolLiquidityUSD: '$215.8M',
+          poolLiquidityUSD: 'Multi-Pool Liquidity',
           hopSteps: [
             {
               fromToken: symIn,
               toToken: intermediaryToken,
-              protocol: 'Saydex v3 Primary',
+              protocol: 'Uniswap V3 Pool',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Saydex v3 Secondary',
+              protocol: 'Uniswap V3 Pool',
               feeTier: '0.05%',
               poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
-            },
-          ],
-        },
-        {
-          protocol: 'Uniswap v3 Multi-Hop',
-          poolAddress: '0xcbc50143180d8c4581e4602842d404746b502a30',
-          percentage: 35,
-          fromToken: symIn,
-          toToken: symOut,
-          feeTier: '0.30%',
-          intermediateTokens: [symIn === 'USDC' || symOut === 'USDC' ? 'DAI' : 'USDC'],
-          poolLiquidityUSD: '$112.4M',
-          hopSteps: [
-            {
-              fromToken: symIn,
-              toToken: symIn === 'USDC' || symOut === 'USDC' ? 'DAI' : 'USDC',
-              protocol: 'Uniswap v3 Deep Pool',
-              feeTier: '0.05%',
-              poolAddress: '0x6c6bc977e13233652659dd5a30f01e02cd0c0d12',
-            },
-            {
-              fromToken: symIn === 'USDC' || symOut === 'USDC' ? 'DAI' : 'USDC',
-              toToken: symOut,
-              protocol: 'Uniswap v3 Anchor',
-              feeTier: '0.30%',
-              poolAddress: '0xcbc50143180d8c4581e4602842d404746b502a30',
             },
           ],
         },
@@ -145,18 +101,18 @@ export function calculateTradeRoutes(
   const directHops: RouteHop[] = isDirectPair
     ? [
         {
-          protocol: 'Saydex Concentrated v3 Direct',
+          protocol: 'Uniswap V3 Direct Pool',
           poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
           percentage: 100,
           fromToken: symIn,
           toToken: symOut,
           feeTier: '0.05%',
-          poolLiquidityUSD: '$428.5M',
+          poolLiquidityUSD: 'Direct Liquidity',
           hopSteps: [
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Saydex Concentrated Pool',
+              protocol: 'Uniswap V3 Pool (0.05%)',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
@@ -165,26 +121,26 @@ export function calculateTradeRoutes(
       ]
     : [
         {
-          protocol: 'Saydex Multi-Hop Direct Pipeline',
+          protocol: 'Uniswap V3 Route',
           poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
           percentage: 100,
           fromToken: symIn,
           toToken: symOut,
           feeTier: '0.05% + 0.05%',
           intermediateTokens: [intermediaryToken],
-          poolLiquidityUSD: '$215.8M',
+          poolLiquidityUSD: 'Direct Pipeline',
           hopSteps: [
             {
               fromToken: symIn,
               toToken: intermediaryToken,
-              protocol: 'Saydex Concentrated v3',
+              protocol: 'Uniswap V3 Pool',
               feeTier: '0.05%',
               poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Saydex Concentrated v3',
+              protocol: 'Uniswap V3 Pool',
               feeTier: '0.05%',
               poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
             },
@@ -195,38 +151,38 @@ export function calculateTradeRoutes(
   // Strategy 3: MEV Protected Private Solver Route
   const mevHops: RouteHop[] = [
     {
-      protocol: 'Flashbots / MEV-Blocker Private Solver',
+      protocol: 'MEV-Protected Private RPC Relay',
       poolAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
       percentage: 100,
       fromToken: symIn,
       toToken: symOut,
       feeTier: '0.00% MEV Shield',
-      poolLiquidityUSD: '$890.0M Multi-Source',
+      poolLiquidityUSD: 'Flashbots Protect / MEV-Blocker',
       intermediateTokens: isDirectPair ? undefined : [intermediaryToken],
       hopSteps: isDirectPair
         ? [
             {
               fromToken: symIn,
               toToken: symOut,
-              protocol: 'Private Solver CoW Matcher',
-              feeTier: '0.00% Zero-Slippage',
-              poolAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
+              protocol: 'Private RPC Uniswap V3 Pool',
+              feeTier: '0.05%',
+              poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
           ]
         : [
             {
               fromToken: symIn,
               toToken: intermediaryToken,
-              protocol: 'Private Batch Settlement',
-              feeTier: '0.01%',
-              poolAddress: '0x9008d19f58aabd9ed0d60971565aa8510560ab41',
+              protocol: 'Private RPC Hop 1',
+              feeTier: '0.05%',
+              poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
             },
             {
               fromToken: intermediaryToken,
               toToken: symOut,
-              protocol: 'Saydex Private Fill',
-              feeTier: '0.01%',
-              poolAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
+              protocol: 'Private RPC Hop 2',
+              feeTier: '0.05%',
+              poolAddress: '0x5777d92f208679db4b9778590fa3cab3ac9e2168',
             },
           ],
     },
@@ -234,32 +190,32 @@ export function calculateTradeRoutes(
 
   const slippageFactor = (100 - slippageTolerance) / 100;
 
-  // Build Route 1 (Smart Split)
+  // Build Route 1 (Optimal Route)
   const smartExpected = amountIn * directRate;
   const smartRoute: CalculatedRoute = {
     strategy: 'smart_split',
-    strategyName: 'Smart Split Route',
+    strategyName: 'Uniswap V3 On-Chain',
     strategyBadge: 'Best Return',
     routeHops: smartSplitHops,
     totalHops: smartSplitHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
-    isMultiHop: !isDirectPair || smartSplitHops.length > 1,
+    isMultiHop: !isDirectPair,
     priceImpact: 0.01,
     gasCostUSD: isDirectPair ? 1.45 : 2.10,
     gasSavingsUSD: 0.85,
     expectedOutput: smartExpected,
     minimumOutput: smartExpected * slippageFactor,
     executionPrice: directRate,
-    solverProtocol: 'Saydex Split Smart Engine',
+    solverProtocol: 'Uniswap V3 QuoterV2',
     routeSummaryText: isDirectPair
-      ? `${symIn} ➔ 70% Saydex v3 + 30% StableSwap ➔ ${symOut}`
-      : `${symIn} ➔ 65% [${intermediaryToken}] + 35% [USDC] ➔ ${symOut}`,
+      ? `${symIn} ➔ Uniswap V3 Pool (0.05%) ➔ ${symOut}`
+      : `${symIn} ➔ ${intermediaryToken} ➔ ${symOut}`,
   };
 
   // Build Route 2 (Direct)
-  const directExpected = amountIn * (directRate * 0.9994); // slightly lower return due to single pool depth
+  const directExpected = amountIn * (directRate * 0.9994);
   const directRoute: CalculatedRoute = {
     strategy: 'direct',
-    strategyName: 'Direct Pipeline',
+    strategyName: 'Direct Uniswap V3 Pool',
     strategyBadge: 'Lowest Gas',
     routeHops: directHops,
     totalHops: directHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
@@ -270,9 +226,9 @@ export function calculateTradeRoutes(
     expectedOutput: directExpected,
     minimumOutput: directExpected * slippageFactor,
     executionPrice: directRate * 0.9994,
-    solverProtocol: 'Saydex Direct Liquidity Pool',
+    solverProtocol: 'Uniswap V3 Direct Pool',
     routeSummaryText: isDirectPair
-      ? `${symIn} ➔ 100% Saydex v3 ➔ ${symOut}`
+      ? `${symIn} ➔ Uniswap V3 Pool ➔ ${symOut}`
       : `${symIn} ➔ ${intermediaryToken} ➔ ${symOut}`,
   };
 
@@ -280,7 +236,7 @@ export function calculateTradeRoutes(
   const mevExpected = amountIn * (directRate * 0.9998);
   const mevRoute: CalculatedRoute = {
     strategy: 'mev_shield',
-    strategyName: 'MEV-Shielded Solver',
+    strategyName: 'MEV-Shielded Routing',
     strategyBadge: 'Zero Frontrun',
     routeHops: mevHops,
     totalHops: mevHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
@@ -291,8 +247,8 @@ export function calculateTradeRoutes(
     expectedOutput: mevExpected,
     minimumOutput: mevExpected * slippageFactor,
     executionPrice: directRate * 0.9998,
-    solverProtocol: 'Private Builder MEV Relay',
-    routeSummaryText: `${symIn} ➔ Private Solver Batch ➔ ${symOut}`,
+    solverProtocol: 'Private RPC MEV Relay',
+    routeSummaryText: `${symIn} ➔ Flashbots Protect Relay ➔ ${symOut}`,
   };
 
   return [smartRoute, directRoute, mevRoute];

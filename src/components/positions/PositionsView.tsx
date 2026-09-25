@@ -17,13 +17,16 @@ import {
   ExternalLink,
   Plus,
   Loader2,
+  Wallet,
 } from 'lucide-react';
+import { WalletModal } from '../wallet/WalletModal';
 
 export const PositionsView: React.FC = () => {
   const { userPositions, removePosition, claimPositionFees, setActiveView, addTransaction } = useProtocol();
-  const { sendTransaction, selectedChain, address } = useWallet();
+  const { isConnected, sendTransaction, selectedChain, address } = useWallet();
   const [selectedPosToManage, setSelectedPosToManage] = useState<UserPosition | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const totalPositionsValue = userPositions.reduce((acc, p) => acc + p.totalValueUSD, 0);
   const totalUnclaimedFees = userPositions.reduce((acc, p) => acc + p.unclaimedFeesUSD, 0);
@@ -206,17 +209,42 @@ export const PositionsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
-          <span className="text-xs text-[var(--text-tertiary)]">Total Position Value</span>
-          <div className="text-2xl font-bold font-mono text-[var(--text-primary)] mt-1">
-            ${totalPositionsValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      {/* Disconnected State */}
+      {!isConnected ? (
+        <div className="p-8 sm:p-12 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-app)] text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-[var(--primary-subtle)] border border-[var(--primary)]/30 flex items-center justify-center text-[var(--primary)] shadow-lg shadow-[var(--primary)]/10">
+            <Wallet className="w-8 h-8" />
           </div>
-          <span className="text-[11px] text-[var(--text-secondary)] font-mono">
-            {userPositions.length} active LP NFTs
-          </span>
+          <div className="max-w-md space-y-2">
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">
+              Connect a wallet to view positions
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Connect your Web3 wallet to manage your active concentrated liquidity positions, fee accruals, and LP NFT tokens on {selectedChain.name}.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsWalletModalOpen(true)}
+            className="px-6 font-semibold"
+          >
+            Connect Wallet
+          </Button>
         </div>
+      ) : (
+        <>
+          {/* Summary Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
+              <span className="text-xs text-[var(--text-tertiary)]">Total Position Value</span>
+              <div className="text-2xl font-bold font-mono text-[var(--text-primary)] mt-1">
+                ${totalPositionsValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </div>
+              <span className="text-[11px] text-[var(--text-secondary)] font-mono">
+                {userPositions.length} active LP NFTs
+              </span>
+            </div>
 
         <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] shadow-xs">
           <span className="text-xs text-[var(--text-tertiary)]">Unclaimed Fees</span>
@@ -357,6 +385,8 @@ export const PositionsView: React.FC = () => {
           </Button>
         </div>
       )}
+      </>
+      )}
 
       {/* Manage Position Modal */}
       {selectedPosToManage && (
@@ -420,6 +450,12 @@ export const PositionsView: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Wallet Modal */}
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+      />
     </div>
   );
 };

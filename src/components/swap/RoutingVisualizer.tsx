@@ -34,10 +34,10 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-[var(--text-primary)]">
-                Saydex Smart Router
+                Uniswap V3 Smart Route
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20">
-                {isMultiHop ? 'Multi-Hop' : 'Split Path'}
+                {isMultiHop ? 'Multi-Hop' : 'Direct V3'}
               </span>
             </div>
             <div className="text-[11px] text-[var(--success)] font-medium flex items-center gap-1">
