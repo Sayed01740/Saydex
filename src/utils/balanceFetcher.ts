@@ -1,5 +1,5 @@
 import { Token, Chain } from '../types';
-import { ALL_CHAINS, getChainById } from '../config/chains';
+import { ALL_CHAINS, getAllChains, getChainById } from '../config/chains';
 import { walletLogger } from './walletLogger';
 import { rpcProviderWrapper, DEFAULT_NETWORK_RPCS } from './rpcProviderWrapper';
 
@@ -169,8 +169,10 @@ export async function fetchAllMultiChainBalances(
     SEP: 0.0,
   };
 
+  const activeChains = getAllChains();
+
   // 1. Initialize summaries for each chain
-  for (const chain of ALL_CHAINS) {
+  for (const chain of activeChains) {
     chainSummaries[chain.id] = {
       chainId: chain.id,
       chainName: chain.name,
@@ -184,7 +186,7 @@ export async function fetchAllMultiChainBalances(
   }
 
   // 2. Fetch native balances in parallel
-  const chainBalancePromises = ALL_CHAINS.map(async (chain) => {
+  const chainBalancePromises = activeChains.map(async (chain) => {
     let bal: number | null = null;
     const rpcEndpoints = [
       chain.rpcUrl,
@@ -288,7 +290,7 @@ export async function fetchAllMultiChainBalances(
 
   const processSingleToken = async (token: Token) => {
     if (signal?.aborted) return;
-    const chain = ALL_CHAINS.find((c) => c.id === token.chainId) || ALL_CHAINS[0];
+    const chain = getAllChains().find((c) => c.id === token.chainId) || ALL_CHAINS[0];
     const rpcEndpoints = [
       chain.rpcUrl,
       ...(chain.rpcUrls?.default?.http || []),

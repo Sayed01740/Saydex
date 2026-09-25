@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useWallet, WalletProviderType } from '../../context/WalletContext';
 import { TokenBalanceResult } from '../../utils/balanceFetcher';
 import { useProtocol } from '../../context/ProtocolContext';
-import { ALL_CHAINS } from '../../config/chains';
+import { ALL_CHAINS, getAllChains } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { TokenIcon } from '../common/TokenIcon';
@@ -85,6 +85,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
   const [customRpcInput, setCustomRpcInput] = useState('');
   const [isTestingRpcFailover, setIsTestingRpcFailover] = useState(false);
   const [connectionError, setConnectionError] = useState<{ message: string; downloadUrl?: string; walletName?: string } | null>(null);
+  const [availableChains, setAvailableChains] = useState(getAllChains());
+
+  React.useEffect(() => {
+    const handleSync = () => setAvailableChains(getAllChains());
+    if (typeof window !== 'undefined') {
+      window.addEventListener('saydex_custom_chains_changed', handleSync);
+      return () => window.removeEventListener('saydex_custom_chains_changed', handleSync);
+    }
+  }, []);
 
   const handleTestSignature = async () => {
     try {
@@ -225,7 +234,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
-                  Wallet provider is on <strong>Chain #{detectedChainId} ({ALL_CHAINS.find(c => c.id === detectedChainId)?.name || 'Custom'})</strong> while app UI is viewing{' '}
+                  Wallet provider is on <strong>Chain #{detectedChainId} ({availableChains.find(c => c.id === detectedChainId)?.name || 'Custom'})</strong> while app UI is viewing{' '}
                   <strong>{selectedChain.name}</strong>.
                 </span>
               </div>
@@ -242,7 +251,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                   onClick={() => syncAppWithWalletChain()}
                   className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] border border-amber-500/40 text-amber-200 font-semibold text-[11px] hover:bg-[var(--bg-surface-hover)] cursor-pointer transition-colors"
                 >
-                  Switch App to {ALL_CHAINS.find(c => c.id === detectedChainId)?.shortName || `#${detectedChainId}`}
+                  Switch App to {availableChains.find(c => c.id === detectedChainId)?.shortName || `#${detectedChainId}`}
                 </button>
               </div>
             </div>
@@ -374,7 +383,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                   : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              Chains ({ALL_CHAINS.length})
+              Chains ({availableChains.length})
             </button>
             <button
               onClick={() => setActiveTab('rpc')}
@@ -524,7 +533,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
 
           {activeTab === 'chains' && (
             <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-              {ALL_CHAINS.map((chain) => {
+              {availableChains.map((chain) => {
                 const summary = chainSummaries[chain.id];
                 const isCurrent = selectedChain.id === chain.id;
                 const bal = summary ? summary.nativeBalance : 0;

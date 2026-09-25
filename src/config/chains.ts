@@ -492,12 +492,80 @@ export const ALL_CHAINS: Chain[] = [
   unichain,
 ];
 
+export const STORAGE_KEY_CUSTOM_CHAINS = 'saydex_custom_chains_v1';
+
 /**
- * Check if a chain ID is in the officially supported list
+ * Get all custom user-defined chains persisted in localStorage
+ */
+export function getCustomChains(): Chain[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CHAINS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((c) => defineChain({ ...c, isCustom: true }));
+    }
+  } catch (err) {
+    console.warn('[Chains] Failed to parse custom chains from localStorage:', err);
+  }
+  return [];
+}
+
+/**
+ * Persist or update a custom EVM chain in localStorage and notify listeners
+ */
+export function saveCustomChain(chain: Chain): Chain[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getCustomChains().filter((c) => c.id !== chain.id);
+    const updated = [...current, { ...chain, isCustom: true }];
+    localStorage.setItem(STORAGE_KEY_CUSTOM_CHAINS, JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('saydex_custom_chains_changed', { detail: updated }));
+    }
+    return updated;
+  } catch (err) {
+    console.error('[Chains] Failed to save custom chain to localStorage:', err);
+    return getCustomChains();
+  }
+}
+
+/**
+ * Remove a custom EVM chain from localStorage and notify listeners
+ */
+export function removeCustomChain(chainId: number): Chain[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const updated = getCustomChains().filter((c) => c.id !== chainId);
+    localStorage.setItem(STORAGE_KEY_CUSTOM_CHAINS, JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('saydex_custom_chains_changed', { detail: updated }));
+    }
+    return updated;
+  } catch (err) {
+    console.error('[Chains] Failed to remove custom chain from localStorage:', err);
+    return getCustomChains();
+  }
+}
+
+/**
+ * Returns all available chains: standard built-in chains + custom user chains
+ */
+export function getAllChains(): Chain[] {
+  const custom = getCustomChains();
+  if (custom.length === 0) return ALL_CHAINS;
+  const customIds = new Set(custom.map((c) => c.id));
+  const base = ALL_CHAINS.filter((c) => !customIds.has(c.id));
+  return [...base, ...custom];
+}
+
+/**
+ * Check if a chain ID is supported (standard or custom)
  */
 export function isSupportedChain(chainId: number | string): boolean {
   const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : parseInt(chainId, 10)) : chainId;
-  return ALL_CHAINS.some((c) => c.id === numId);
+  return getAllChains().some((c) => c.id === numId);
 }
 
 /**
@@ -515,14 +583,21 @@ export function getChainRpcUrls(chainId: number | string): string[] {
 
 /**
  * Universal Chain Resolver & Dynamic Detector:
- * Matches any chain by decimal or hex ID, or synthesizes a dynamic EVM Chain definition
+ * Matches any chain by decimal or hex ID from standard list, custom list,
+ * or synthesizes a dynamic EVM Chain definition
  */
 export function getChainById(chainId: number | string): Chain {
   const numId = typeof chainId === 'string' ? (chainId.startsWith('0x') ? parseInt(chainId, 16) : parseInt(chainId, 10)) : chainId;
-  const found = ALL_CHAINS.find((c) => c.id === numId);
-  if (found) return found;
+  
+  // 1. Check standard static chains
+  const foundStandard = ALL_CHAINS.find((c) => c.id === numId);
+  if (foundStandard) return foundStandard;
 
-  // Synthesize dynamic chain object for custom EVM networks
+  // 2. Check user-defined custom chains
+  const foundCustom = getCustomChains().find((c) => c.id === numId);
+  if (foundCustom) return foundCustom;
+
+  // 3. Synthesize dynamic chain object for unknown EVM networks
   return defineChain({
     id: numId,
     name: `EVM Chain #${numId}`,

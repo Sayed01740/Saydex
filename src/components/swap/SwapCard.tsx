@@ -459,7 +459,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
               <span className="truncate">
-                Wallet on <strong>{ALL_CHAINS.find(c => c.id === detectedChainId)?.shortName || `#${detectedChainId}`}</strong>
+                Wallet on <strong>{getChainById(detectedChainId).shortName || `#${detectedChainId}`}</strong>
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">

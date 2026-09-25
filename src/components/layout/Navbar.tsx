@@ -8,8 +8,8 @@ import { WalletModal } from '../wallet/WalletModal';
 import { WalletIcon } from '../wallet/WalletIcon';
 import { ChainsModal } from '../chains/ChainsModal';
 import { SwapSettingsModal } from '../swap/SwapSettingsModal';
-import { ALL_CHAINS } from '../../config/chains';
-import { ChainId } from '../../types';
+import { getAllChains } from '../../config/chains';
+import { Chain, ChainId } from '../../types';
 import {
   ChevronDown,
   Sun,
@@ -50,6 +50,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
   const [isChainModalOpen, setIsChainModalOpen] = useState(false);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [availableChains, setAvailableChains] = useState<Chain[]>(getAllChains());
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      setAvailableChains(getAllChains());
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('saydex_custom_chains_changed', handleSync);
+      return () => window.removeEventListener('saydex_custom_chains_changed', handleSync);
+    }
+  }, []);
   const primaryNavItems = [
     { id: 'swap', label: 'Trade' },
     { id: 'explore', label: 'Explore' },
@@ -165,7 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                       </div>
                     )}
                     <div className="max-h-64 overflow-y-auto">
-                      {ALL_CHAINS.map((chain) => (
+                      {availableChains.map((chain) => (
                         <button
                           key={chain.id}
                           onClick={() => {
@@ -183,6 +194,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                               {chain.shortName.charAt(0)}
                             </div>
                             <span className="truncate">{chain.name}</span>
+                            {chain.isCustom && (
+                              <span className="px-1 py-0.2 rounded text-[8px] bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                Custom
+                              </span>
+                            )}
                           </div>
                           <span className="font-mono text-[10px] text-[var(--text-tertiary)]">
                             {chain.gasPriceGwei} gwei

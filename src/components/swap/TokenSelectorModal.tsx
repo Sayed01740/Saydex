@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Token } from '../../types';
 import { useProtocol } from '../../context/ProtocolContext';
 import { useWallet } from '../../context/WalletContext';
-import { ALL_CHAINS } from '../../config/chains';
+import { ALL_CHAINS, getChainById } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { TokenIcon } from '../common/TokenIcon';
 import {
@@ -186,7 +186,7 @@ export const TokenSelectorModal: React.FC<TokenSelectorModalProps> = ({
 
   const getChainName = (chainId?: number) => {
     if (!chainId) return null;
-    const c = ALL_CHAINS.find((ch) => ch.id === chainId);
+    const c = getChainById(chainId);
     return c ? c.shortName : `Chain ${chainId}`;
   };
 

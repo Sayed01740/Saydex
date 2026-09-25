@@ -1,5 +1,5 @@
 import { walletLogger } from './walletLogger';
-import { ALL_CHAINS, getAlchemyRpc } from '../config/chains';
+import { ALL_CHAINS, getAllChains, getAlchemyRpc } from '../config/chains';
 import { PublicClient } from '../types';
 
 export interface RpcEndpointState {
@@ -166,14 +166,20 @@ export class CustomRpcProviderWrapper {
 
   constructor() {
     this.initializeDefaultPools();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('saydex_custom_chains_changed', () => {
+        this.initializeDefaultPools();
+      });
+    }
   }
 
   /**
-   * Populate pools using configured chains and hardcoded resilient fallbacks
+   * Populate pools using configured chains, custom EVM chains, and hardcoded resilient fallbacks
    */
   private initializeDefaultPools() {
-    // Seed from ALL_CHAINS
-    ALL_CHAINS.forEach((chain) => {
+    // Seed from all chains (standard + user-added custom EVM chains)
+    const chains = getAllChains();
+    chains.forEach((chain) => {
       const configuredEndpoints: string[] = [
         chain.rpcUrl,
         ...(chain.rpcUrls?.default?.http || []),

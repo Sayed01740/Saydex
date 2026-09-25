@@ -46,6 +46,7 @@ export interface Chain {
   gasPriceGwei: number;
   isSupported: boolean;
   testnet?: boolean;
+  isCustom?: boolean;
   sourceId?: number;
 }
 
