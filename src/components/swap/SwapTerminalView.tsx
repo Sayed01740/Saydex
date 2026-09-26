@@ -102,6 +102,7 @@ export const SwapTerminalView: React.FC = () => {
 
   // Settings Modal state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [currentSwapRate, setCurrentSwapRate] = useState<number | undefined>(undefined);
 
   // Target Price Alert Modal state
   const [isSetAlertModalOpen, setIsSetAlertModalOpen] = useState(false);
@@ -141,6 +142,7 @@ export const SwapTerminalView: React.FC = () => {
                 <PriceChart
                   tokenIn={tokenIn}
                   tokenOut={tokenOut}
+                  liveRate={currentSwapRate}
                   onOpenSetAlertModal={handleOpenSetAlertModal}
                 />
               </motion.div>
@@ -157,6 +159,7 @@ export const SwapTerminalView: React.FC = () => {
               externalAmountIn={amountIn}
               onOpenSetAlertModal={handleOpenSetAlertModal}
               onAmountInChanged={(amt) => setAmountIn(amt)}
+              onQuoteChanged={(q) => setCurrentSwapRate(q.executionPrice)}
               onTokensChanged={(inTok, outTok) => {
                 setTokenIn(inTok);
                 setTokenOut(outTok);

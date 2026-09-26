@@ -174,14 +174,33 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     // Initial immediate fetch
     syncLivePrices();
 
-    // 25-second background real-time polling (balanced performance & low CPU/battery consumption)
-    const priceInterval = setInterval(syncLivePrices, 25000);
+    // 10-second background real-time polling (matches live DEX responsiveness)
+    const priceInterval = setInterval(syncLivePrices, 10000);
+
+    // Event listener for immediate custom updates from multi-source price feeds
+    const handlePricesUpdated = () => {
+      if (mounted) {
+        setTokens((prev) => livePriceService.enrichTokensWithLivePrices(prev));
+      }
+    };
+
+    // Refresh immediately when user returns to tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncLivePrices();
+      }
+    };
+
+    window.addEventListener('saydex_prices_updated', handlePricesUpdated);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       mounted = false;
       clearInterval(priceInterval);
+      window.removeEventListener('saydex_prices_updated', handlePricesUpdated);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [selectedChain.id]);
 
   // Dynamically load real pools when active chain changes
   useEffect(() => {

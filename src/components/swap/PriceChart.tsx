@@ -9,6 +9,7 @@ interface PriceChartProps {
   tokenOut?: Token;
   token0?: Token;
   token1?: Token;
+  liveRate?: number;
   onOpenSetAlertModal?: (tokenIn?: Token, tokenOut?: Token) => void;
 }
 
@@ -27,8 +28,8 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
     symbol: 'ETH',
     name: 'Ethereum',
     decimals: 18,
-    priceUSD: 3482.50,
-    change24h: 3.42,
+    priceUSD: 2688.50,
+    change24h: 1.42,
     volume24hUSD: 425000000,
     color: '#627EEA',
     iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
@@ -46,7 +47,11 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
     iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
   };
 
-  const baseRatio = (currentTokenIn.priceUSD || 1) / Math.max(0.0001, currentTokenOut.priceUSD || 1);
+  // Live real-time rate from on-chain quoter / swap quote, fallback to price ratio
+  const liveTargetPrice = props.liveRate && props.liveRate > 0
+    ? props.liveRate
+    : (currentTokenIn.priceUSD || 1) / Math.max(0.0001, currentTokenOut.priceUSD || 1);
+
   const isPositive = (currentTokenIn.change24h ?? 0) >= 0;
 
   // Active alerts for this specific pair
@@ -59,7 +64,7 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
     );
   }, [priceAlerts, currentTokenIn.symbol, currentTokenOut.symbol]);
 
-  // Generate smooth realistic price series based on timeframe
+  // Generate realistic smooth price series leading up directly to the exact live current price
   const chartData = useMemo(() => {
     const pointsCount = timeframe === '1H' ? 24 : timeframe === '1D' ? 48 : timeframe === '1W' ? 56 : 60;
     const data = [];
@@ -73,13 +78,17 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
         ? 1000 * 60 * 60 * 3
         : 1000 * 60 * 60 * 12;
 
-    let currentVal = baseRatio * (1 - (isPositive ? 0.035 : -0.035));
+    const netChangePct = (currentTokenIn.change24h ?? 1.5) / 100;
+    const startPrice = liveTargetPrice / (1 + netChangePct);
 
     for (let i = pointsCount; i >= 0; i--) {
       const time = new Date(now - i * stepMs);
-      const volatility = baseRatio * 0.008;
-      const change = (Math.sin(i * 0.5) * 0.5 + (Math.random() - 0.48)) * volatility;
-      currentVal = Math.max(0.00001, currentVal + change);
+      const progress = 1 - (i / pointsCount); // 0 at start, 1 at end
+
+      // Interpolate smoothly from startPrice to liveTargetPrice with micro-volatility
+      const interpolated = startPrice + (liveTargetPrice - startPrice) * progress;
+      const noise = (Math.sin(i * 0.7) * 0.4 + (Math.cos(i * 1.3) * 0.3)) * (liveTargetPrice * 0.004) * (1 - progress);
+      const pointPrice = i === 0 ? liveTargetPrice : Math.max(0.00001, interpolated + noise);
 
       const timeLabel =
         timeframe === '1H' || timeframe === '1D'
@@ -89,18 +98,29 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
       data.push({
         timestamp: time.getTime(),
         timeLabel,
-        price: parseFloat(currentVal.toFixed(currentVal > 10 ? 2 : 5)),
+        price: parseFloat(pointPrice.toFixed(pointPrice > 10 ? 2 : 5)),
         volumeUSD: Math.round(150000 + Math.random() * 850000),
       });
     }
+
     return data;
-  }, [baseRatio, timeframe, isPositive]);
+  }, [liveTargetPrice, timeframe, currentTokenIn.change24h]);
 
   const [hoveredPoint, setHoveredPoint] = useState<any | null>(null);
 
   const displayPrice = hoveredPoint
     ? hoveredPoint.price
-    : parseFloat(baseRatio.toFixed(baseRatio > 10 ? 2 : 5));
+    : parseFloat(liveTargetPrice.toFixed(liveTargetPrice > 10 ? 2 : 5));
+
+  // Compute exact timeframe percentage gain/loss from chart data
+  const timeframeChangePct = useMemo(() => {
+    if (!chartData || chartData.length < 2) return currentTokenIn.change24h || 0;
+    const first = chartData[0].price;
+    const last = chartData[chartData.length - 1].price;
+    if (first <= 0) return 0;
+    const pct = ((last - first) / first) * 100;
+    return parseFloat(pct.toFixed(2));
+  }, [chartData, currentTokenIn.change24h]);
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-2xl p-5 shadow-sm space-y-4">
@@ -113,13 +133,13 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
             </span>
             <span
               className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-md ${
-                isPositive
+                timeframeChangePct >= 0
                   ? 'bg-[var(--success-subtle)] text-[var(--success)]'
                   : 'bg-[var(--error-subtle)] text-[var(--error)]'
               }`}
             >
-              {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              <span>{isPositive ? '+' : ''}{currentTokenIn.change24h}%</span>
+              {timeframeChangePct >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              <span>{timeframeChangePct >= 0 ? '+' : ''}{timeframeChangePct}% ({timeframe})</span>
             </span>
           </div>
 

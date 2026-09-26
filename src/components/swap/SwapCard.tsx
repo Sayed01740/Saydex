@@ -45,6 +45,7 @@ interface SwapCardProps {
   externalTokenOut?: Token;
   externalAmountIn?: string;
   onOpenSetAlertModal?: (tokenIn?: Token, tokenOut?: Token) => void;
+  onQuoteChanged?: (quote: SwapQuote) => void;
 }
 
 export const SwapCard: React.FC<SwapCardProps> = ({
@@ -52,6 +53,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   isChartOpen = false,
   onTokensChanged,
   onAmountInChanged,
+  onQuoteChanged,
   externalTokenIn,
   externalTokenOut,
   externalAmountIn,
@@ -337,6 +339,25 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       mevProtected: settings.mevProtection,
     };
   }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult]);
+
+  // Synchronize live quote to parent container (for chart and external viewers)
+  useEffect(() => {
+    if (onQuoteChanged && quote) {
+      onQuoteChanged(quote);
+    }
+  }, [quote, onQuoteChanged]);
+
+  // Synchronize live token prices when ProtocolContext updates
+  useEffect(() => {
+    const liveIn = tokens.find((t) => t.symbol === tokenIn.symbol && (t.chainId === tokenIn.chainId || !tokenIn.chainId));
+    if (liveIn && (liveIn.priceUSD !== tokenIn.priceUSD || liveIn.change24h !== tokenIn.change24h)) {
+      setTokenIn((prev) => ({ ...prev, priceUSD: liveIn.priceUSD, change24h: liveIn.change24h }));
+    }
+    const liveOut = tokens.find((t) => t.symbol === tokenOut.symbol && (t.chainId === tokenOut.chainId || !tokenOut.chainId));
+    if (liveOut && (liveOut.priceUSD !== tokenOut.priceUSD || liveOut.change24h !== tokenOut.change24h)) {
+      setTokenOut((prev) => ({ ...prev, priceUSD: liveOut.priceUSD, change24h: liveOut.change24h }));
+    }
+  }, [tokens]);
 
   const userBalanceIn = isConnected ? getTokenBalance(tokenIn, selectedChain.id) : 0;
   const userBalanceOut = isConnected ? getTokenBalance(tokenOut, selectedChain.id) : 0;
