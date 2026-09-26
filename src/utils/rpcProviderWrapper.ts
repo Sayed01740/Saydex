@@ -142,6 +142,38 @@ export const DEFAULT_NETWORK_RPCS: Record<number, string[]> = {
     'https://optimism-sepolia-rpc.publicnode.com',
     'https://endpoints.omniatech.io/v1/op/sepolia/public',
   ],
+  // Celo Mainnet (42220)
+  42220: [
+    'https://forno.celo.org',
+    'https://rpc.ankr.com/celo',
+    'https://1rpc.io/celo',
+  ],
+  // Blast Mainnet (81457)
+  81457: [
+    'https://rpc.blast.io',
+    'https://blast-rpc.publicnode.com',
+    'https://blast.dinorpc.com',
+    'https://1rpc.io/blast',
+  ],
+  // Zora (7777777)
+  7777777: [
+    'https://rpc.zora.energy',
+    'https://zora-rpc.publicnode.com',
+    'https://1rpc.io/zora',
+  ],
+  // ZKsync Era (324)
+  324: [
+    'https://mainnet.era.zksync.io',
+    'https://zksync-era.blockpi.network/v1/rpc/public',
+    'https://1rpc.io/zksync2-era',
+    'https://zksync-rpc.publicnode.com',
+  ],
+  // World Chain (480)
+  480: [
+    'https://worldchain-mainnet.g.alchemy.com/public',
+    'https://worldchain.drpc.org',
+    'https://rpc.worldchain.org',
+  ],
   // Unichain Mainnet (130)
   130: [
     'https://mainnet.unichain.org',

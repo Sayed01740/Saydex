@@ -452,6 +452,160 @@ export const bsc = defineChain({
   testnet: false,
 });
 
+export const unichainMainnet = defineChain({
+  id: 130,
+  name: 'Unichain Mainnet',
+  shortName: 'Unichain',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://mainnet.unichain.org',
+  rpcUrls: {
+    default: { http: ['https://mainnet.unichain.org', 'https://unichain-rpc.publicnode.com'] },
+    public: { http: ['https://mainnet.unichain.org', 'https://unichain-rpc.publicnode.com'] },
+  },
+  blockExplorerUrl: 'https://uniscan.xyz',
+  blockExplorers: {
+    default: { name: 'UniScan', url: 'https://uniscan.xyz' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.05,
+  isSupported: true,
+  testnet: false,
+});
+
+export const celo = defineChain({
+  id: 42220,
+  name: 'Celo Mainnet',
+  shortName: 'Celo',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/celo/info/logo.png',
+  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+  rpcUrl: 'https://forno.celo.org',
+  rpcUrls: {
+    default: { http: ['https://forno.celo.org', 'https://rpc.ankr.com/celo', 'https://1rpc.io/celo'] },
+    public: { http: ['https://forno.celo.org', 'https://rpc.ankr.com/celo'] },
+  },
+  blockExplorerUrl: 'https://celoscan.io',
+  blockExplorers: {
+    default: { name: 'CeloScan', url: 'https://celoscan.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 13112599,
+    },
+  },
+  gasPriceGwei: 5.0,
+  isSupported: true,
+  testnet: false,
+});
+
+export const blast = defineChain({
+  id: 81457,
+  name: 'Blast',
+  shortName: 'Blast',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/blast/info/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://rpc.blast.io',
+  rpcUrls: {
+    default: { http: ['https://rpc.blast.io', 'https://blast-rpc.publicnode.com'] },
+    public: { http: ['https://rpc.blast.io', 'https://blast-rpc.publicnode.com'] },
+  },
+  blockExplorerUrl: 'https://blastscan.io',
+  blockExplorers: {
+    default: { name: 'BlastScan', url: 'https://blastscan.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 88184,
+    },
+  },
+  gasPriceGwei: 0.1,
+  isSupported: true,
+  testnet: false,
+});
+
+export const zora = defineChain({
+  id: 7777777,
+  name: 'Zora',
+  shortName: 'Zora',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zora/info/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://rpc.zora.energy',
+  rpcUrls: {
+    default: { http: ['https://rpc.zora.energy', 'https://zora-rpc.publicnode.com'] },
+    public: { http: ['https://rpc.zora.energy', 'https://zora-rpc.publicnode.com'] },
+  },
+  blockExplorerUrl: 'https://explorer.zora.energy',
+  blockExplorers: {
+    default: { name: 'Zora Explorer', url: 'https://explorer.zora.energy' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 5882,
+    },
+  },
+  gasPriceGwei: 0.05,
+  isSupported: true,
+  testnet: false,
+});
+
+export const zksync = defineChain({
+  id: 324,
+  name: 'ZKsync Era',
+  shortName: 'ZKsync',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zksync/info/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://mainnet.era.zksync.io',
+  rpcUrls: {
+    default: { http: ['https://mainnet.era.zksync.io', 'https://zksync-era.blockpi.network/v1/rpc/public', 'https://1rpc.io/zksync2-era'] },
+    public: { http: ['https://mainnet.era.zksync.io'] },
+  },
+  blockExplorerUrl: 'https://era.zksync.network',
+  blockExplorers: {
+    default: { name: 'ZKsync Explorer', url: 'https://era.zksync.network' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xF9cda624FBC7e059355ce98a31693d299FACd963',
+      blockCreated: 324,
+    },
+  },
+  gasPriceGwei: 0.1,
+  isSupported: true,
+  testnet: false,
+});
+
+export const worldchain = defineChain({
+  id: 480,
+  name: 'World Chain',
+  shortName: 'World Chain',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x163f8C2467924be0AE7B5347228CABF26043f753/logo.png',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://worldchain-mainnet.g.alchemy.com/public',
+  rpcUrls: {
+    default: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] },
+    public: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] },
+  },
+  blockExplorerUrl: 'https://worldscan.org',
+  blockExplorers: {
+    default: { name: 'WorldScan', url: 'https://worldscan.org' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.05,
+  isSupported: true,
+  testnet: false,
+});
+
 export const unichain = defineChain({
   id: 1301,
   name: 'Unichain Sepolia',
@@ -460,8 +614,8 @@ export const unichain = defineChain({
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrl: 'https://sepolia.unichain.org',
   rpcUrls: {
-    default: { http: ['https://sepolia.unichain.org'] },
-    public: { http: ['https://sepolia.unichain.org'] },
+    default: { http: ['https://sepolia.unichain.org', 'https://unichain-sepolia.blockpi.network/v1/rpc/public', 'https://unichain-sepolia-rpc.publicnode.com'] },
+    public: { http: ['https://sepolia.unichain.org', 'https://unichain-sepolia-rpc.publicnode.com'] },
   },
   blockExplorerUrl: 'https://sepolia.uniscan.xyz',
   blockExplorers: {
@@ -485,6 +639,12 @@ export const ALL_CHAINS: Chain[] = [
   polygon,
   bsc,
   avalanche,
+  celo,
+  blast,
+  zora,
+  zksync,
+  worldchain,
+  unichainMainnet,
   sepolia,
   baseSepolia,
   arbitrumSepolia,
