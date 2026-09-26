@@ -331,13 +331,13 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
         <div>
           <span className="text-[var(--text-tertiary)]">24h High</span>
           <p className="font-semibold font-mono text-[var(--text-primary)] mt-0.5">
-            {(baseRatio * 1.042).toFixed(baseRatio > 10 ? 2 : 4)}
+            {(liveTargetPrice * 1.042).toFixed(liveTargetPrice > 10 ? 2 : 4)}
           </p>
         </div>
         <div>
           <span className="text-[var(--text-tertiary)]">24h Low</span>
           <p className="font-semibold font-mono text-[var(--text-primary)] mt-0.5">
-            {(baseRatio * 0.965).toFixed(baseRatio > 10 ? 2 : 4)}
+            {(liveTargetPrice * 0.965).toFixed(liveTargetPrice > 10 ? 2 : 4)}
           </p>
         </div>
         <div>
