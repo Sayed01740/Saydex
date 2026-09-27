@@ -34,10 +34,14 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-[var(--text-primary)]">
-                Uniswap V3 Route
+                {settings.routingProtocol === 'v4' ? 'Uniswap V4 Route' : 'Uniswap V3 Route'}
               </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20">
-                {isMultiHop ? 'Multi-Hop' : 'Direct V3'}
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+                settings.routingProtocol === 'v4'
+                  ? 'bg-pink-500/15 text-pink-400 border-pink-500/30'
+                  : 'bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/20'
+              }`}>
+                {settings.routingProtocol === 'v4' ? 'Universal Router (0x10)' : isMultiHop ? 'Multi-Hop' : 'Direct V3'}
               </span>
             </div>
           </div>
@@ -68,43 +72,80 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
             </div>
 
             <div className="space-y-1.5">
-              {quote.routeHops.map((hop, index) => (
-                <div
-                  key={index}
-                  className="p-2.5 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] font-mono text-[11px] space-y-1.5"
-                >
+              {settings.routingProtocol === 'v4' ? (
+                <div className="p-2.5 rounded-lg bg-[var(--bg-surface-elevated)] border border-pink-500/30 font-mono text-[11px] space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-[var(--primary-subtle)] text-[var(--primary)] font-bold text-[10px]">
-                        {hop.percentage}%
+                      <span className="px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold text-[10px]">
+                        100%
                       </span>
                       <span className="text-[var(--text-primary)] font-semibold">
-                        {hop.protocol}
+                        Uniswap V4 (Universal Router)
                       </span>
                     </div>
-                    <span className="px-1.5 py-0.2 rounded bg-[var(--bg-subtle)] text-[var(--text-tertiary)] text-[10px] border border-[var(--border-subtle)]">
-                      {hop.feeTier}
+                    <span className="px-1.5 py-0.2 rounded bg-pink-500/10 text-pink-400 text-[10px] border border-pink-500/20">
+                      Commands: 0x10
                     </span>
                   </div>
 
-                  {/* Visual Hop Steps */}
-                  <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] pt-0.5">
-                    <span className="font-bold text-[var(--text-primary)]">{hop.fromToken}</span>
-                    {hop.intermediateTokens && hop.intermediateTokens.length > 0 ? (
-                      <>
-                        <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
-                        <span className="px-1.5 py-0.2 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-[var(--text-primary)] font-bold">
-                          {hop.intermediateTokens.join(' ➔ ')}
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
-                      </>
-                    ) : (
-                      <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
-                    )}
-                    <span className="font-bold text-[var(--text-primary)]">{hop.toToken}</span>
+                  {/* Actions Pipeline Steps */}
+                  <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] pt-0.5 flex-wrap">
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-emerald-400 font-bold border border-emerald-500/30">
+                      Permit2
+                    </span>
+                    <ArrowRight className="w-3 h-3 text-pink-400" />
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-pink-400 font-bold border border-pink-500/30">
+                      SWAP_EXACT_IN_SINGLE (0x06)
+                    </span>
+                    <ArrowRight className="w-3 h-3 text-pink-400" />
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-amber-400 font-bold border border-amber-500/30">
+                      SETTLE_ALL (0x0c)
+                    </span>
+                    <ArrowRight className="w-3 h-3 text-pink-400" />
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-cyan-400 font-bold border border-cyan-500/30">
+                      TAKE_ALL (0x0d)
+                    </span>
                   </div>
                 </div>
-              ))}
+              ) : (
+                quote.routeHops.map((hop, index) => (
+                  <div
+                    key={index}
+                    className="p-2.5 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] font-mono text-[11px] space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--primary-subtle)] text-[var(--primary)] font-bold text-[10px]">
+                          {hop.percentage}%
+                        </span>
+                        <span className="text-[var(--text-primary)] font-semibold">
+                          {hop.protocol}
+                        </span>
+                      </div>
+                      <span className="px-1.5 py-0.2 rounded bg-[var(--bg-subtle)] text-[var(--text-tertiary)] text-[10px] border border-[var(--border-subtle)]">
+                        {hop.feeTier}
+                      </span>
+                    </div>
+
+                    {/* Visual Hop Steps */}
+                    <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] pt-0.5">
+                      <span className="font-bold text-[var(--text-primary)]">{hop.fromToken}</span>
+                      {hop.intermediateTokens && hop.intermediateTokens.length > 0 ? (
+                        <>
+                          <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
+                          <span className="px-1.5 py-0.2 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-[var(--text-primary)] font-bold">
+                            {hop.intermediateTokens.join(' ➔ ')}
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
+                        </>
+                      ) : (
+                        <ArrowRight className="w-3 h-3 text-[var(--primary)]" />
+                      )}
+                      <span className="font-bold text-[var(--text-primary)]">{hop.toToken}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

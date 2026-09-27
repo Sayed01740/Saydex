@@ -479,6 +479,18 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               </button>
             )}
 
+            {settings.routingProtocol === 'v4' && (
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className="px-2 py-1 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 text-pink-400 border border-pink-500/30 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                title="Uniswap V4 Universal Router Active - Click to configure"
+              >
+                <Zap className="w-3 h-3 text-pink-400" />
+                <span>V4</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 rounded-xl text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-transparent transition-all cursor-pointer"

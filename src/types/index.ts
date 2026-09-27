@@ -248,6 +248,7 @@ export interface UserSettings {
   advancedMode: boolean;
   autoRouter: boolean;
   highGasAlert: boolean;
+  routingProtocol?: 'v3' | 'v4'; // Uniswap V3 (SwapRouter02) vs Uniswap V4 (Universal Router + Permit2)
 }
 
 export interface PriceAlert {

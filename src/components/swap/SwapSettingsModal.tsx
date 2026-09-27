@@ -335,22 +335,68 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
             </button>
           </div>
 
-          {/* Section 4: Official Uniswap Smart Order Routing Engine */}
-          <div className="p-3 rounded-xl bg-[var(--bg-subtle)]/60 border border-[var(--border-subtle)] space-y-1.5">
+          {/* Section 4: Official Uniswap Routing Protocol Selection */}
+          <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-pink-400" />
-                <span className="text-xs font-semibold text-[var(--text-primary)]">
-                  Routing Engine
+                <span className="text-xs font-bold text-[var(--text-primary)]">
+                  Execution Routing Protocol
                 </span>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-400 border border-pink-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
-                Uniswap SOR Active
+              <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
+                {settings.routingProtocol === 'v4' ? 'Universal Router v2' : 'SwapRouter02'}
               </span>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => updateSettings({ routingProtocol: 'v3' })}
+                className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                  (settings.routingProtocol || 'v3') === 'v3'
+                    ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold">Uniswap V3</span>
+                  {(settings.routingProtocol || 'v3') === 'v3' && (
+                    <Check className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  )}
+                </div>
+                <div className="text-[10px] text-[var(--text-tertiary)] leading-tight">
+                  SwapRouter02 + QuoterV2 live on 18 networks
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => updateSettings({ routingProtocol: 'v4' })}
+                className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                  settings.routingProtocol === 'v4'
+                    ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--text-primary)]'
+                    : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-pink-400 flex items-center gap-1">
+                    Uniswap V4
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-pink-500/20 text-pink-300 font-mono">NEW</span>
+                  </span>
+                  {settings.routingProtocol === 'v4' && (
+                    <Check className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  )}
+                </div>
+                <div className="text-[10px] text-[var(--text-tertiary)] leading-tight">
+                  Universal Router (0x10) + Permit2 singleton
+                </div>
+              </button>
+            </div>
             <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-              Multi-hop split routing across concentrated pools with automated MEV protection & optimal price execution.
+              {settings.routingProtocol === 'v4'
+                ? 'Uniswap V4 uses Universal Router execute() with single-byte V4_SWAP (0x10), SWAP_EXACT_IN_SINGLE actions, and Permit2 transient delta settlement.'
+                : 'Uniswap V3 routes multi-hop trades with concentrated liquidity ticks and automated MEV slippage protection.'}
             </p>
           </div>
         </div>

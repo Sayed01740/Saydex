@@ -20,6 +20,7 @@ import { TokenIcon } from '../common/TokenIcon';
 import { useWallet } from '../../context/WalletContext';
 import { useProtocol } from '../../context/ProtocolContext';
 import { uniswapV3Service } from '../../services/uniswapV3Service';
+import { universalRouterV4Service } from '../../services/universalRouterV4Service';
 import { walletLogger } from '../../utils/walletLogger';
 
 interface SwapReviewModalProps {
@@ -47,6 +48,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
   } = useWallet();
 
   const {
+    settings,
     startTransactionLifecycle,
     markTransactionSigning,
     markTransactionSigned,
@@ -107,47 +109,104 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
         throw new Error('No active wallet connected. Please connect your MetaMask or Rabby extension first.');
       }
 
-      // Prepare real Uniswap V3 swap transaction on targetChainId
-      const preparedTx = await uniswapV3Service.buildSwapTransaction({
-        chainId: targetChainId,
-        userAddress: address,
-        tokenIn: quote.tokenIn,
-        tokenOut: quote.tokenOut,
-        amountIn: quote.amountIn,
-        minAmountOut: quote.amountOutMin || quote.amountOut,
-        feeTier: quote.feeTier || 3000,
-        deadlineMinutes: 20,
-      });
+      let swapTo = '';
+      let swapData = '';
+      let swapValue = '0x0';
 
-      // Handle token approval if selling ERC-20
-      if (preparedTx.requiresApproval && preparedTx.approvalTx && !forceSimulation) {
-        setApprovalStep('approving');
-        const approveResult = await sendTransaction({
-          to: preparedTx.approvalTx.to,
-          value: preparedTx.approvalTx.value,
-          data: preparedTx.approvalTx.data,
+      if (settings.routingProtocol === 'v4') {
+        // Prepare official Uniswap V4 Universal Router swap transaction on targetChainId
+        const v4Tx = await universalRouterV4Service.buildV4SwapTransaction({
           chainId: targetChainId,
-          title: `Approve ${quote.tokenIn.symbol} for Uniswap Router`,
-          forceSimulation: false,
+          userAddress: address,
+          tokenIn: quote.tokenIn,
+          tokenOut: quote.tokenOut,
+          amountIn: quote.amountIn,
+          minAmountOut: quote.amountOutMin || quote.amountOut,
+          feeTier: quote.feeTier || 3000,
+          deadlineMinutes: settings.deadlineMinutes || 20,
         });
 
-        // Wait for approval confirmation on-chain before executing swap
-        if (approveResult.hash && !approveResult.hash.startsWith('0x_sim')) {
-          walletLogger.info(
-            'TRANSACTION_LIFECYCLE',
-            `Waiting for approval transaction to be mined on Chain ${targetChainId} (${approveResult.hash})...`
-          );
-          await uniswapV3Service.waitForReceipt(targetChainId, approveResult.hash, 45000);
+        // Handle Permit2 token approval if selling ERC-20
+        if (v4Tx.requiresPermit2Erc20Approval && v4Tx.erc20ApprovalTx && !forceSimulation) {
+          setApprovalStep('approving');
+          const approveResult = await sendTransaction({
+            to: v4Tx.erc20ApprovalTx.to,
+            value: v4Tx.erc20ApprovalTx.value,
+            data: v4Tx.erc20ApprovalTx.data,
+            chainId: targetChainId,
+            title: `Approve ${quote.tokenIn.symbol} for Permit2`,
+            forceSimulation: false,
+          });
+
+          if (approveResult.hash && !approveResult.hash.startsWith('0x_sim')) {
+            await uniswapV3Service.waitForReceipt(targetChainId, approveResult.hash, 45000);
+          }
+
+          // Permit2 router approval if needed
+          if (v4Tx.permit2ApproveTx) {
+            await sendTransaction({
+              to: v4Tx.permit2ApproveTx.to,
+              value: v4Tx.permit2ApproveTx.value,
+              data: v4Tx.permit2ApproveTx.data,
+              chainId: targetChainId,
+              title: `Approve Universal Router via Permit2`,
+              forceSimulation: false,
+            });
+          }
+          setApprovalStep('approved');
+          await new Promise((resolve) => setTimeout(resolve, 800));
         }
-        setApprovalStep('approved');
-        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        swapTo = v4Tx.to;
+        swapData = v4Tx.data;
+        swapValue = v4Tx.value;
+      } else {
+        // Prepare real Uniswap V3 swap transaction on targetChainId
+        const preparedTx = await uniswapV3Service.buildSwapTransaction({
+          chainId: targetChainId,
+          userAddress: address,
+          tokenIn: quote.tokenIn,
+          tokenOut: quote.tokenOut,
+          amountIn: quote.amountIn,
+          minAmountOut: quote.amountOutMin || quote.amountOut,
+          feeTier: quote.feeTier || 3000,
+          deadlineMinutes: settings.deadlineMinutes || 20,
+        });
+
+        // Handle token approval if selling ERC-20
+        if (preparedTx.requiresApproval && preparedTx.approvalTx && !forceSimulation) {
+          setApprovalStep('approving');
+          const approveResult = await sendTransaction({
+            to: preparedTx.approvalTx.to,
+            value: preparedTx.approvalTx.value,
+            data: preparedTx.approvalTx.data,
+            chainId: targetChainId,
+            title: `Approve ${quote.tokenIn.symbol} for Uniswap Router`,
+            forceSimulation: false,
+          });
+
+          // Wait for approval confirmation on-chain before executing swap
+          if (approveResult.hash && !approveResult.hash.startsWith('0x_sim')) {
+            walletLogger.info(
+              'TRANSACTION_LIFECYCLE',
+              `Waiting for approval transaction to be mined on Chain ${targetChainId} (${approveResult.hash})...`
+            );
+            await uniswapV3Service.waitForReceipt(targetChainId, approveResult.hash, 45000);
+          }
+          setApprovalStep('approved');
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
+
+        swapTo = preparedTx.to;
+        swapData = preparedTx.data;
+        swapValue = preparedTx.value;
       }
 
       // Execute Swap transaction through connected wallet
       const txResult = await sendTransaction({
-        to: preparedTx.to,
-        value: preparedTx.value,
-        data: preparedTx.data,
+        to: swapTo,
+        value: swapValue,
+        data: swapData,
         chainId: targetChainId,
         title: `Swap ${quote.amountIn} ${quote.tokenIn.symbol} -> ${quote.amountOut} ${quote.tokenOut.symbol}`,
         forceSimulation: false,
@@ -351,34 +410,54 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
               <span className="text-[var(--text-tertiary)]">Routing Engine</span>
               <span className="text-pink-500 font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Universal Router + Permit2</span>
+                <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 (Universal Router)' : 'Uniswap V3 (SwapRouter02)'}</span>
               </span>
             </div>
           </div>
 
-          {/* Universal Router Command Stack Preview */}
+          {/* Calldata & Command Stack Preview */}
           <div className="p-3 rounded-xl bg-pink-500/5 border border-pink-500/20 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-pink-500 flex items-center gap-1">
-                <span>Atomic Calldata Pipeline</span>
+                <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 Execution Pipeline' : 'Atomic Calldata Pipeline'}</span>
               </span>
               <span className="font-mono text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                Single execute() call
+                {settings.routingProtocol === 'v4' ? 'Command: 0x10 V4_SWAP' : 'Single execute() call'}
               </span>
             </div>
-            <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
-              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-emerald-500 font-bold">
-                0x02 PERMIT2
-              </span>
-              <span>→</span>
-              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-indigo-400 font-bold">
-                0x00 V3_SWAP
-              </span>
-              <span>→</span>
-              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-amber-400 font-bold">
-                0x0b SWEEP
-              </span>
-            </div>
+            {settings.routingProtocol === 'v4' ? (
+              <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-emerald-500/30 text-emerald-500 font-bold">
+                  PERMIT2
+                </span>
+                <span>→</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-pink-500/30 text-pink-400 font-bold">
+                  0x06 SWAP_EXACT_IN
+                </span>
+                <span>→</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-amber-500/30 text-amber-400 font-bold">
+                  0x0c SETTLE_ALL
+                </span>
+                <span>→</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-cyan-500/30 text-cyan-400 font-bold">
+                  0x0d TAKE_ALL
+                </span>
+              </div>
+            ) : (
+              <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-emerald-500 font-bold">
+                  0x02 PERMIT2
+                </span>
+                <span>→</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-indigo-400 font-bold">
+                  0x00 V3_SWAP
+                </span>
+                <span>→</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-amber-400 font-bold">
+                  0x0b SWEEP
+                </span>
+              </div>
+            )}
           </div>
 
           <Button

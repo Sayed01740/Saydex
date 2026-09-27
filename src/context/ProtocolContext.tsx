@@ -314,6 +314,7 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
     advancedMode: false,
     autoRouter: true,
     highGasAlert: false,
+    routingProtocol: 'v3',
   });
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {
