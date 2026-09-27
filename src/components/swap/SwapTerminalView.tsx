@@ -9,6 +9,8 @@ import { PriceAlertsManager } from './PriceAlertsManager';
 import { SetPriceAlertModal } from './SetPriceAlertModal';
 import { SwapSettingsModal } from './SwapSettingsModal';
 import { motion, AnimatePresence } from 'motion/react';
+import { getUniswapV3Deployment } from '../../config/uniswapV3Contracts';
+import { livePriceService } from '../../services/livePriceService';
 
 export const SwapTerminalView: React.FC = () => {
   const { tokens, settings, targetTradeToken } = useProtocol();
@@ -36,13 +38,14 @@ export const SwapTerminalView: React.FC = () => {
   useEffect(() => {
     const nativeSym = selectedChain.nativeCurrency.symbol;
     const nativeName = selectedChain.nativeCurrency.name;
+    const deployment = getUniswapV3Deployment(selectedChain.id);
 
     const chainTokens = tokens.filter((t) => t.chainId === selectedChain.id);
     const matchingNative =
       chainTokens.find(
         (t) =>
-          t.symbol.toUpperCase() === nativeSym.toUpperCase() ||
-          t.address === '0x0000000000000000000000000000000000000000'
+          t.address === '0x0000000000000000000000000000000000000000' ||
+          t.symbol.toUpperCase() === nativeSym.toUpperCase()
       ) ||
       tokens.find((t) => t.symbol.toUpperCase() === nativeSym.toUpperCase() && t.chainId === selectedChain.id) || {
         address: '0x0000000000000000000000000000000000000000',
@@ -50,8 +53,8 @@ export const SwapTerminalView: React.FC = () => {
         symbol: nativeSym,
         name: nativeName,
         decimals: selectedChain.nativeCurrency.decimals || 18,
-        priceUSD: nativeSym === 'BNB' ? 645.0 : nativeSym === 'AVAX' ? 34.8 : nativeSym === 'POL' ? 0.52 : 3482.5,
-        change24h: 2.5,
+        priceUSD: livePriceService.getCachedPrice({ symbol: nativeSym, chainId: selectedChain.id } as Token)?.priceUSD || 0,
+        change24h: livePriceService.getCachedPrice({ symbol: nativeSym, chainId: selectedChain.id } as Token)?.change24h || 0,
         icon: selectedChain.icon,
         isVerified: true,
         isPopular: true,
@@ -61,44 +64,54 @@ export const SwapTerminalView: React.FC = () => {
 
     const outCandidates = chainTokens.filter(
       (t) =>
-        t.symbol.toUpperCase() !== nativeSym.toUpperCase() &&
-        t.address !== '0x0000000000000000000000000000000000000000'
+        t.address !== '0x0000000000000000000000000000000000000000' &&
+        t.symbol.toUpperCase() !== nativeSym.toUpperCase()
     );
+
+    const targetStableAddr = deployment?.defaultStablecoinAddress?.toLowerCase();
+    const targetStableSym = deployment?.defaultStablecoinSymbol?.toUpperCase() || 'USDC';
+
     const matchingOut =
+      (targetStableAddr ? outCandidates.find((t) => t.address.toLowerCase() === targetStableAddr) : undefined) ||
+      outCandidates.find((t) => t.symbol.toUpperCase() === targetStableSym) ||
       outCandidates.find((t) => t.symbol.toUpperCase() === 'USDC') ||
       outCandidates.find((t) => t.symbol.toUpperCase() === 'USDT') ||
       outCandidates[0] ||
-      tokens.find((t) => t.symbol.toUpperCase() === 'USDC') ||
-      tokens[1];
+      (deployment
+        ? {
+            address: deployment.defaultStablecoinAddress,
+            chainId: selectedChain.id,
+            symbol: deployment.defaultStablecoinSymbol,
+            name: deployment.defaultStablecoinSymbol,
+            decimals: ['USDT', 'CUSD', 'USDB'].includes(deployment.defaultStablecoinSymbol) && selectedChain.id !== 1 ? 18 : 6,
+            priceUSD: 1.0,
+            change24h: 0.0,
+            icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+            isVerified: true,
+            isPopular: true,
+          }
+        : tokens.find((t) => t.symbol.toUpperCase() === 'USDC') || tokens[1]);
 
     if (matchingOut) {
       setTokenOut(matchingOut);
     }
   }, [selectedChain.id, selectedChain.nativeCurrency.symbol]);
 
-  // Keep active selected token prices and 24h change synchronized with live tokens array
+  // Keep active selected token prices and 24h change synchronized with live price service
   useEffect(() => {
     if (tokenIn) {
-      const liveIn = tokens.find(
-        (t) =>
-          t.symbol.toUpperCase() === tokenIn.symbol.toUpperCase() &&
-          (t.chainId === tokenIn.chainId || (!t.address && !tokenIn.address))
-      );
-      if (liveIn && Math.abs(liveIn.priceUSD - tokenIn.priceUSD) > 0.0001) {
-        setTokenIn((prev) => ({ ...prev, priceUSD: liveIn.priceUSD, change24h: liveIn.change24h }));
+      const live = livePriceService.getCachedPrice(tokenIn);
+      if (live && live.priceUSD > 0 && Math.abs(live.priceUSD - tokenIn.priceUSD) > 0.0001) {
+        setTokenIn((prev) => ({ ...prev, priceUSD: live.priceUSD, change24h: live.change24h || prev.change24h }));
       }
     }
     if (tokenOut) {
-      const liveOut = tokens.find(
-        (t) =>
-          t.symbol.toUpperCase() === tokenOut.symbol.toUpperCase() &&
-          (t.chainId === tokenOut.chainId || (!t.address && !tokenOut.address))
-      );
-      if (liveOut && Math.abs(liveOut.priceUSD - tokenOut.priceUSD) > 0.0001) {
-        setTokenOut((prev) => ({ ...prev, priceUSD: liveOut.priceUSD, change24h: liveOut.change24h }));
+      const live = livePriceService.getCachedPrice(tokenOut);
+      if (live && live.priceUSD > 0 && Math.abs(live.priceUSD - tokenOut.priceUSD) > 0.0001) {
+        setTokenOut((prev) => ({ ...prev, priceUSD: live.priceUSD, change24h: live.change24h || prev.change24h }));
       }
     }
-  }, [tokens]);
+  }, [tokens, tokenIn.symbol, tokenOut.symbol]);
 
   // Settings Modal state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);

@@ -128,11 +128,72 @@ class LivePriceService {
   }
 
   /**
-   * Get cached price for a token synchronously
+   * Get cached price for a token synchronously across any chain
    */
-  public getCachedPrice(token: Token): LivePriceData | null {
-    const key = this.getTokenKey(token);
-    return this.cache.get(key) || this.cache.get(`1:${token.symbol.toUpperCase()}`) || null;
+  public getCachedPrice(token: { chainId?: number; symbol: string; address?: string }): LivePriceData | null {
+    if (!token || !token.symbol) return null;
+    const sym = token.symbol.toUpperCase();
+
+    // 1. All pegged stablecoins are pegged at $1.00 USD
+    if (['USDC', 'USDT', 'DAI', 'USDS', 'FDUSD', 'PYUSD', 'USDB', 'CUSD'].includes(sym)) {
+      return {
+        priceUSD: 1.0,
+        change24h: 0.0,
+        lastUpdated: Date.now(),
+      };
+    }
+
+    // 2. Direct exact match (chainId:symbol)
+    const directKey = this.getTokenKey(token);
+    const direct = this.cache.get(directKey);
+    if (direct && direct.priceUSD > 0) {
+      return direct;
+    }
+
+    // 3. ETH & WETH across any L1 / L2 network (Arbitrum, Base, Optimism, Blast, Unichain, etc.)
+    if (sym === 'ETH' || sym === 'WETH') {
+      const ethPrice = this.cache.get('1:ETH') || this.cache.get('1:WETH');
+      if (ethPrice && ethPrice.priceUSD > 0) return ethPrice;
+    }
+
+    // 4. BNB / WBNB
+    if (sym === 'BNB' || sym === 'WBNB') {
+      const bnbPrice = this.cache.get('56:BNB') || this.cache.get('1:BNB');
+      if (bnbPrice && bnbPrice.priceUSD > 0) return bnbPrice;
+    }
+
+    // 5. AVAX / WAVAX
+    if (sym === 'AVAX' || sym === 'WAVAX') {
+      const avaxPrice = this.cache.get('43114:AVAX') || this.cache.get('1:AVAX');
+      if (avaxPrice && avaxPrice.priceUSD > 0) return avaxPrice;
+    }
+
+    // 6. POL / MATIC
+    if (sym === 'POL' || sym === 'MATIC' || sym === 'WPOL') {
+      const polPrice = this.cache.get('137:POL') || this.cache.get('1:POL') || this.cache.get('1:MATIC');
+      if (polPrice && polPrice.priceUSD > 0) return polPrice;
+    }
+
+    // 7. CELO
+    if (sym === 'CELO') {
+      const celoPrice = this.cache.get('42220:CELO') || this.cache.get('1:CELO');
+      if (celoPrice && celoPrice.priceUSD > 0) return celoPrice;
+    }
+
+    // 8. General canonical check (1:SYMBOL)
+    const canonical = this.cache.get(`1:${sym}`);
+    if (canonical && canonical.priceUSD > 0) {
+      return canonical;
+    }
+
+    // 9. Scan cache for any entry with this symbol
+    for (const [k, v] of this.cache.entries()) {
+      if (k.endsWith(`:${sym}`) && v.priceUSD > 0) {
+        return v;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -233,9 +294,38 @@ class LivePriceService {
                 lastUpdated: now,
               };
               this.cache.set(`1:${sym}`, priceData);
-              // Set for wrapped pairs too
-              if (sym === 'ETH') this.cache.set(`1:WETH`, priceData);
-              if (sym === 'BTC') this.cache.set(`1:WBTC`, priceData);
+              // Set for wrapped pairs & multi-chain native tokens too
+              if (sym === 'ETH') {
+                this.cache.set(`1:WETH`, priceData);
+                const ethChains = [1, 42161, 8453, 10, 81457, 130, 324, 480, 7777777, 11155111, 84532, 421614, 11155420, 1301];
+                ethChains.forEach((cid) => {
+                  this.cache.set(`${cid}:ETH`, priceData);
+                  this.cache.set(`${cid}:WETH`, priceData);
+                });
+              }
+              if (sym === 'BTC') {
+                this.cache.set(`1:WBTC`, priceData);
+                [1, 42161, 8453, 10, 137, 56, 43114].forEach((cid) => {
+                  this.cache.set(`${cid}:BTC`, priceData);
+                  this.cache.set(`${cid}:WBTC`, priceData);
+                });
+              }
+              if (sym === 'BNB') {
+                this.cache.set(`56:BNB`, priceData);
+                this.cache.set(`56:WBNB`, priceData);
+              }
+              if (sym === 'AVAX') {
+                this.cache.set(`43114:AVAX`, priceData);
+                this.cache.set(`43114:WAVAX`, priceData);
+              }
+              if (sym === 'MATIC' || sym === 'POL') {
+                this.cache.set(`137:POL`, priceData);
+                this.cache.set(`137:MATIC`, priceData);
+                this.cache.set(`137:WPOL`, priceData);
+              }
+              if (sym === 'CELO') {
+                this.cache.set(`42220:CELO`, priceData);
+              }
             }
           }
         } catch {}
@@ -280,11 +370,37 @@ class LivePriceService {
                     lastUpdated: now,
                   };
                   this.cache.set(`1:${sym}`, updated);
-                  if (sym === 'ETH') this.cache.set(`1:WETH`, updated);
-                  if (sym === 'BTC') this.cache.set(`1:WBTC`, updated);
-                  if (sym === 'BNB') this.cache.set(`56:BNB`, updated);
-                  if (sym === 'AVAX') this.cache.set(`43114:AVAX`, updated);
-                  if (sym === 'CELO') this.cache.set(`42220:CELO`, updated);
+                  if (sym === 'ETH') {
+                    this.cache.set(`1:WETH`, updated);
+                    const ethChains = [1, 42161, 8453, 10, 81457, 130, 324, 480, 7777777, 11155111, 84532, 421614, 11155420, 1301];
+                    ethChains.forEach((cid) => {
+                      this.cache.set(`${cid}:ETH`, updated);
+                      this.cache.set(`${cid}:WETH`, updated);
+                    });
+                  }
+                  if (sym === 'BTC') {
+                    this.cache.set(`1:WBTC`, updated);
+                    [1, 42161, 8453, 10, 137, 56, 43114].forEach((cid) => {
+                      this.cache.set(`${cid}:BTC`, updated);
+                      this.cache.set(`${cid}:WBTC`, updated);
+                    });
+                  }
+                  if (sym === 'BNB') {
+                    this.cache.set(`56:BNB`, updated);
+                    this.cache.set(`56:WBNB`, updated);
+                  }
+                  if (sym === 'AVAX') {
+                    this.cache.set(`43114:AVAX`, updated);
+                    this.cache.set(`43114:WAVAX`, updated);
+                  }
+                  if (sym === 'POL') {
+                    this.cache.set(`137:POL`, updated);
+                    this.cache.set(`137:MATIC`, updated);
+                    this.cache.set(`137:WPOL`, updated);
+                  }
+                  if (sym === 'CELO') {
+                    this.cache.set(`42220:CELO`, updated);
+                  }
                 }
               });
             }

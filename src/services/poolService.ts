@@ -2,6 +2,7 @@ import { LiquidityPool, Token, FeeTier } from '../types';
 import { UNISWAP_V3_DEPLOYMENTS } from '../config/uniswapV3Contracts';
 import { rpcProviderWrapper } from '../utils/rpcProviderWrapper';
 import { UNISWAP_TOKENS } from '../data/uniswapTokens';
+import { livePriceService } from './livePriceService';
 
 function pad32Bytes(value: string | number | bigint): string {
   let hex: string;
@@ -252,7 +253,7 @@ class PoolService {
         symbol: tpl.token0Symbol,
         name: tpl.token0Symbol,
         decimals: 18,
-        priceUSD: tpl.token0Symbol === 'WBTC' ? 92450 : tpl.token0Symbol === 'ETH' || tpl.token0Symbol === 'WETH' ? 3482.5 : tpl.token0Symbol === 'SAYDEX' ? 14.8 : 1.0,
+        priceUSD: livePriceService.getCachedPrice({ symbol: tpl.token0Symbol, chainId } as Token)?.priceUSD || 1.0,
         change24h: 0,
         icon: '',
         isVerified: true,
@@ -264,7 +265,7 @@ class PoolService {
         symbol: tpl.token1Symbol,
         name: tpl.token1Symbol,
         decimals: 18,
-        priceUSD: tpl.token1Symbol === 'USDC' || tpl.token1Symbol === 'USDT' ? 1.0 : 3482.5,
+        priceUSD: livePriceService.getCachedPrice({ symbol: tpl.token1Symbol, chainId } as Token)?.priceUSD || 1.0,
         change24h: 0,
         icon: '',
         isVerified: true,

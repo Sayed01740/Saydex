@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uniswapV3Service, OnChainQuoteResult } from '../../services/uniswapV3Service';
+import { getUniswapV3Deployment } from '../../config/uniswapV3Contracts';
+import { livePriceService } from '../../services/livePriceService';
 import { LimitOrdersManager } from './LimitOrdersManager';
 import { FiatOnRampModal } from '../common/FiatOnRampModal';
 import { limitOrdersService } from '../../services/limitOrdersService';
@@ -80,7 +82,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     symbol: 'ETH',
     name: 'Ethereum',
     decimals: 18,
-    priceUSD: 3482.50,
+    priceUSD: livePriceService.getCachedPrice({ symbol: 'ETH', chainId: 1 } as Token)?.priceUSD || 2680.00,
     change24h: 3.42,
     volume24hUSD: 425000000,
     color: '#627EEA',
@@ -104,28 +106,61 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     if (!externalTokenIn) {
       const nativeSym = selectedChain.nativeCurrency.symbol;
       const nativeName = selectedChain.nativeCurrency.name;
+      const deployment = getUniswapV3Deployment(selectedChain.id);
       
-      const matchingNative = tokens.find(
-        (t) => t.symbol === nativeSym && (t.chainId === selectedChain.id || t.address === '0x0000000000000000000000000000000000000000')
-      ) || {
-        id: `${selectedChain.id}-${nativeSym.toLowerCase()}`,
-        symbol: nativeSym,
-        name: nativeName,
-        decimals: selectedChain.nativeCurrency.decimals || 18,
-        priceUSD: nativeSym === 'BNB' ? 645.0 : nativeSym === 'AVAX' ? 34.8 : nativeSym === 'POL' ? 0.52 : 3482.5,
-        change24h: 2.5,
-        volume24hUSD: 100000000,
-        color: '#627EEA',
-        iconUrl: selectedChain.icon,
-        chainId: selectedChain.id,
-      };
+      const chainTokens = tokens.filter((t) => t.chainId === selectedChain.id);
+      const matchingNative =
+        chainTokens.find(
+          (t) =>
+            t.address === '0x0000000000000000000000000000000000000000' ||
+            t.symbol.toUpperCase() === nativeSym.toUpperCase()
+        ) || {
+          id: `${selectedChain.id}-${nativeSym.toLowerCase()}`,
+          address: '0x0000000000000000000000000000000000000000',
+          symbol: nativeSym,
+          name: nativeName,
+          decimals: selectedChain.nativeCurrency.decimals || 18,
+          priceUSD: livePriceService.getCachedPrice({ symbol: nativeSym, chainId: selectedChain.id } as Token)?.priceUSD || 0,
+          change24h: livePriceService.getCachedPrice({ symbol: nativeSym, chainId: selectedChain.id } as Token)?.change24h || 0,
+          volume24hUSD: 100000000,
+          color: '#627EEA',
+          iconUrl: selectedChain.icon,
+          chainId: selectedChain.id,
+        };
 
       setTokenIn(matchingNative);
 
-      // Also adapt tokenOut to a token on the selected chain (e.g. USDC or USDT or popular DEX token)
+      // Also adapt tokenOut to a token on the selected chain (e.g. USDC or USDT or default stablecoin)
       if (!externalTokenOut) {
-        const chainTokens = tokens.filter((t) => t.chainId === selectedChain.id && t.symbol !== nativeSym);
-        const matchingOut = chainTokens.find((t) => t.symbol === 'USDC') || chainTokens.find((t) => t.symbol === 'USDT') || chainTokens[0];
+        const outCandidates = chainTokens.filter(
+          (t) =>
+            t.address !== '0x0000000000000000000000000000000000000000' &&
+            t.symbol.toUpperCase() !== nativeSym.toUpperCase()
+        );
+        const targetStableAddr = deployment?.defaultStablecoinAddress?.toLowerCase();
+        const targetStableSym = deployment?.defaultStablecoinSymbol?.toUpperCase() || 'USDC';
+
+        const matchingOut =
+          (targetStableAddr ? outCandidates.find((t) => t.address.toLowerCase() === targetStableAddr) : undefined) ||
+          outCandidates.find((t) => t.symbol.toUpperCase() === targetStableSym) ||
+          outCandidates.find((t) => t.symbol.toUpperCase() === 'USDC') ||
+          outCandidates.find((t) => t.symbol.toUpperCase() === 'USDT') ||
+          outCandidates[0] ||
+          (deployment
+            ? {
+                id: `${selectedChain.id}-${deployment.defaultStablecoinSymbol.toLowerCase()}`,
+                address: deployment.defaultStablecoinAddress,
+                chainId: selectedChain.id,
+                symbol: deployment.defaultStablecoinSymbol,
+                name: deployment.defaultStablecoinSymbol,
+                decimals: ['USDT', 'CUSD', 'USDB'].includes(deployment.defaultStablecoinSymbol) && selectedChain.id !== 1 ? 18 : 6,
+                priceUSD: 1.0,
+                change24h: 0.0,
+                color: '#2775CA',
+                iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+              }
+            : undefined);
+
         if (matchingOut) {
           setTokenOut(matchingOut);
           if (onTokensChanged) onTokensChanged(matchingNative, matchingOut);
@@ -291,9 +326,13 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   // Calculate live output quote combining on-chain quoter with fallback math
   const quote: SwapQuote = useMemo(() => {
     const parsedAmount = parseFloat(amountIn) || 0;
-    const inPrice = tokenIn?.priceUSD ?? 3482.50;
-    const outPrice = tokenOut?.priceUSD ?? 1.00;
-    const mathRate = inPrice / Math.max(0.000001, outPrice);
+    const inPrice = (tokenIn?.priceUSD && tokenIn.priceUSD > 0)
+      ? tokenIn.priceUSD
+      : (livePriceService.getCachedPrice(tokenIn)?.priceUSD || 0);
+    const outPrice = (tokenOut?.priceUSD && tokenOut.priceUSD > 0)
+      ? tokenOut.priceUSD
+      : (livePriceService.getCachedPrice(tokenOut)?.priceUSD || 1.0);
+    const mathRate = outPrice > 0 ? inPrice / outPrice : inPrice;
     const mathOut = parsedAmount * mathRate;
 
     // Use live on-chain quote if available and valid
