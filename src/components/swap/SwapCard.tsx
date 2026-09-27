@@ -26,6 +26,7 @@ import {
   CreditCard,
   Clock,
   CheckCircle2,
+  Zap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uniswapV3Service, OnChainQuoteResult } from '../../services/uniswapV3Service';
