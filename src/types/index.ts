@@ -8,6 +8,7 @@ export interface PublicClient {
   getTokenBalance: (tokenAddress: string, walletAddress: string, decimals?: number, signal?: AbortSignal) => Promise<number | null>;
   call: (params: { to: string; data: string; from?: string; value?: string }, blockTag?: string) => Promise<string>;
   estimateGas: (params: { to?: string; from?: string; data?: string; value?: string }) => Promise<string>;
+  getGasPrice?: () => Promise<bigint | null>;
   getChainId: () => Promise<number | null>;
   getBlockNumber: () => Promise<number | null>;
   getTransactionReceipt: (hash: string) => Promise<any>;

@@ -402,7 +402,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-tertiary)]">Network Gas Fee</span>
               <span className="font-mono text-[var(--text-primary)] font-medium">
-                ~${quote.networkFeeUSD.toFixed(2)}
+                {quote.networkFeeUSD < 0.005 ? '<$0.01' : `~$${quote.networkFeeUSD.toFixed(2)}`}
               </span>
             </div>
 
@@ -636,7 +636,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-tertiary)]">Actual Gas Used</span>
               <span className="font-mono text-[var(--text-primary)]">
-                ${quote.networkFeeUSD.toFixed(2)}
+                {quote.networkFeeUSD < 0.005 ? '<$0.01' : `$${quote.networkFeeUSD.toFixed(2)}`}
               </span>
             </div>
           </div>

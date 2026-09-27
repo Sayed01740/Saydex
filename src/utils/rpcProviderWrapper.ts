@@ -959,6 +959,21 @@ export class CustomRpcProviderWrapper {
   }
 
   /**
+   * Helper: get live on-chain gas price (in Wei) directly from blockchain node
+   */
+  public async getGasPrice(chainId: number): Promise<bigint | null> {
+    try {
+      const hex = await this.execute<string>(chainId, 'eth_gasPrice', [], { timeoutMs: 3500 });
+      if (hex && typeof hex === 'string' && hex.startsWith('0x')) {
+        return BigInt(hex);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Helper: get transaction receipt on chain
    */
   public async getTransactionReceipt(
@@ -1007,6 +1022,7 @@ export class CustomRpcProviderWrapper {
         this.getTokenBalance(chainId, tokenAddress, walletAddress, decimals, signal),
       call: (params, blockTag) => this.call(chainId, params, blockTag),
       estimateGas: (params) => this.estimateGas(chainId, params),
+      getGasPrice: () => this.getGasPrice(chainId),
       getChainId: () => this.getChainId(chainId),
       getBlockNumber: () => this.getBlockNumber(chainId),
       getTransactionReceipt: (hash: string) => this.getTransactionReceipt(chainId, hash),

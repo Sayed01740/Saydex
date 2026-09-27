@@ -39,6 +39,7 @@ import { limitOrdersService } from '../../services/limitOrdersService';
 import { tokenSecurityService } from '../../services/tokenSecurityService';
 import { audioFeedback } from '../../utils/audioFeedback';
 import { TokenSecurityBadge } from './TokenSecurityBadge';
+import { gasService, LiveGasData } from '../../services/gasService';
 
 interface SwapCardProps {
   onToggleChart?: () => void;
@@ -102,6 +103,34 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   });
   const [amountIn, setAmountIn] = useState<string>(() => externalAmountIn || '1.0');
   const [showDetails, setShowDetails] = useState(false);
+  const [gasData, setGasData] = useState<LiveGasData>(() =>
+    gasService.getGasDataSync(selectedChain.id, 135000)
+  );
+
+  // Real-time on-chain gas price polling from blockchain RPC pool
+  useEffect(() => {
+    let isCancelled = false;
+    const gasUnits = onChainQuoteResult?.gasEstimate || 135000;
+
+    const fetchGas = async () => {
+      try {
+        const data = await gasService.fetchLiveGasData(selectedChain.id, gasUnits);
+        if (!isCancelled) {
+          setGasData(data);
+        }
+      } catch (err) {
+        console.warn('Failed to query live gas:', err);
+      }
+    };
+
+    fetchGas();
+    const interval = setInterval(fetchGas, 10000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedChain.id, onChainQuoteResult?.gasEstimate]);
 
   // Adapt native currency & pair tokens when selected chain changes
   useEffect(() => {
@@ -360,12 +389,10 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       amountOutMin: minOut > 0 ? (minOut > 1 ? minOut.toFixed(4) : minOut.toFixed(6)) : '0.00',
       executionPrice: rate,
       priceImpact: selectedRoute ? selectedRoute.priceImpact : 0.01,
-      networkFeeUSD: onChainQuoteResult?.gasEstimate
-        ? Math.max(0.05, (onChainQuoteResult.gasEstimate * 25e-9 * (tokenIn.priceUSD || 3000)))
-        : (selectedRoute ? selectedRoute.gasCostUSD : 1.45),
+      networkFeeUSD: gasData.gasCostUSD,
       feeTier,
       quoteSource: onChainQuoteResult?.source || 'fallback_math',
-      gasEstimate: onChainQuoteResult?.gasEstimate,
+      gasEstimate: onChainQuoteResult?.gasEstimate || gasData.estimatedGasUnits,
       routeHops: selectedRoute ? selectedRoute.routeHops : [
         {
           protocol: 'Uniswap V3',
@@ -380,7 +407,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       guaranteedUntil: Date.now() + 30000,
       mevProtected: settings.mevProtection,
     };
-  }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult]);
+  }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult, gasData]);
 
   // Synchronize live quote to parent container (for chart and external viewers)
   useEffect(() => {
@@ -720,7 +747,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)]">
                 <Fuel className="w-3.5 h-3.5 text-[var(--primary)]" />
-                <span>${quote.networkFeeUSD.toFixed(2)}</span>
+                <span>{gasData.formattedUSD}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showDetails ? 'rotate-180' : ''}`} />
               </div>
             </button>
@@ -736,8 +763,18 @@ export const SwapCard: React.FC<SwapCardProps> = ({
                   <span className="font-mono text-[var(--text-primary)]">{settings.slippageTolerance}%</span>
                 </div>
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                  <span className="text-[var(--text-tertiary)]">Network Cost</span>
-                  <span className="font-mono text-[var(--text-primary)]">~${quote.networkFeeUSD.toFixed(2)}</span>
+                  <span className="text-[var(--text-tertiary)] flex items-center gap-1.5">
+                    <span>Network Cost</span>
+                    {gasData.isLiveOnChain && (
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Live On-Chain Gas" />
+                    )}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-[var(--text-primary)]">~{gasData.formattedUSD}</span>
+                    <span className="font-mono text-[10px] text-[var(--text-tertiary)]">
+                      ({gasData.gasPriceGwei < 0.1 ? gasData.gasPriceGwei.toFixed(3) : gasData.gasPriceGwei.toFixed(1)} Gwei)
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-tertiary)]">Order Routing</span>

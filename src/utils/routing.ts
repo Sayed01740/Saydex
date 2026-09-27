@@ -1,4 +1,5 @@
 import { Token, RouteHop, SwapQuote } from '../types';
+import { gasService } from '../services/gasService';
 
 export type RouteStrategy = 'smart_split' | 'direct' | 'mev_shield';
 
@@ -188,6 +189,15 @@ export function calculateTradeRoutes(
     },
   ];
 
+  const chainId = tokenIn?.chainId || tokenOut?.chainId || 1;
+  const baseGasUnits = isDirectPair ? 125000 : 175000;
+  const directGasUnits = isDirectPair ? 110000 : 155000;
+  const mevGasUnits = 135000;
+
+  const baseGas = gasService.getGasDataSync(chainId, baseGasUnits);
+  const directGas = gasService.getGasDataSync(chainId, directGasUnits);
+  const mevGas = gasService.getGasDataSync(chainId, mevGasUnits);
+
   const slippageFactor = (100 - slippageTolerance) / 100;
 
   // Build Route 1 (Optimal Route)
@@ -200,8 +210,8 @@ export function calculateTradeRoutes(
     totalHops: smartSplitHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
     isMultiHop: !isDirectPair,
     priceImpact: 0.01,
-    gasCostUSD: isDirectPair ? 1.45 : 2.10,
-    gasSavingsUSD: 0.85,
+    gasCostUSD: baseGas.gasCostUSD,
+    gasSavingsUSD: Math.max(0.005, Number((baseGas.gasCostUSD * 0.15).toFixed(4))),
     expectedOutput: smartExpected,
     minimumOutput: smartExpected * slippageFactor,
     executionPrice: directRate,
@@ -221,8 +231,8 @@ export function calculateTradeRoutes(
     totalHops: directHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
     isMultiHop: !isDirectPair,
     priceImpact: 0.04,
-    gasCostUSD: isDirectPair ? 0.95 : 1.60,
-    gasSavingsUSD: 1.35,
+    gasCostUSD: directGas.gasCostUSD,
+    gasSavingsUSD: Math.max(0.01, Number((baseGas.gasCostUSD - directGas.gasCostUSD).toFixed(4))),
     expectedOutput: directExpected,
     minimumOutput: directExpected * slippageFactor,
     executionPrice: directRate * 0.9994,
@@ -242,8 +252,8 @@ export function calculateTradeRoutes(
     totalHops: mevHops.reduce((acc, h) => acc + (h.hopSteps?.length || 1), 0),
     isMultiHop: !isDirectPair,
     priceImpact: 0.01,
-    gasCostUSD: 1.20,
-    gasSavingsUSD: 0.90,
+    gasCostUSD: mevGas.gasCostUSD,
+    gasSavingsUSD: 0,
     expectedOutput: mevExpected,
     minimumOutput: mevExpected * slippageFactor,
     executionPrice: directRate * 0.9998,
