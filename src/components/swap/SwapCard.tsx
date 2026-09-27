@@ -103,34 +103,6 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   });
   const [amountIn, setAmountIn] = useState<string>(() => externalAmountIn || '1.0');
   const [showDetails, setShowDetails] = useState(false);
-  const [gasData, setGasData] = useState<LiveGasData>(() =>
-    gasService.getGasDataSync(selectedChain.id, 135000)
-  );
-
-  // Real-time on-chain gas price polling from blockchain RPC pool
-  useEffect(() => {
-    let isCancelled = false;
-    const gasUnits = onChainQuoteResult?.gasEstimate || 135000;
-
-    const fetchGas = async () => {
-      try {
-        const data = await gasService.fetchLiveGasData(selectedChain.id, gasUnits);
-        if (!isCancelled) {
-          setGasData(data);
-        }
-      } catch (err) {
-        console.warn('Failed to query live gas:', err);
-      }
-    };
-
-    fetchGas();
-    const interval = setInterval(fetchGas, 10000);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-    };
-  }, [selectedChain.id, onChainQuoteResult?.gasEstimate]);
 
   // Adapt native currency & pair tokens when selected chain changes
   useEffect(() => {
@@ -353,6 +325,35 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       clearTimeout(timer);
     };
   }, [amountIn, tokenIn, tokenOut, selectedChain.id]);
+ 
+  // Live on-chain gas calculation state & effect from blockchain RPC pool
+  const [gasData, setGasData] = useState<LiveGasData>(() =>
+    gasService.getGasDataSync(selectedChain.id, 135000)
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+    const gasUnits = onChainQuoteResult?.gasEstimate || 135000;
+
+    const fetchGas = async () => {
+      try {
+        const data = await gasService.fetchLiveGasData(selectedChain.id, gasUnits);
+        if (!isCancelled) {
+          setGasData(data);
+        }
+      } catch (err) {
+        console.warn('Failed to query live gas:', err);
+      }
+    };
+
+    fetchGas();
+    const interval = setInterval(fetchGas, 10000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedChain.id, onChainQuoteResult?.gasEstimate]);
 
   // Calculate live output quote combining on-chain quoter with fallback math
   const quote: SwapQuote = useMemo(() => {
