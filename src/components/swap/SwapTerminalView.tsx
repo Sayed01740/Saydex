@@ -4,9 +4,6 @@ import { useWallet } from '../../context/WalletContext';
 import { Token } from '../../types';
 import { SwapCard } from './SwapCard';
 import { PriceChart } from './PriceChart';
-import { RecentTradesTable } from './RecentTradesTable';
-import { PriceAlertsManager } from './PriceAlertsManager';
-import { SetPriceAlertModal } from './SetPriceAlertModal';
 import { SwapSettingsModal } from './SwapSettingsModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { getUniswapV3Deployment } from '../../config/uniswapV3Contracts';
@@ -18,7 +15,7 @@ export const SwapTerminalView: React.FC = () => {
   const [tokenIn, setTokenIn] = useState<Token>(() => tokens.find((t) => t.chainId === selectedChain.id) || tokens[0]);
   const [tokenOut, setTokenOut] = useState<Token>(() => tokens.find((t) => t.chainId === selectedChain.id && t.symbol === 'USDC') || tokens[1]);
   const [amountIn, setAmountIn] = useState<string>('1.0');
-  const [isChartOpen, setIsChartOpen] = useState(true);
+  const [isChartOpen, setIsChartOpen] = useState(false);
 
   // Synchronize when a trade token is selected from Explore or Markets
   useEffect(() => {
@@ -117,32 +114,13 @@ export const SwapTerminalView: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [currentSwapRate, setCurrentSwapRate] = useState<number | undefined>(undefined);
 
-  // Target Price Alert Modal state
-  const [isSetAlertModalOpen, setIsSetAlertModalOpen] = useState(false);
-  const [alertModalTokenIn, setAlertModalTokenIn] = useState<Token | undefined>(undefined);
-  const [alertModalTokenOut, setAlertModalTokenOut] = useState<Token | undefined>(undefined);
-
-  const handleOpenSetAlertModal = (inTok?: Token, outTok?: Token) => {
-    setAlertModalTokenIn(inTok || tokenIn);
-    setAlertModalTokenOut(outTok || tokenOut);
-    setIsSetAlertModalOpen(true);
-  };
-
-  const handleSelectPairFromTrade = (inSymbol: string, outSymbol: string, amount?: string) => {
-    const foundIn = tokens.find((t) => t.symbol.toUpperCase() === inSymbol.toUpperCase());
-    const foundOut = tokens.find((t) => t.symbol.toUpperCase() === outSymbol.toUpperCase());
-    if (foundIn) setTokenIn(foundIn);
-    if (foundOut) setTokenOut(foundOut);
-    if (amount) setAmountIn(amount);
-  };
-
   return (
-    <div className="space-y-8 pb-16 pt-4 sm:pt-6">
+    <div className="pb-16 pt-4 sm:pt-10">
       {/* Primary Swap Terminal Layout */}
-      <div id="swap-terminal-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 scroll-mt-24">
+      <div id="swap-terminal-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24">
         {/* Interactive Chart + Swap Card Grid */}
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-6">
-          {/* Left / Center: Interactive Price Chart (Collapsible/Responsive) */}
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-6">
+          {/* Left: Interactive Price Chart (Collapsible/Responsive) */}
           <AnimatePresence>
             {isChartOpen && (
               <motion.div
@@ -156,21 +134,19 @@ export const SwapTerminalView: React.FC = () => {
                   tokenIn={tokenIn}
                   tokenOut={tokenOut}
                   liveRate={currentSwapRate}
-                  onOpenSetAlertModal={handleOpenSetAlertModal}
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Right / Center: Precision Swap Card Terminal */}
-          <div id="swap-card-container" className="w-full lg:w-[480px] shrink-0 mx-auto scroll-mt-24">
+          {/* Center: Precision Swap Card Terminal */}
+          <div id="swap-card-container" className="w-full max-w-[480px] shrink-0 mx-auto scroll-mt-24">
             <SwapCard
               isChartOpen={isChartOpen}
               onToggleChart={() => setIsChartOpen(!isChartOpen)}
               externalTokenIn={tokenIn}
               externalTokenOut={tokenOut}
               externalAmountIn={amountIn}
-              onOpenSetAlertModal={handleOpenSetAlertModal}
               onAmountInChanged={(amt) => setAmountIn(amt)}
               onQuoteChanged={(q) => setCurrentSwapRate(q.executionPrice)}
               onTokensChanged={(inTok, outTok) => {
@@ -180,29 +156,12 @@ export const SwapTerminalView: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Target Price Alerts Manager */}
-        <PriceAlertsManager
-          onOpenSetAlertModal={handleOpenSetAlertModal}
-          onSelectPair={handleSelectPairFromTrade}
-        />
-
-        {/* Mini-table of User's Recent Trade History */}
-        <RecentTradesTable onSelectPair={handleSelectPairFromTrade} />
       </div>
 
       {/* Trade & Protocol Settings Modal */}
       <SwapSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-      />
-
-      {/* Set Price Alert Modal */}
-      <SetPriceAlertModal
-        isOpen={isSetAlertModalOpen}
-        onClose={() => setIsSetAlertModalOpen(false)}
-        initialTokenIn={alertModalTokenIn}
-        initialTokenOut={alertModalTokenOut}
       />
     </div>
   );

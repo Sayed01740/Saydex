@@ -27,6 +27,7 @@ import {
   Clock,
   CheckCircle2,
   Zap,
+  Fuel,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uniswapV3Service, OnChainQuoteResult } from '../../services/uniswapV3Service';
@@ -100,6 +101,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
   });
   const [amountIn, setAmountIn] = useState<string>(() => externalAmountIn || '1.0');
+  const [showDetails, setShowDetails] = useState(false);
 
   // Adapt native currency & pair tokens when selected chain changes
   useEffect(() => {
@@ -459,15 +461,15 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         <div className="aurora-glow-indigo w-64 h-64 -bottom-10 -right-10 opacity-60 pointer-events-none" />
 
         <div className="relative w-full glass-panel rounded-3xl p-4 sm:p-5 shadow-[var(--shadow-card)] transition-all">
-          {/* Header: Tab Switcher (Swap vs Limit vs Buy with Card), Chart toggle, Settings */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-subtle)]">
+        {/* Header: Tab Switcher (Swap vs Limit), Chart toggle, Settings */}
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setTradeMode('swap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
                 tradeMode === 'swap'
-                  ? 'bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-sm'
+                  ? 'text-[var(--text-primary)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               }`}
             >
@@ -482,36 +484,24 @@ export const SwapCard: React.FC<SwapCardProps> = ({
                   setLimitTargetPrice(defaultTarget.toFixed(2));
                 }
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
                 tradeMode === 'limit'
-                  ? 'bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-sm'
+                  ? 'text-[var(--text-primary)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               }`}
             >
-              <Clock className="w-3 h-3 text-indigo-400" />
-              <span>Limit</span>
-              <span className="text-[9px] px-1 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-mono">
-                Gasless
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsFiatModalOpen(true)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--text-tertiary)] hover:text-emerald-400 hover:bg-emerald-500/10 transition-all cursor-pointer"
-            >
-              <CreditCard className="w-3 h-3 text-emerald-400" />
-              <span>Buy</span>
+              Limit
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {onToggleChart && (
               <button
                 onClick={onToggleChart}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
                   isChartOpen
-                    ? 'bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/30'
-                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-transparent'
+                    ? 'text-[var(--primary)] bg-[var(--primary-subtle)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
                 }`}
                 title="Toggle Price Chart"
               >
@@ -519,21 +509,9 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               </button>
             )}
 
-            {settings.routingProtocol === 'v4' && (
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                className="px-2 py-1 rounded-lg bg-[var(--primary-subtle)] hover:bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                title="Uniswap V4 Universal Router Active - Click to configure"
-              >
-                <Zap className="w-3 h-3 text-[var(--primary)]" />
-                <span>V4</span>
-              </button>
-            )}
-
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 rounded-xl text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-transparent transition-all cursor-pointer"
+              className="p-2 rounded-xl text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-all cursor-pointer"
               title="Trade Settings"
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -543,7 +521,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
         {/* Network Mismatch Quick Sync Bar */}
         {isChainMismatch && detectedChainId && (
-          <div className="mb-3.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-300">
+          <div className="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-300">
             <div className="flex items-center gap-1.5 min-w-0">
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
               <span className="truncate">
@@ -559,80 +537,57 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               >
                 Sync Wallet
               </button>
-              <button
-                type="button"
-                onClick={() => syncAppWithWalletChain()}
-                className="px-2 py-1 rounded bg-[var(--bg-surface)] border border-amber-500/30 text-amber-200 font-semibold text-[11px] hover:bg-[var(--bg-surface-hover)] cursor-pointer transition-colors"
-                title="Switch app interface to match wallet"
-              >
-                Sync App
-              </button>
             </div>
           </div>
         )}
 
-        {/* Input: Token In Terminal */}
-        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] focus-within:border-[var(--primary)]/60 rounded-2xl p-4 transition-all">
-          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2.5">
-            <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
-              You Pay
-            </span>
-            <div className="flex items-center gap-1.5 font-mono text-xs">
-              <span className="text-[var(--text-tertiary)]">Balance:</span>
-              <span className="text-[var(--text-primary)] font-bold">
-                {userBalanceIn.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenIn.symbol}
-              </span>
-            </div>
+        {/* Input: Token In ("Sell") */}
+        <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] focus-within:border-[var(--primary)]/50 rounded-2xl p-4 transition-all">
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
+            <span className="font-medium text-[var(--text-secondary)]">Sell</span>
+            {isConnected && (
+              <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--text-tertiary)]">
+                <span>{userBalanceIn.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenIn.symbol}</span>
+                {userBalanceIn > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handlePercentInput(1.0)}
+                    className="text-[var(--primary)] hover:underline font-bold cursor-pointer text-[11px]"
+                  >
+                    Max
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-3">
             <input
               type="number"
-              placeholder="0.0"
+              placeholder="0"
               value={amountIn}
               onChange={(e) => handleAmountChange(e.target.value)}
-              className="w-full bg-transparent font-mono text-3xl font-extrabold tracking-tight text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none"
+              className="w-full bg-transparent font-mono text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none"
               min="0"
               step="any"
             />
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <TokenSecurityBadge token={tokenIn} chainId={selectedChain.id} variant="compact" />
-              <button
-                onClick={() => setSelectorTarget('in')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shadow-xs"
-              >
-                <TokenIcon symbol={tokenIn.symbol} icon={tokenIn.icon} size="sm" />
-                <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-                  {tokenIn.symbol}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              </button>
-            </div>
+            <button
+              onClick={() => setSelectorTarget('in')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--border-strong)] transition-all cursor-pointer shadow-xs shrink-0"
+            >
+              <TokenIcon symbol={tokenIn.symbol} icon={tokenIn.icon} size="sm" />
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
+                {tokenIn.symbol}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+            </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
-            <span className="text-[var(--text-tertiary)] font-mono font-medium">
+          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] font-mono">
+            <span>
               ≈ ${(parseFloat(amountIn || '0') * tokenIn.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-
-            {/* Percentage shortcuts */}
-            <div className="flex items-center gap-1">
-              {[
-                { label: '25%', val: 0.25 },
-                { label: '50%', val: 0.5 },
-                { label: '75%', val: 0.75 },
-                { label: 'MAX', val: 1.0 },
-              ].map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => handlePercentInput(p.val)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wide bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] spring-tactile cursor-pointer"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -649,51 +604,40 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           </motion.button>
         </div>
 
-        {/* Input: Token Out Terminal */}
+        {/* Input: Token Out ("Buy") */}
         <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] hover:border-[var(--border-strong)] rounded-2xl p-4 transition-all">
-          <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-2.5">
-            <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
-              You Receive (Estimated)
-            </span>
-            <div className="flex items-center gap-1.5 font-mono text-xs">
-              <span className="text-[var(--text-tertiary)]">Balance:</span>
-              <span className="text-[var(--text-primary)] font-bold">
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
+            <span className="font-medium text-[var(--text-secondary)]">Buy</span>
+            {isConnected && (
+              <div className="font-mono text-xs text-[var(--text-tertiary)]">
                 {userBalanceOut.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenOut.symbol}
-              </span>
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="w-full font-mono text-3xl font-extrabold tracking-tight text-[var(--primary)] select-all truncate flex items-center gap-2">
+            <div className="w-full font-mono text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-primary)] select-all truncate flex items-center gap-2">
               {isQuoting ? (
-                <div className="h-8 w-44 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shimmer-wave flex items-center px-2">
-                  <span className="text-xs font-sans text-[var(--text-tertiary)] flex items-center gap-1.5">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary)]" />
-                    <span>Best route...</span>
-                  </span>
-                </div>
+                <div className="h-9 w-44 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shimmer-wave" />
               ) : (
-                quote.amountOut
+                quote.amountOut || '0'
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <TokenSecurityBadge token={tokenOut} chainId={selectedChain.id} variant="compact" />
-              <button
-                onClick={() => setSelectorTarget('out')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)]/50 transition-all cursor-pointer shadow-xs"
-              >
-                <TokenIcon symbol={tokenOut.symbol} icon={tokenOut.icon} size="sm" />
-                <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-                  {tokenOut.symbol}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              </button>
-            </div>
+            <button
+              onClick={() => setSelectorTarget('out')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--border-strong)] transition-all cursor-pointer shadow-xs shrink-0"
+            >
+              <TokenIcon symbol={tokenOut.symbol} icon={tokenOut.icon} size="sm" />
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
+                {tokenOut.symbol}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+            </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border-subtle)] text-xs">
-            <span className="text-[var(--text-tertiary)] font-mono font-medium">
+          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] font-mono">
+            <span>
               ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -701,7 +645,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
         {/* LIMIT ORDER CONTROLS (Only visible in Limit Mode) */}
         {tradeMode === 'limit' && (
-          <div className="mb-3 p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2.5">
+          <div className="my-3 p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-[var(--text-primary)]">Target Rate Price</span>
               <div className="flex items-center gap-1">
@@ -755,61 +699,56 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
             <div className="flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
               <span>Execute when {tokenIn.symbol} {limitCondition === 'gte' ? '≥' : '≤'} ${limitTargetPrice || '0.00'}</span>
-              <span className="text-indigo-400 font-semibold font-mono">0 Gas Cost (UniswapX)</span>
+              <span className="text-[var(--primary)] font-semibold font-mono">Gasless</span>
             </div>
           </div>
         )}
 
-        {/* Live Rate & Details Summary (Swap Mode) */}
-        {tradeMode === 'swap' && (
-          <div className="my-3 space-y-2">
-            <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] px-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[var(--text-tertiary)]">Rate</span>
-                <span className="font-mono font-medium text-[var(--text-primary)]">
-                  1 {tokenIn.symbol} = {quote.executionPrice.toFixed(4)} {tokenOut.symbol}
-                </span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold ${
-                    quote.priceImpact < 0.05
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : quote.priceImpact < 0.5
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}
-                  title="Estimated Price Impact against market pool reserves"
-                >
-                  {quote.priceImpact < 0.01 ? '<0.01%' : `${quote.priceImpact.toFixed(2)}%`} Impact
+        {/* Rate & Swap Details (Clean Uniswap Accordion) */}
+        {tradeMode === 'swap' && parseFloat(amountIn || '0') > 0 && (
+          <div className="my-2.5 px-1">
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] py-1 transition-colors cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-1 font-mono text-[12px]">
+                <span>1 {tokenIn.symbol} = {quote.executionPrice.toFixed(4)} {tokenOut.symbol}</span>
+                <span className="text-[var(--text-tertiary)]">
+                  (${(quote.executionPrice * (tokenOut.priceUSD || 1.0)).toFixed(2)})
                 </span>
               </div>
-              {onOpenSetAlertModal && (
-                <button
-                  type="button"
-                  onClick={() => onOpenSetAlertModal(tokenIn, tokenOut)}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--primary)] hover:underline cursor-pointer transition-colors"
-                  title="Set a price alert notification for this pair"
-                >
-                  <Target className="w-3 h-3" />
-                  <span>Target Alert</span>
-                </button>
-              )}
-            </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)]">
+                <Fuel className="w-3.5 h-3.5 text-[var(--primary)]" />
+                <span>${quote.networkFeeUSD.toFixed(2)}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showDetails ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
 
-            {/* Smart Routing Visualizer Component */}
-            <RoutingVisualizer quote={quote} />
+            {showDetails && (
+              <div className="mt-2 p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2 text-xs animate-in fade-in duration-150">
+                <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span className="text-[var(--text-tertiary)]">Price Impact</span>
+                  <span className="font-mono text-[var(--text-primary)]">{quote.priceImpact < 0.01 ? '<0.01%' : `${quote.priceImpact.toFixed(2)}%`}</span>
+                </div>
+                <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span className="text-[var(--text-tertiary)]">Max Slippage</span>
+                  <span className="font-mono text-[var(--text-primary)]">{settings.slippageTolerance}%</span>
+                </div>
+                <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span className="text-[var(--text-tertiary)]">Network Cost</span>
+                  <span className="font-mono text-[var(--text-primary)]">~${quote.networkFeeUSD.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span className="text-[var(--text-tertiary)]">Order Routing</span>
+                  <span className="font-mono text-[var(--primary)] font-medium">
+                    {settings.routingProtocol === 'v4' ? 'Uniswap V4 Universal Router' : 'Uniswap V3'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
-
-        {/* Warning if balance is insufficient */}
-        {isInsufficientBalance && (
-          <div className="mb-3 p-2.5 rounded-xl bg-[var(--error-subtle)] border border-[var(--error)]/30 flex items-center gap-2 text-xs text-[var(--error)]">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Insufficient {tokenIn.symbol} balance for this swap.</span>
-          </div>
-        )}
-
-        {/* Token Security Bar */}
-        <TokenSecurityBadge token={tokenOut} chainId={selectedChain.id} variant="bar" className="mb-3" />
 
         {/* Primary Action Button (Swap vs Limit) */}
         {!isConnected ? (
@@ -818,7 +757,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             size="lg"
             fullWidth
             onClick={() => setIsWalletModalOpen(true)}
-            className="mt-1"
+            className="mt-2"
           >
             Connect Wallet
           </Button>
@@ -829,23 +768,20 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             fullWidth
             disabled={!amountIn || parseFloat(amountIn) <= 0 || !limitTargetPrice || isSigningLimitOrder}
             onClick={handlePlaceLimitOrder}
-            className="mt-1 bg-indigo-500 hover:bg-indigo-400 text-white font-bold gap-2"
+            className="mt-2"
           >
             {isSigningLimitOrder ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Signing via Wallet (EIP-712)...</span>
+                <span>Signing via Wallet...</span>
               </>
             ) : isLimitSuccess ? (
               <>
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Limit Order Placed Gaslessly!</span>
+                <span>Limit Order Placed!</span>
               </>
             ) : (
-              <>
-                <Clock className="w-4 h-4" />
-                <span>Sign Gasless Limit Order (EIP-712)</span>
-              </>
+              <span>Place Limit Order</span>
             )}
           </Button>
         ) : (
@@ -855,13 +791,13 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             fullWidth
             disabled={!amountIn || parseFloat(amountIn) <= 0 || isInsufficientBalance}
             onClick={() => setIsReviewOpen(true)}
-            className="mt-1"
+            className="mt-2"
           >
             {isInsufficientBalance
-              ? `Insufficient ${tokenIn.symbol} Balance`
+              ? `Insufficient ${tokenIn.symbol} balance`
               : !amountIn || parseFloat(amountIn) <= 0
-              ? 'Enter an Amount'
-              : 'Review Swap'}
+              ? 'Enter an amount'
+              : 'Swap'}
           </Button>
         )}
         </div>

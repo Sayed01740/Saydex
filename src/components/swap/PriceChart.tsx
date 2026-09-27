@@ -155,22 +155,6 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
 
         {/* Timeframe & View Toggles */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Target Price Alert Button */}
-          {props.onOpenSetAlertModal && (
-            <button
-              onClick={() => props.onOpenSetAlertModal?.(currentTokenIn, currentTokenOut)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--primary-subtle)] hover:bg-[var(--primary)] hover:text-[#090B0E] border border-[var(--primary)]/30 text-xs font-semibold text-[var(--primary)] transition-all cursor-pointer shadow-2xs"
-              title="Set target price alert for this pair"
-            >
-              <Target className="w-3.5 h-3.5" />
-              <span>Set Alert</span>
-              {pairAlerts.length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-[#090B0E] text-[10px] font-mono font-bold flex items-center justify-center">
-                  {pairAlerts.length}
-                </span>
-              )}
-            </button>
-          )}
 
           <div className="flex items-center p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] text-xs font-medium">
             {(['1H', '1D', '1W', '1M', '1Y', 'ALL'] as Timeframe[]).map((tf) => (
