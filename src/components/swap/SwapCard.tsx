@@ -484,10 +484,10 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(true)}
-                className="px-2 py-1 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 text-pink-400 border border-pink-500/30 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-2 py-1 rounded-lg bg-[var(--primary-subtle)] hover:bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 title="Uniswap V4 Universal Router Active - Click to configure"
               >
-                <Zap className="w-3 h-3 text-pink-400" />
+                <Zap className="w-3 h-3 text-[var(--primary)]" />
                 <span>V4</span>
               </button>
             )}

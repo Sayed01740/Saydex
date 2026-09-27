@@ -2,6 +2,7 @@ import { Token, Chain } from '../types';
 import { ALL_CHAINS, getAllChains, getChainById } from '../config/chains';
 import { walletLogger } from './walletLogger';
 import { rpcProviderWrapper, DEFAULT_NETWORK_RPCS } from './rpcProviderWrapper';
+import { livePriceService } from '../services/livePriceService';
 
 export interface ChainBalanceSummary {
   chainId: number;
@@ -88,6 +89,53 @@ export async function fetchTokenBalanceRpc(
 }
 
 /**
+ * Authoritative native asset real market price resolver.
+ * Free testnet faucet currencies strictly evaluate to $0.00.
+ */
+function getNativeAssetPrice(chain: Chain, tokens: Token[]): number {
+  if (chain.testnet) return 0;
+
+  // 1. Check live price service for exact chain + native symbol
+  const live = livePriceService.getCachedPrice({
+    chainId: chain.id,
+    symbol: chain.nativeCurrency.symbol,
+  } as any);
+  if (live?.priceUsd && live.priceUsd > 0) {
+    return live.priceUsd;
+  }
+
+  // 2. Check tokens list for matching native token on this chain
+  const matched = tokens.find(
+    (t) =>
+      t.chainId === chain.id &&
+      (!t.address ||
+        t.address === '0x0000000000000000000000000000000000000000' ||
+        t.symbol.toUpperCase() === chain.nativeCurrency.symbol.toUpperCase()) &&
+      t.priceUSD &&
+      t.priceUSD > 0
+  );
+  if (matched?.priceUSD) return matched.priceUSD;
+
+  // 3. Fallback to mainnet token with same symbol if available in token registry
+  const mainnetMatched = tokens.find(
+    (t) =>
+      t.symbol.toUpperCase() === chain.nativeCurrency.symbol.toUpperCase() &&
+      t.priceUSD &&
+      t.priceUSD > 0
+  );
+  if (mainnetMatched?.priceUSD) return mainnetMatched.priceUSD;
+
+  // 4. Query livePriceService for global symbol
+  const globalLive = livePriceService.getCachedPrice({
+    chainId: 1,
+    symbol: chain.nativeCurrency.symbol,
+  } as any);
+  if (globalLive?.priceUsd && globalLive.priceUsd > 0) return globalLive.priceUsd;
+
+  return 0;
+}
+
+/**
  * Multi-Chain Balance Aggregator:
  * Validates selected chain against connected wallet provider before querying,
  * avoiding chain mismatch inaccuracy and querying authoritative RPCs.
@@ -130,15 +178,6 @@ export async function fetchAllMultiChainBalances(
       );
     }
   }
-
-  // Native price estimation map
-  const nativePrices: Record<string, number> = {
-    ETH: 3482.5,
-    POL: 0.52,
-    BNB: 645.0,
-    AVAX: 34.8,
-    SEP: 0.0,
-  };
 
   const activeChains = getAllChains();
 
@@ -192,8 +231,9 @@ export async function fetchAllMultiChainBalances(
 
     // Default unresolved or null balance strictly to 0
     const finalBal = bal !== null && !isNaN(bal) ? bal : 0;
-    const nativePrice = nativePrices[chain.nativeCurrency.symbol] || 3482.5;
-    const usdVal = finalBal * nativePrice;
+    const isTestnet = !!chain.testnet;
+    const nativePrice = isTestnet ? 0 : getNativeAssetPrice(chain, tokens);
+    const usdVal = isTestnet ? 0 : finalBal * nativePrice;
 
     chainSummaries[chain.id].nativeBalance = finalBal;
     chainSummaries[chain.id].nativeUsdValue = usdVal;
@@ -290,8 +330,18 @@ export async function fetchAllMultiChainBalances(
       }
     }
 
+    const isTestnet = !!chain.testnet;
     const safeBal = bal !== null && !isNaN(bal) ? bal : 0;
-    const usdVal = safeBal * (token.priceUSD || 1);
+    let tokenPrice = 0;
+    if (!isTestnet) {
+      if (token.priceUSD && token.priceUSD > 0) {
+        tokenPrice = token.priceUSD;
+      } else {
+        const live = livePriceService.getCachedPrice(token);
+        tokenPrice = live?.priceUsd || 0;
+      }
+    }
+    const usdVal = isTestnet ? 0 : safeBal * tokenPrice;
 
     const tokenKey = `${token.chainId}:${(token.address || token.symbol).toLowerCase()}`;
     const symbolKey = `${token.chainId}:${token.symbol.toUpperCase()}`;
@@ -341,10 +391,19 @@ export async function fetchAllMultiChainBalances(
     await Promise.allSettled(batch.map(processSingleToken));
   }
 
-  // Compute grand total
+  // Compute grand total (strictly mainnet assets with real on-chain balances)
   let totalPortfolioUSD = 0;
   for (const cid in chainSummaries) {
+    const chainIdNum = Number(cid);
+    const chainObj = activeChains.find((c) => c.id === chainIdNum);
     const summary = chainSummaries[cid];
+    if (chainObj?.testnet) {
+      // Testnet tokens and native faucets strictly do not contribute to real net worth
+      summary.nativeUsdValue = 0;
+      summary.tokensUsdValue = 0;
+      summary.totalUsdValue = 0;
+      continue;
+    }
     summary.totalUsdValue = summary.nativeUsdValue + summary.tokensUsdValue;
     totalPortfolioUSD += summary.totalUsdValue;
   }

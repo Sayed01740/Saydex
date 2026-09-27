@@ -408,7 +408,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
 
             <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]">
               <span className="text-[var(--text-tertiary)]">Routing Engine</span>
-              <span className="text-pink-500 font-semibold flex items-center gap-1">
+              <span className="text-[var(--primary)] font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 (Universal Router)' : 'Uniswap V3 (SwapRouter02)'}</span>
               </span>
@@ -416,9 +416,9 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
           </div>
 
           {/* Calldata & Command Stack Preview */}
-          <div className="p-3 rounded-xl bg-pink-500/5 border border-pink-500/20 space-y-1.5 text-xs">
+          <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-pink-500 flex items-center gap-1">
+              <span className="font-semibold text-[var(--primary)] flex items-center gap-1">
                 <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 Execution Pipeline' : 'Atomic Calldata Pipeline'}</span>
               </span>
               <span className="font-mono text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -431,7 +431,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
                   PERMIT2
                 </span>
                 <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-pink-500/30 text-pink-400 font-bold">
+                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--primary)]/30 text-[var(--primary)] font-bold">
                   0x06 SWAP_EXACT_IN
                 </span>
                 <span>→</span>

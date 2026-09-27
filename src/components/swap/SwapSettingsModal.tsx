@@ -339,7 +339,7 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
           <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-pink-400" />
+                <Zap className="w-4 h-4 text-[var(--primary)]" />
                 <span className="text-xs font-bold text-[var(--text-primary)]">
                   Execution Routing Protocol
                 </span>
@@ -380,9 +380,9 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-pink-400 flex items-center gap-1">
+                  <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
                     Uniswap V4
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-pink-500/20 text-pink-300 font-mono">NEW</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/30 font-mono font-bold">NEW</span>
                   </span>
                   {settings.routingProtocol === 'v4' && (
                     <Check className="w-3.5 h-3.5 text-[var(--primary)]" />

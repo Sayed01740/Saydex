@@ -347,7 +347,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
               <div className="bg-[var(--bg-surface)] p-2.5 rounded-xl border border-[var(--border-subtle)]">
                 <span className="text-[10px] text-[var(--text-tertiary)]">USDC Balance</span>
                 <p className="text-sm font-bold text-[var(--text-primary)] font-mono mt-0.5">
-                  ${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
                 </p>
               </div>
             </div>
@@ -537,7 +537,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                 const summary = chainSummaries[chain.id];
                 const isCurrent = selectedChain.id === chain.id;
                 const bal = summary ? summary.nativeBalance : 0;
-                const usd = summary ? summary.totalUsdValue : 0;
+                const isTestnet = !!chain.testnet;
+                const usd = isTestnet ? 0 : (summary ? summary.totalUsdValue : 0);
 
                 return (
                   <button
@@ -558,18 +559,28 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                           <span className="font-semibold text-xs text-[var(--text-primary)]">
                             {chain.name}
                           </span>
+                          {isTestnet && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[var(--bg-subtle)] text-[var(--text-tertiary)] border border-[var(--border-subtle)]">
+                              Testnet
+                            </span>
+                          )}
                           {isCurrent && (
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
                           )}
                         </div>
                         <span className="text-[10px] text-[var(--text-tertiary)] font-mono">
-                          {bal.toFixed(4)} {chain.nativeCurrency.symbol}
+                          {bal > 0 ? (bal < 0.0001 ? bal.toFixed(6) : bal.toFixed(4)) : '0.00'}{' '}
+                          {chain.nativeCurrency.symbol}
                         </span>
                       </div>
                     </div>
                     <div className="text-right font-mono">
                       <div className="text-xs font-bold text-[var(--text-primary)]">
-                        ${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {isTestnet ? (
+                          <span className="text-[10px] text-[var(--text-tertiary)] font-normal">Faucet · $0.00</span>
+                        ) : (
+                          `$${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        )}
                       </div>
                       <span className="text-[9px] text-[var(--text-tertiary)]">
                         {summary?.tokenCount || 0} tokens

@@ -38,7 +38,7 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
               </span>
               <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
                 settings.routingProtocol === 'v4'
-                  ? 'bg-pink-500/15 text-pink-400 border-pink-500/30'
+                  ? 'bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/30'
                   : 'bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/20'
               }`}>
                 {settings.routingProtocol === 'v4' ? 'Universal Router (0x10)' : isMultiHop ? 'Multi-Hop' : 'Direct V3'}
@@ -73,17 +73,17 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
 
             <div className="space-y-1.5">
               {settings.routingProtocol === 'v4' ? (
-                <div className="p-2.5 rounded-lg bg-[var(--bg-surface-elevated)] border border-pink-500/30 font-mono text-[11px] space-y-2">
+                <div className="p-2.5 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--primary)]/30 font-mono text-[11px] space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded bg-[var(--primary-subtle)] text-[var(--primary)] font-bold text-[10px] border border-[var(--primary)]/30">
                         100%
                       </span>
                       <span className="text-[var(--text-primary)] font-semibold">
                         Uniswap V4 (Universal Router)
                       </span>
                     </div>
-                    <span className="px-1.5 py-0.2 rounded bg-pink-500/10 text-pink-400 text-[10px] border border-pink-500/20">
+                    <span className="px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] text-[10px] border border-[var(--primary)]/20">
                       Commands: 0x10
                     </span>
                   </div>
@@ -93,15 +93,15 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
                     <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-emerald-400 font-bold border border-emerald-500/30">
                       Permit2
                     </span>
-                    <ArrowRight className="w-3 h-3 text-pink-400" />
-                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-pink-400 font-bold border border-pink-500/30">
+                    <ArrowRight className="w-3 h-3 text-[var(--text-tertiary)]" />
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--primary)] font-bold border border-[var(--primary)]/30">
                       SWAP_EXACT_IN_SINGLE (0x06)
                     </span>
-                    <ArrowRight className="w-3 h-3 text-pink-400" />
+                    <ArrowRight className="w-3 h-3 text-[var(--text-tertiary)]" />
                     <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-amber-400 font-bold border border-amber-500/30">
                       SETTLE_ALL (0x0c)
                     </span>
-                    <ArrowRight className="w-3 h-3 text-pink-400" />
+                    <ArrowRight className="w-3 h-3 text-[var(--text-tertiary)]" />
                     <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-cyan-400 font-bold border border-cyan-500/30">
                       TAKE_ALL (0x0d)
                     </span>

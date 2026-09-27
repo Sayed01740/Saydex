@@ -175,12 +175,12 @@ export const UniswapEcosystemView: React.FC = () => {
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-20">
       {/* Header Banner */}
       <div className="p-6 md:p-8 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-app)] relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-pink-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[var(--primary)]/10 via-emerald-500/5 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/10 text-pink-500 border border-pink-500/20 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20 text-xs font-semibold">
                 <Boxes className="w-3.5 h-3.5" />
                 Uniswap GitHub Organization
               </span>
@@ -210,7 +210,7 @@ export const UniswapEcosystemView: React.FC = () => {
               <div className="w-px h-8 bg-[var(--border-subtle)]" />
               <div>
                 <div className="text-xs text-[var(--text-tertiary)]">Total Forks</div>
-                <div className="text-lg font-bold font-mono text-pink-500">19,200+ 🔱</div>
+                <div className="text-lg font-bold font-mono text-[var(--primary)]">19,200+ 🔱</div>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@ export const UniswapEcosystemView: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)]">
             <span className="text-xs text-[var(--text-tertiary)]">Core AMM Generations</span>
             <div className="text-xl font-bold font-mono text-[var(--text-primary)] mt-0.5">V1 • V2 • V3 • V4</div>
-            <span className="text-[10px] text-pink-500">Continuous 7-Year Evolution</span>
+            <span className="text-[10px] text-[var(--primary)]">Continuous 7-Year Evolution</span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)]">
@@ -284,7 +284,7 @@ export const UniswapEcosystemView: React.FC = () => {
                 placeholder="Search across all 173 repositories by name, feature, hook, or tag..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9.5 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] outline-none focus:border-pink-500 transition-colors"
+                className="w-full pl-9.5 pr-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors"
               />
             </div>
 
@@ -329,17 +329,17 @@ export const UniswapEcosystemView: React.FC = () => {
                 <div
                   key={repo.id}
                   onClick={() => setSelectedRepo(repo)}
-                  className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] hover:border-pink-500/40 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+                  className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] hover:border-[var(--primary)]/40 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-bold text-[var(--text-primary)] group-hover:text-pink-500 transition-colors">
+                          <h3 className="text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
                             {repo.name}
                           </h3>
                           {repo.badge && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20">
                               {repo.badge}
                             </span>
                           )}
@@ -382,7 +382,7 @@ export const UniswapEcosystemView: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-pink-400 group-hover:translate-x-0.5 transition-transform font-sans font-semibold">
+                    <div className="flex items-center gap-1 text-[var(--primary)] group-hover:translate-x-0.5 transition-transform font-sans font-semibold">
                       <span>Inspect</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </div>
@@ -407,7 +407,7 @@ export const UniswapEcosystemView: React.FC = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="text-2xl font-bold text-[var(--text-primary)]">{selectedRepo.name}</h2>
                         {selectedRepo.badge && (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-500/10 text-pink-500 border border-pink-500/20">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/20">
                             {selectedRepo.badge}
                           </span>
                         )}
@@ -444,7 +444,7 @@ export const UniswapEcosystemView: React.FC = () => {
                   {/* Architecture Summary */}
                   <div className="p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
                     <h4 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wider">
-                      <Cpu className="w-3.5 h-3.5 text-pink-500" />
+                      <Cpu className="w-3.5 h-3.5 text-[var(--primary)]" />
                       Architecture Summary
                     </h4>
                     <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
@@ -479,7 +479,7 @@ export const UniswapEcosystemView: React.FC = () => {
                         </h4>
                         <button
                           onClick={() => handleCopy(selectedRepo.sampleCode!, 'sample-code')}
-                          className="text-xs text-pink-400 hover:underline flex items-center gap-1 font-mono"
+                          className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1 font-mono"
                         >
                           {copiedText === 'sample-code' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                           Copy Code
@@ -499,7 +499,7 @@ export const UniswapEcosystemView: React.FC = () => {
                     </div>
                     <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
                       <div className="text-[10px] text-[var(--text-tertiary)]">NPM Package</div>
-                      <div className="font-bold text-pink-400 truncate mt-0.5">{selectedRepo.npmPackage || 'N/A'}</div>
+                      <div className="font-bold text-[var(--primary)] truncate mt-0.5">{selectedRepo.npmPackage || 'N/A'}</div>
                     </div>
                     <div className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
                       <div className="text-[10px] text-[var(--text-tertiary)]">Solidity/Target</div>
@@ -518,7 +518,7 @@ export const UniswapEcosystemView: React.FC = () => {
         <div className="space-y-6">
           <div className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] space-y-2">
             <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-pink-500" />
+              <Sparkles className="w-4 h-4 text-[var(--primary)]" />
               UniswapX Dutch Auction Protocol Simulator (Uniswap/UniswapX)
             </h3>
             <p className="text-xs text-[var(--text-secondary)] max-w-3xl">
@@ -592,7 +592,7 @@ export const UniswapEcosystemView: React.FC = () => {
                   <Button
                     onClick={handleCreateDutchOrder}
                     disabled={isSubmittingOrder}
-                    className="w-full py-3 text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3 text-sm font-bold bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-black rounded-xl shadow-md flex items-center justify-center gap-2"
                   >
                     {isSubmittingOrder ? (
                       <span>Signing EIP-712 Order...</span>
@@ -612,7 +612,7 @@ export const UniswapEcosystemView: React.FC = () => {
               <div className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-app)] space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-pink-500" />
+                    <Activity className="w-4 h-4 text-[var(--primary)]" />
                     Live Dutch Auction RFQ Stream
                   </h4>
                   <span className="text-xs font-mono text-emerald-500 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
@@ -630,7 +630,7 @@ export const UniswapEcosystemView: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm text-[var(--text-primary)]">{order.tokenIn}</span>
                           <ArrowRight className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-                          <span className="font-bold text-sm text-pink-400">{order.tokenOut}</span>
+                          <span className="font-bold text-sm text-[var(--primary)]">{order.tokenOut}</span>
                         </div>
                         <span
                           className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
@@ -647,12 +647,12 @@ export const UniswapEcosystemView: React.FC = () => {
                       <div className="space-y-1">
                         <div className="flex justify-between text-[11px] font-mono text-[var(--text-tertiary)]">
                           <span>Start: {order.startAmountOut}</span>
-                          <span className="text-pink-400 font-bold">Current: {order.currentDecayedAmountOut}</span>
+                          <span className="text-[var(--primary)] font-bold">Current: {order.currentDecayedAmountOut}</span>
                           <span>Floor: {order.endAmountOut}</span>
                         </div>
                         <div className="w-full h-1.5 rounded-full bg-[var(--bg-surface)] overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full"
+                            className="h-full bg-gradient-to-r from-[var(--primary)] to-emerald-500 rounded-full"
                             style={{ width: `${Math.min(100, Math.max(10, order.decayPercent))}%` }}
                           />
                         </div>
@@ -700,13 +700,13 @@ export const UniswapEcosystemView: React.FC = () => {
                         onClick={() => setSelectedHookPreset(hook)}
                         className={`p-3.5 rounded-xl border transition-all cursor-pointer space-y-1 ${
                           isSelected
-                            ? 'bg-pink-500/10 border-pink-500 text-[var(--text-primary)]'
+                            ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--text-primary)]'
                             : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] hover:border-[var(--border-app)]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-[var(--text-primary)]">{hook.name}</span>
-                          <span className="font-mono text-[10px] font-bold text-pink-400 bg-[var(--bg-surface)] px-2 py-0.5 rounded border border-[var(--border-app)]">
+                          <span className="font-mono text-[10px] font-bold text-[var(--primary)] bg-[var(--bg-surface)] px-2 py-0.5 rounded border border-[var(--border-app)]">
                             {hook.hookFlagsHex}
                           </span>
                         </div>
@@ -723,7 +723,7 @@ export const UniswapEcosystemView: React.FC = () => {
                     <span className="text-[10px] font-mono text-purple-400 font-bold">Bitmask Target: {selectedHookPreset.hookFlagsHex}</span>
                   </div>
 
-                  <div className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-app)] font-mono text-xs text-pink-400 break-all">
+                  <div className="p-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-app)] font-mono text-xs text-[var(--primary)] break-all">
                     {minedAddress || 'Click Mine Salt to calculate...'}
                   </div>
 
@@ -755,7 +755,7 @@ export const UniswapEcosystemView: React.FC = () => {
                   </h4>
                   <button
                     onClick={() => handleCopy(selectedHookPreset.solidityTemplate, 'hook-sol')}
-                    className="text-xs text-pink-400 hover:underline flex items-center gap-1 font-mono"
+                    className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1 font-mono"
                   >
                     {copiedText === 'hook-sol' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                     Copy Solidity
@@ -824,16 +824,16 @@ export const UniswapEcosystemView: React.FC = () => {
               {/* Path 1 */}
               <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-pink-400 font-mono">Route 1 (55% Split • 27,500 USDC)</span>
+                  <span className="font-bold text-[var(--primary)] font-mono">Route 1 (55% Split • 27,500 USDC)</span>
                   <span className="text-[var(--text-tertiary)] font-mono">Uniswap V3 (0.05% Fee Pool)</span>
                 </div>
                 <div className="font-mono text-xs text-[var(--text-primary)] flex items-center gap-2">
                   <span>USDC</span>
-                  <span className="text-pink-400">→</span>
+                  <span className="text-[var(--primary)]">→</span>
                   <span className="px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-[11px]">
                     Pool 0x88e6a0...05%
                   </span>
-                  <span className="text-pink-400">→</span>
+                  <span className="text-[var(--primary)]">→</span>
                   <span>ETH (7.902 ETH)</span>
                 </div>
               </div>
@@ -912,7 +912,7 @@ export const UniswapEcosystemView: React.FC = () => {
                 </div>
                 <div className="flex justify-between p-2 rounded-lg bg-[var(--bg-subtle)]">
                   <span className="text-[var(--text-tertiary)]">Calldata Function:</span>
-                  <span className="font-bold text-pink-400">setImplementation(address)</span>
+                  <span className="font-bold text-[var(--primary)]">setImplementation(address)</span>
                 </div>
               </div>
             </div>

@@ -77,7 +77,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
       onClose={onClose}
       title={
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-pink-500/15 text-pink-400">
+          <div className="p-1.5 rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)]">
             <CreditCard className="w-4 h-4" />
           </div>
           <span>Uniswap Fiat Gateway</span>
@@ -88,12 +88,12 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
     >
       <div className="space-y-4 pt-1">
         {/* Gateway Security Banner */}
-        <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-pink-300 font-semibold">
-            <Sparkles className="w-4 h-4 text-pink-400" />
+        <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-[var(--primary)] font-semibold">
+            <Sparkles className="w-4 h-4 text-[var(--primary)]" />
             <span>Official Uniswap On-Ramp Partner Gateway</span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-mono font-bold">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] font-mono font-bold">
             Live 🟢
           </span>
         </div>
@@ -108,7 +108,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
                   key={preset}
                   type="button"
                   onClick={() => setFiatAmount(preset.toString())}
-                  className="px-2 py-0.5 rounded-md text-[10px] bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-pink-500 text-[var(--text-secondary)] hover:text-pink-400 cursor-pointer font-semibold"
+                  className="px-2 py-0.5 rounded-md text-[10px] bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--primary)] cursor-pointer font-semibold transition-colors"
                 >
                   ${preset}
                 </button>
@@ -149,7 +149,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
         {/* Conversion Arrow */}
         <div className="flex justify-center -my-2 relative z-10">
           <div className="p-1.5 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[var(--text-tertiary)] shadow-xs">
-            <ArrowRight className="w-3.5 h-3.5 rotate-90 text-pink-400" />
+            <ArrowRight className="w-3.5 h-3.5 rotate-90 text-[var(--primary)]" />
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
             <span>1 {selectedCryptoSym} ≈ ${selectedCryptoObj.priceUSD.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-pink-400 font-mono">
+            <span className="text-2xl font-bold text-[var(--primary)] font-mono">
               {estimatedCryptoOut}
             </span>
             <div className="relative">
@@ -183,7 +183,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
         {/* Destination Wallet Bar */}
         <div className="p-2.5 rounded-xl bg-[var(--bg-subtle)]/50 border border-[var(--border-subtle)] flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-            <Wallet className="w-3.5 h-3.5 text-pink-400" />
+            <Wallet className="w-3.5 h-3.5 text-[var(--primary)]" />
             <span>Destination:</span>
             <span className="font-mono text-[var(--text-primary)] font-semibold truncate max-w-[200px]">
               {userRecipientAddress}
@@ -212,7 +212,7 @@ export const FiatOnRampModal: React.FC<FiatOnRampModalProps> = ({
           size="lg"
           onClick={handleLaunchOnRamp}
           disabled={isProcessing || parseFloat(fiatAmount) <= 0}
-          className="w-full justify-center gap-2 bg-pink-500 hover:bg-pink-400 text-white font-bold py-3 text-sm shadow-md"
+          className="w-full justify-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-black font-bold py-3 text-sm shadow-md"
         >
           {isProcessing ? (
             <span>Connecting Uniswap Gateway...</span>
