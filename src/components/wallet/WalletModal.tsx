@@ -110,48 +110,41 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
   const walletOptions: {
     id: WalletProviderType;
     name: string;
-    description: string;
     color: string;
     isDetected?: boolean;
   }[] = [
     {
-      id: 'rabby',
-      name: 'Rabby Wallet',
-      description: 'Web3 multi-chain wallet with pre-tx risk analysis',
-      color: '#8697FF',
-      isDetected: detectedExtensions.rabby,
-    },
-    {
       id: 'metamask',
       name: 'MetaMask',
-      description: 'Popular Ethereum browser extension & mobile app',
       color: '#F6851B',
       isDetected: detectedExtensions.metamask,
     },
     {
       id: 'coinbase',
       name: 'Coinbase Wallet',
-      description: 'Self-custody crypto wallet & Smart Wallet passkeys',
       color: '#0052FF',
       isDetected: detectedExtensions.coinbase,
     },
     {
       id: 'phantom',
       name: 'Phantom',
-      description: 'EVM & Solana multi-chain friendly interface',
       color: '#AB9FF2',
       isDetected: detectedExtensions.phantom,
     },
     {
+      id: 'rabby',
+      name: 'Rabby Wallet',
+      color: '#8697FF',
+      isDetected: detectedExtensions.rabby,
+    },
+    {
       id: 'walletconnect',
       name: 'WalletConnect',
-      description: 'Scan QR with Trust, Rainbow, Zerion or 300+ apps',
       color: '#3B99FC',
     },
     {
       id: 'ledger',
-      name: 'Ledger Hardware',
-      description: 'Cold storage security with USB / Bluetooth verification',
+      name: 'Ledger',
       color: '#22c55e',
     },
   ];
@@ -218,13 +211,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
         setShowSwitchList(false);
         onClose();
       }}
-      title={isConnected && !showSwitchList ? 'Portfolio & Account' : 'Connect a Wallet'}
+      title={isConnected && !showSwitchList ? 'Account' : 'Connect a wallet'}
       subtitle={
         isConnected && !showSwitchList
-          ? `Active on ${selectedChain.name} (${getProviderName(walletProvider)})`
-          : 'Select your Web3 wallet or choose a fresh account from your provider.'
+          ? `${selectedChain.name} • ${getProviderName(walletProvider)}`
+          : undefined
       }
-      maxWidth="md"
+      maxWidth={isConnected && !showSwitchList ? 'md' : 'sm'}
     >
       {isConnected && !showSwitchList ? (
         <div className="space-y-4">
@@ -761,64 +754,53 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
             </div>
           )}
 
-          {walletOptions.map((w) => {
-            const isCurrentlyActive = isConnected && walletProvider === w.id;
+          <div className="space-y-1.5">
+            {walletOptions.map((w) => {
+              const isCurrentlyActive = isConnected && walletProvider === w.id;
 
-            return (
-              <button
-                key={w.id}
-                onClick={() => handleConnect(w.id)}
-                disabled={isConnecting}
-                className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all group text-left cursor-pointer ${
-                  isCurrentlyActive
-                    ? 'border-[var(--primary)] bg-[var(--primary-subtle)]'
-                    : 'border-[var(--border-app)] hover:border-[var(--primary)]/50 bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)]'
-                }`}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex items-center justify-center p-1 shrink-0 shadow-xs">
-                    <WalletIcon type={w.id} size="lg" className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                        {w.name}
-                      </span>
-                      {w.isDetected && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-[var(--success-subtle)] text-[var(--success)] text-[10px] font-semibold border border-[var(--success)]/20 inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-                          Detected
-                        </span>
-                      )}
-                      {isCurrentlyActive && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-[var(--primary-subtle)] text-[var(--primary)] text-[10px] font-semibold">
-                          Connected
-                        </span>
-                      )}
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => handleConnect(w.id)}
+                  disabled={isConnecting}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-colors text-left cursor-pointer group ${
+                    isCurrentlyActive
+                      ? 'bg-[var(--primary-subtle)] border border-[var(--primary)]/30'
+                      : 'bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-app)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
+                      <WalletIcon type={w.id} size="md" className="w-7 h-7" />
                     </div>
-                    <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                      {w.description}
-                    </div>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      {w.name}
+                    </span>
                   </div>
-                </div>
 
-                {isCurrentlyActive ? (
-                  <CheckCircle2 className="w-4 h-4 text-[var(--primary)] shrink-0" />
-                ) : (
-                  <span className="text-xs text-[var(--text-tertiary)] group-hover:text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                    Connect →
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  {isCurrentlyActive ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+                      Connected
+                    </span>
+                  ) : w.isDetected ? (
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[var(--text-secondary)] text-[11px] font-medium">
+                      Installed
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
 
-          <div className="pt-2 text-center text-xs text-[var(--text-tertiary)] leading-relaxed">
-            By connecting a wallet, you agree to Saydex Protocol{' '}
-            <span className="text-[var(--text-secondary)] underline cursor-pointer">
+          <div className="pt-3 px-2 text-center text-xs text-[var(--text-tertiary)] leading-relaxed">
+            By connecting a wallet, you agree to Saydex Protocol's{' '}
+            <a href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline">
               Terms of Service
-            </span>{' '}
-            and zero-knowledge privacy policies.
+            </a>{' '}
+            and{' '}
+            <a href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline">
+              Privacy Policy
+            </a>.
           </div>
         </div>
       )}

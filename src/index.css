@@ -77,7 +77,7 @@
 }
 
 body {
-  font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-primary);
   min-height: 100vh;
@@ -88,12 +88,15 @@ body {
 }
 
 /* Tabular figures for financial numbers & prices */
-.font-mono,
-.font-mono-code,
-[class*="font-mono"] {
-  font-family: 'JetBrains Mono', monospace;
+.tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+.font-mono,
+.font-mono-code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 

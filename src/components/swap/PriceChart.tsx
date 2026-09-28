@@ -144,10 +144,10 @@ export const PriceChart: React.FC<PriceChartProps> = (props) => {
           </div>
 
           <div className="flex items-baseline gap-2 mt-1">
-            <h2 className="text-2xl font-bold font-mono text-[var(--text-primary)]">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
               {displayPrice.toLocaleString(undefined, { maximumFractionDigits: 5 })}
             </h2>
-            <span className="text-xs text-[var(--text-tertiary)] font-mono">
+            <span className="text-xs text-[var(--text-tertiary)]">
               {currentTokenOut.symbol} per {currentTokenIn.symbol}
             </span>
           </div>

@@ -1,0 +1,17 @@
+{
+  "name": "Saydex Protocol",
+  "short_name": "Saydex",
+  "description": "Next-generation decentralized exchange, concentrated liquidity routing, and DeFi terminal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090B0E",
+  "theme_color": "#00D2B4",
+  "icons": [
+    {
+      "src": "/SAYDEX_logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

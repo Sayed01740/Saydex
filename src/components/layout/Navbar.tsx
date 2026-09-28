@@ -97,16 +97,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
             </button>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1 shrink-0">
+            <nav className="hidden lg:flex items-center gap-1.5 shrink-0">
               {primaryNavItems.map((item) => {
                 const isActive = activeView === item.id || (item.id === 'pools' && activeView === 'positions');
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    className={`px-3.5 py-2 rounded-xl text-base font-semibold transition-all cursor-pointer whitespace-nowrap ${
                       isActive
-                        ? 'bg-[var(--bg-surface-elevated)] text-[var(--primary)] border border-[var(--border-strong)] font-semibold shadow-xs'
+                        ? 'bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] border border-[var(--border-strong)] shadow-xs'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
                     }`}
                   >

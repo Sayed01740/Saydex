@@ -32,6 +32,7 @@ const LLAMA_CHAIN_PREFIX: Record<number, string> = {
 const COINGECKO_MAP: Record<string, string> = {
   ETH: 'coingecko:ethereum',
   WETH: 'coingecko:ethereum',
+  SEP: 'coingecko:ethereum',
   BTC: 'coingecko:bitcoin',
   WBTC: 'coingecko:wrapped-bitcoin',
   SOL: 'coingecko:solana',
@@ -66,6 +67,7 @@ const COINGECKO_MAP: Record<string, string> = {
 const COINBASE_SYMBOLS: Record<string, string> = {
   ETH: 'ETH',
   WETH: 'ETH',
+  SEP: 'ETH',
   BTC: 'BTC',
   WBTC: 'BTC',
   SOL: 'SOL',
@@ -150,8 +152,8 @@ class LivePriceService {
       return direct;
     }
 
-    // 3. ETH & WETH across any L1 / L2 network (Arbitrum, Base, Optimism, Blast, Unichain, etc.)
-    if (sym === 'ETH' || sym === 'WETH') {
+    // 3. ETH, WETH & SEP (Sepolia ETH) across any L1 / L2 / Testnet network
+    if (sym === 'ETH' || sym === 'WETH' || sym === 'SEP') {
       const ethPrice = this.cache.get('1:ETH') || this.cache.get('1:WETH');
       if (ethPrice && ethPrice.priceUSD > 0) return ethPrice;
     }

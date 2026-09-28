@@ -131,8 +131,8 @@ export class UniswapV3Service {
       ? (deployment?.wethAddress || '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
       : tokenOut.address;
 
-    // Check tiers: prioritize requested tier, then check 500, 3000, 10000
-    const tiersToTest = Array.from(new Set([feeTier, 3000, 500, 10000]));
+    // Check tiers in optimal liquidity order: requested tier, 500, 3000, 100, 10000
+    const tiersToTest = [feeTier, 500, 3000, 100, 10000].filter((v, i, a) => a.indexOf(v) === i);
 
     // 1. Check official Uniswap Trading API (SOR / Auto Router / UniswapX) if API Key is configured
     if (uniswapApiService.hasApiKey()) {
@@ -158,13 +158,11 @@ export class UniswapV3Service {
       }
     }
 
-    // 2. Direct On-Chain QuoterV2 invocation via RPC Provider
+    // 2. Direct On-Chain QuoterV2 parallel invocation across fee tiers
     if (deployment?.quoterV2) {
-      let bestResult: OnChainQuoteResult | null = null;
-
-      for (const tier of tiersToTest) {
+      const tierPromises = tiersToTest.map(async (tier) => {
         try {
-          // QuoterV2 quoteExactInputSingle params struct:
+          // QuoterV2 quoteExactInputSingle params:
           // (address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96)
           // selector: 0xc6a5026a
           const paramsCalldata = `${padAddress(addrIn)}${padAddress(addrOut)}${pad32Bytes(amountInRaw)}${pad32Bytes(tier)}${pad32Bytes(0)}`;
@@ -176,41 +174,45 @@ export class UniswapV3Service {
           });
 
           if (resultHex && resultHex.length >= 66) {
-            // First 32 bytes is amountOut
             const amountOutHex = '0x' + resultHex.slice(2, 66);
             const rawOut = BigInt(amountOutHex);
             const formattedOut = Number(rawOut) / 10 ** decimalsOut;
-
             if (formattedOut > 0) {
-              walletLogger.info(
-                'RPC_DISPATCH',
-                `On-Chain Quoter returned ${formattedOut.toFixed(4)} ${tokenOut.symbol} (feeTier ${tier}) for ${amountIn} ${tokenIn.symbol} on Chain ${chainId}`
-              );
-
-              const currentTierResult: OnChainQuoteResult = {
+              return {
                 amountOut: formattedOut,
                 amountOutRaw: rawOut,
                 feeTier: tier,
-                gasEstimate: 145000,
-                source: 'onchain_quoter',
+                gasEstimate: 155000,
+                source: 'onchain_quoter' as const,
               };
-
-              if (!bestResult || currentTierResult.amountOutRaw > bestResult.amountOutRaw) {
-                bestResult = currentTierResult;
-              }
             }
           }
-        } catch (err: any) {
-          // Pool does not exist at this specific fee tier or empty, try next tier
+        } catch {
+          // Tier empty or pool does not exist
+        }
+        return null;
+      });
+
+      const settled = await Promise.allSettled(tierPromises);
+      let bestResult: OnChainQuoteResult | null = null;
+      for (const res of settled) {
+        if (res.status === 'fulfilled' && res.value) {
+          if (!bestResult || res.value.amountOutRaw > bestResult.amountOutRaw) {
+            bestResult = res.value;
+          }
         }
       }
 
       if (bestResult) {
+        walletLogger.info(
+          'RPC_DISPATCH',
+          `QuoterV2 found best rate: ${bestResult.amountOut.toFixed(6)} ${tokenOut.symbol} (fee tier ${bestResult.feeTier}) for ${amountIn} ${tokenIn.symbol} on Chain #${chainId}`
+        );
         return bestResult;
       }
     }
 
-    // High precision mathematical fallback quote if on-chain pool is not yet created
+    // High precision mathematical fallback quote if RPC/Quoter is temporarily unreachable
     const inPrice = tokenIn.priceUSD || 1.0;
     const outPrice = tokenOut.priceUSD || 1.0;
     const rate = inPrice / Math.max(0.000001, outPrice);
@@ -222,7 +224,7 @@ export class UniswapV3Service {
       amountOut: calculatedOut,
       amountOutRaw: calculatedRaw,
       feeTier,
-      gasEstimate: 120000,
+      gasEstimate: 130000,
       source: 'fallback_math',
     };
   }
@@ -236,6 +238,10 @@ export class UniswapV3Service {
 
   /**
    * Build Real Swap Transaction Calldata for Uniswap SwapRouter02
+   * Follows official Uniswap web app execution specification:
+   * - Native ETH In: multicall([exactInputSingle, refundETH])
+   * - Native ETH Out: multicall([exactInputSingle, unwrapWETH9])
+   * - ERC20 to ERC20: exactInputSingle
    */
   public async buildSwapTransaction(params: {
     chainId: number;
@@ -250,8 +256,7 @@ export class UniswapV3Service {
   }): Promise<PreparedSwapTransaction> {
     const deployment = getUniswapV3Deployment(params.chainId) || UNISWAP_V3_DEPLOYMENTS[11155111];
     const routerAddress = deployment.swapRouter02;
-    const fee = params.feeTier || 3000;
-    const deadline = Math.floor(Date.now() / 1000) + (params.deadlineMinutes || 20) * 60;
+    const fee = params.feeTier || (params.chainId === 11155111 || params.chainId === 421614 ? 500 : 3000);
 
     const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
 
@@ -276,7 +281,7 @@ export class UniswapV3Service {
     let rawMinAmountOut = BigInt(Math.max(0, Math.floor(parseFloat(params.minAmountOut || '0') * 10 ** decimalsOut)));
 
     // Protection against unrealistic minimum output that causes router revert
-    const slippagePct = params.slippagePercent !== undefined ? params.slippagePercent : 2.5;
+    const slippagePct = params.slippagePercent !== undefined ? params.slippagePercent : 1.0;
     if (rawMinAmountOut === 0n && parseFloat(params.amountIn) > 0) {
       const inPrice = params.tokenIn.priceUSD || 1.0;
       const outPrice = params.tokenOut.priceUSD || 1.0;
@@ -313,14 +318,22 @@ export class UniswapV3Service {
     const exactInputSingleCall = `0x04e45aaf${exactInputSingleParams}`;
 
     let finalData = exactInputSingleCall;
-    let finalValue = isNativeIn ? '0x' + rawAmountIn.toString(16) : '0x0';
+    let finalValue = '0x0';
 
-    // If native token output, bundle with unwrapWETH9 via multicall if supported
-    if (isNativeOut) {
-      // unwrapWETH9(uint256 amountMinimum, address recipient) selector: 0x49404b7c
+    if (isNativeIn) {
+      // ETH -> Token: Bundle exactInputSingle with refundETH() (selector: 0x12210e8a)
+      const refundETHCall = '0x12210e8a';
+      finalData = this.encodeMulticall([exactInputSingleCall, refundETHCall]);
+      finalValue = '0x' + rawAmountIn.toString(16);
+    } else if (isNativeOut) {
+      // Token -> ETH: Swap to Router as WETH, then unwrapWETH9(minOut, recipient) (selector: 0x49404b7c)
       const unwrapCall = `0x49404b7c${pad32Bytes(rawMinAmountOut)}${padAddress(params.userAddress)}`;
-      // multicall(bytes[] data)
       finalData = this.encodeMulticall([exactInputSingleCall, unwrapCall]);
+      finalValue = '0x0';
+    } else {
+      // ERC20 -> ERC20: direct exactInputSingle
+      finalData = exactInputSingleCall;
+      finalValue = '0x0';
     }
 
     return {
@@ -331,6 +344,177 @@ export class UniswapV3Service {
       requiresApproval,
       approvalTx,
     };
+  }
+
+  /**
+   * Pre-flight simulation for swap transaction before prompting user wallet
+   */
+  public async simulateSwapTransaction(params: {
+    chainId: number;
+    from: string;
+    to: string;
+    data: string;
+    value: string;
+  }): Promise<{ success: boolean; error?: string; estimatedGas?: number; rawResult?: string }> {
+    try {
+      // 1. Try estimateGas for accurate on-chain simulation and gas limits
+      const gasEstimateHex = await rpcProviderWrapper.estimateGas(params.chainId, {
+        from: params.from,
+        to: params.to,
+        value: params.value || '0x0',
+        data: params.data || '0x',
+      });
+      const gasUnits = parseInt(gasEstimateHex, 16);
+      return { success: true, estimatedGas: isNaN(gasUnits) ? 185000 : gasUnits };
+    } catch (err: any) {
+      // 2. If estimateGas fails, check eth_call to extract exact EVM revert reason
+      try {
+        const callResult = await rpcProviderWrapper.call(params.chainId, {
+          from: params.from,
+          to: params.to,
+          value: params.value || '0x0',
+          data: params.data || '0x',
+        });
+        return { success: true, estimatedGas: 185000, rawResult: callResult };
+      } catch (callErr: any) {
+        let msg = callErr.message || err.message || 'Swap simulation reverted on-chain.';
+        if (msg.includes('Too little received') || msg.includes('TF')) {
+          msg = 'Too little received: Slippage tolerance exceeded. The on-chain pool price moved.';
+        } else if (msg.includes('STF')) {
+          msg = 'SafeTransferFrom failed: Token approval not confirmed or insufficient balance.';
+        }
+        return { success: false, error: msg };
+      }
+    }
+  }
+
+  /**
+   * Pre-flight verify and optimize swap:
+   * Simulates the transaction and if it reverts due to tick rounding or slippage,
+   * automatically adjusts rawMinAmountOut safely to match the exact live pool state.
+   */
+  public async buildAndVerifySwapTransaction(params: {
+    chainId: number;
+    userAddress: string;
+    tokenIn: Token;
+    tokenOut: Token;
+    amountIn: string;
+    minAmountOut: string;
+    feeTier?: number;
+    deadlineMinutes?: number;
+    slippagePercent?: number;
+  }): Promise<{ preparedTx: PreparedSwapTransaction; estimatedGas: number }> {
+    const slippagePct = params.slippagePercent !== undefined ? params.slippagePercent : 1.0;
+    let effectiveFee = params.feeTier || (params.chainId === 11155111 || params.chainId === 421614 ? 500 : 3000);
+    let effectiveMinAmountOut = params.minAmountOut;
+
+    // 1. Fetch live on-chain quote right before building to ensure fee tier & pool reserves match exactly
+    try {
+      const liveQuote = await this.getOnChainQuote(
+        params.chainId,
+        params.tokenIn,
+        params.tokenOut,
+        params.amountIn,
+        effectiveFee
+      );
+
+      if (liveQuote && liveQuote.amountOutRaw > 0n && liveQuote.source === 'onchain_quoter') {
+        effectiveFee = liveQuote.feeTier;
+        const decimalsOut = params.tokenOut.decimals || 18;
+        const rawMinOut = (liveQuote.amountOutRaw * BigInt(Math.floor((100 - slippagePct) * 100))) / 10000n;
+        effectiveMinAmountOut = (Number(rawMinOut) / 10 ** decimalsOut).toFixed(decimalsOut > 6 ? 6 : decimalsOut);
+      }
+    } catch (quoteErr: any) {
+      walletLogger.warn('ROUTING_QUERY', `Pre-build on-chain quote query bypassed: ${quoteErr.message}`);
+    }
+
+    let preparedTx = await this.buildSwapTransaction({
+      ...params,
+      feeTier: effectiveFee,
+      minAmountOut: effectiveMinAmountOut,
+    });
+
+    // If approval is required, skip swap simulation until approval is complete
+    if (preparedTx.requiresApproval) {
+      return { preparedTx, estimatedGas: 185000 };
+    }
+
+    if (!params.userAddress) {
+      return { preparedTx, estimatedGas: 185000 };
+    }
+
+    try {
+      // Run pre-flight simulation
+      const sim = await this.simulateSwapTransaction({
+        chainId: params.chainId,
+        from: params.userAddress,
+        to: preparedTx.to,
+        data: preparedTx.data,
+        value: preparedTx.value,
+      });
+
+      if (sim.success) {
+        return {
+          preparedTx,
+          estimatedGas: sim.estimatedGas || 185000,
+        };
+      }
+
+      // If failed with slippage ("Too little received"), automatically adjust minAmountOut and retry
+      if (sim.error?.includes('Too little received') || sim.error?.includes('Slippage tolerance exceeded')) {
+        walletLogger.warn('TRANSACTION_LIFECYCLE', 'Pre-flight simulation detected slippage revert. Auto-adjusting to pool reserves...');
+        
+        const liveQuote = await this.getOnChainQuote(
+          params.chainId,
+          params.tokenIn,
+          params.tokenOut,
+          params.amountIn,
+          effectiveFee
+        );
+
+        if (liveQuote && liveQuote.amountOutRaw > 0n) {
+          const retrySlippage = slippagePct + 0.5;
+          const adjustedMinRaw = (liveQuote.amountOutRaw * BigInt(Math.floor((100 - retrySlippage) * 100))) / 10000n;
+          const decimalsOut = params.tokenOut.decimals || 18;
+          const adjustedMinFormatted = (Number(adjustedMinRaw) / 10 ** decimalsOut).toFixed(6);
+
+          preparedTx = await this.buildSwapTransaction({
+            ...params,
+            minAmountOut: adjustedMinFormatted,
+            feeTier: liveQuote.feeTier,
+          });
+
+          const retrySim = await this.simulateSwapTransaction({
+            chainId: params.chainId,
+            from: params.userAddress,
+            to: preparedTx.to,
+            data: preparedTx.data,
+            value: preparedTx.value,
+          });
+
+          if (retrySim.success) {
+            walletLogger.info('TRANSACTION_LIFECYCLE', 'Pre-flight auto-adjusted successfully! Proceeding with swap.');
+            return {
+              preparedTx,
+              estimatedGas: retrySim.estimatedGas || 185000,
+            };
+          }
+        }
+      }
+
+      // If simulation note exists, log and fall back gracefully with safe gas so wallet can open
+      walletLogger.warn('TRANSACTION_LIFECYCLE', `Simulation note: ${sim.error}. Proceeding with wallet confirmation.`);
+      return {
+        preparedTx,
+        estimatedGas: 220000,
+      };
+    } catch (err: any) {
+      walletLogger.warn('TRANSACTION_LIFECYCLE', `Pre-flight check error: ${err.message}. Proceeding to wallet.`);
+      return {
+        preparedTx,
+        estimatedGas: 220000,
+      };
+    }
   }
 
   /**

@@ -1,11 +1,35 @@
+# Dependencies
 node_modules/
-build/
-dist/
-coverage/
-.DS_Store
-*.log
-.env*
-!.env.example
+.pnp
+.pnp.js
 
-.vercel
+# Production build artifacts
+dist/
+build/
+out/
+
+# Environment files
+.env
 .env*.local
+.env.production
+.env.development
+
+# Vercel & Cloudflare Deployment
+.vercel/
+.wrangler/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+
+# AI agent & IDE scratch directories
+.gemini/
+.agents/
+.system_generated/

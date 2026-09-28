@@ -1,8 +1,5 @@
 {
   "name": "Saydex Protocol",
   "description": "Next-generation decentralized exchange, concentrated liquidity routing, and DeFi terminal.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "requestFramePermissions": []
 }

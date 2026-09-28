@@ -382,12 +382,20 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     const feeTier = onChainQuoteResult?.feeTier || 3000;
     const feeTierDisplay = feeTier === 500 ? '0.05%' : feeTier === 10000 ? '1.00%' : '0.30%';
 
+    // Ensure minOut is safely floored to avoid tick boundary rounding errors
+    const formatOut = (val: number) => {
+      if (val <= 0) return '0.00';
+      const dec = val > 1 ? 4 : 6;
+      const factor = 10 ** dec;
+      return (Math.floor(val * factor) / factor).toFixed(dec);
+    };
+
     return {
       tokenIn,
       tokenOut,
       amountIn: amountIn || '0',
-      amountOut: calculatedOut > 0 ? (calculatedOut > 1 ? calculatedOut.toFixed(4) : calculatedOut.toFixed(6)) : '0.00',
-      amountOutMin: minOut > 0 ? (minOut > 1 ? minOut.toFixed(4) : minOut.toFixed(6)) : '0.00',
+      amountOut: formatOut(calculatedOut),
+      amountOutMin: formatOut(minOut),
       executionPrice: rate,
       priceImpact: selectedRoute ? selectedRoute.priceImpact : 0.01,
       networkFeeUSD: gasData.gasCostUSD,
@@ -484,11 +492,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
   return (
     <>
       <div className="relative w-full max-w-[480px] mx-auto">
-        {/* Ambient Aurora Glow Backdrop */}
-        <div className="aurora-glow-cyan w-64 h-64 -top-10 -left-10 opacity-70 pointer-events-none" />
-        <div className="aurora-glow-indigo w-64 h-64 -bottom-10 -right-10 opacity-60 pointer-events-none" />
-
-        <div className="relative w-full glass-panel rounded-3xl p-4 sm:p-5 shadow-[var(--shadow-card)] transition-all">
+        <div className="relative w-full bg-[var(--bg-surface)] border border-[var(--border-app)] rounded-3xl p-4 sm:p-5 shadow-2xl transition-all">
         {/* Header: Tab Switcher (Swap vs Limit), Chart toggle, Settings */}
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-1">
@@ -574,7 +578,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
             <span className="font-medium text-[var(--text-secondary)]">Sell</span>
             {isConnected && (
-              <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--text-tertiary)]">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] tabular-nums">
                 <span>{userBalanceIn.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenIn.symbol}</span>
                 {userBalanceIn > 0 && (
                   <button
@@ -595,7 +599,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               placeholder="0"
               value={amountIn}
               onChange={(e) => handleAmountChange(e.target.value)}
-              className="w-full bg-transparent font-mono text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none"
+              className="w-full bg-transparent text-3xl sm:text-4xl font-medium tracking-tight text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none tabular-nums"
               min="0"
               step="any"
             />
@@ -612,7 +616,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] font-mono">
+          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] tabular-nums">
             <span>
               ≈ ${(parseFloat(amountIn || '0') * tokenIn.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -637,14 +641,14 @@ export const SwapCard: React.FC<SwapCardProps> = ({
           <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
             <span className="font-medium text-[var(--text-secondary)]">Buy</span>
             {isConnected && (
-              <div className="font-mono text-xs text-[var(--text-tertiary)]">
+              <div className="text-xs text-[var(--text-tertiary)] tabular-nums">
                 {userBalanceOut.toLocaleString(undefined, { maximumFractionDigits: 4 })} {tokenOut.symbol}
               </div>
             )}
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="w-full font-mono text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-primary)] select-all truncate flex items-center gap-2">
+            <div className="w-full text-3xl sm:text-4xl font-medium tracking-tight text-[var(--text-primary)] select-all truncate flex items-center gap-2 tabular-nums">
               {isQuoting ? (
                 <div className="h-9 w-44 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shimmer-wave" />
               ) : (
@@ -664,9 +668,12 @@ export const SwapCard: React.FC<SwapCardProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] font-mono">
+          <div className="flex items-center justify-between mt-2 text-xs text-[var(--text-tertiary)] tabular-nums">
             <span>
-              ≈ ${(parseFloat(quote.amountOut || '0') * tokenOut.priceUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ≈ ${selectedChain.testnet
+                ? (parseFloat(amountIn || '0') * (tokenIn.priceUSD || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : (parseFloat(quote.amountOut || '0') * (tokenOut.priceUSD || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              }
             </span>
           </div>
         </div>
@@ -740,7 +747,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               onClick={() => setShowDetails(!showDetails)}
               className="w-full flex items-center justify-between text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] py-1 transition-colors cursor-pointer select-none"
             >
-              <div className="flex items-center gap-1 font-mono text-[12px]">
+              <div className="flex items-center gap-1 text-[12px] tabular-nums">
                 <span>1 {tokenIn.symbol} = {quote.executionPrice.toFixed(4)} {tokenOut.symbol}</span>
                 <span className="text-[var(--text-tertiary)]">
                   (${(quote.executionPrice * (tokenOut.priceUSD || 1.0)).toFixed(2)})
@@ -748,7 +755,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)]">
                 <Fuel className="w-3.5 h-3.5 text-[var(--primary)]" />
-                <span>{gasData.formattedUSD}</span>
+                <span className="tabular-nums">{gasData.formattedUSD}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showDetails ? 'rotate-180' : ''}`} />
               </div>
             </button>
@@ -757,11 +764,11 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               <div className="mt-2 p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2 text-xs animate-in fade-in duration-150">
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-tertiary)]">Price Impact</span>
-                  <span className="font-mono text-[var(--text-primary)]">{quote.priceImpact < 0.01 ? '<0.01%' : `${quote.priceImpact.toFixed(2)}%`}</span>
+                  <span className="tabular-nums text-[var(--text-primary)] font-medium">{quote.priceImpact < 0.01 ? '<0.01%' : `${quote.priceImpact.toFixed(2)}%`}</span>
                 </div>
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-tertiary)]">Max Slippage</span>
-                  <span className="font-mono text-[var(--text-primary)]">{settings.slippageTolerance}%</span>
+                  <span className="tabular-nums text-[var(--text-primary)] font-medium">{settings.slippageTolerance}%</span>
                 </div>
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-tertiary)] flex items-center gap-1.5">
@@ -771,16 +778,16 @@ export const SwapCard: React.FC<SwapCardProps> = ({
                     )}
                   </span>
                   <div className="flex items-center gap-1">
-                    <span className="font-mono text-[var(--text-primary)]">~{gasData.formattedUSD}</span>
-                    <span className="font-mono text-[10px] text-[var(--text-tertiary)]">
+                    <span className="tabular-nums text-[var(--text-primary)] font-medium">~{gasData.formattedUSD}</span>
+                    <span className="tabular-nums text-[10px] text-[var(--text-tertiary)]">
                       ({gasData.gasPriceGwei < 0.1 ? gasData.gasPriceGwei.toFixed(3) : gasData.gasPriceGwei.toFixed(1)} Gwei)
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-[var(--text-secondary)]">
                   <span className="text-[var(--text-tertiary)]">Order Routing</span>
-                  <span className="font-mono text-[var(--primary)] font-medium">
-                    {settings.routingProtocol === 'v4' ? 'Uniswap V4 Universal Router' : 'Uniswap V3'}
+                  <span className="text-[var(--primary)] font-medium">
+                    {settings.routingProtocol === 'v4' ? 'Uniswap V4' : 'Uniswap V3'}
                   </span>
                 </div>
               </div>

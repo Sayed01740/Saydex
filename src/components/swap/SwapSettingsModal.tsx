@@ -7,7 +7,6 @@ import {
   Zap,
   Info,
   Sliders,
-  Activity,
   Clock,
   AlertTriangle,
   RotateCcw,
@@ -25,11 +24,10 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
   const [customSlippageVal, setCustomSlippageVal] = useState(settings.customSlippage || '');
 
   const slippagePresets = [
-    { label: 'Auto (0.5%)', value: 0.5, isAuto: true },
+    { label: 'Auto', value: 0.5, isAuto: true },
     { label: '0.1%', value: 0.1 },
     { label: '0.5%', value: 0.5 },
     { label: '1.0%', value: 1.0 },
-    { label: '2.5%', value: 2.5 },
   ];
 
   const deadlinePresets = [5, 10, 20, 30, 60];
@@ -76,15 +74,7 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)]">
-            <Sliders className="w-4 h-4" />
-          </div>
-          <span>Swap Execution & Settings</span>
-        </div>
-      }
-      subtitle="Configure allowed slippage tolerance, transaction deadlines, and MEV routing"
+      title="Settings"
       maxWidth="md"
     >
       <div className="space-y-5 pt-1">
@@ -174,230 +164,106 @@ export const SwapSettingsModal: React.FC<SwapSettingsModalProps> = ({ isOpen, on
           )}
         </div>
 
-        {/* Section 2: Transaction Deadline Duration */}
-        <div className="space-y-2.5 p-3.5 rounded-xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)]">
+        {/* Section 2: Transaction Deadline */}
+        <div className="space-y-2 p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
-                Transaction Deadline Duration
-              </span>
-              <div className="group relative cursor-help">
-                <Info className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block w-48 p-2 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-[11px] text-[var(--text-secondary)] shadow-lg z-50 pointer-events-none">
-                  Your transaction will automatically revert if it is pending in the mempool longer than this duration.
-                </div>
-              </div>
-            </div>
-            <span className="text-xs font-mono font-bold text-[var(--text-primary)]">
-              {settings.deadlineMinutes} mins
+            <span className="text-xs font-semibold text-[var(--text-primary)]">
+              Transaction deadline
             </span>
-          </div>
-
-          {/* Deadline Presets & Stepper */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {deadlinePresets.map((mins) => {
-              const isSelected = settings.deadlineMinutes === mins;
-              return (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => handleDeadlineChange(mins)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all border cursor-pointer ${
-                    isSelected
-                      ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--primary)]'
-                      : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {mins}m
-                </button>
-              );
-            })}
-
-            <div className="flex items-center gap-1 ml-auto">
-              <button
-                type="button"
-                onClick={() => handleDeadlineChange(settings.deadlineMinutes - 5)}
-                className="w-8 h-8 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-xs font-mono font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center transition-colors cursor-pointer"
-                title="Decrease 5 minutes"
-              >
-                -5
-              </button>
+            <div className="flex items-center gap-1.5">
               <input
                 type="number"
                 value={settings.deadlineMinutes}
                 onChange={(e) => handleDeadlineChange(parseInt(e.target.value) || 20)}
-                className="w-14 py-1 px-1 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-app)] focus:border-[var(--primary)] text-xs font-mono font-bold text-[var(--text-primary)] text-center focus:outline-none"
+                className="w-16 py-1 px-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-app)] focus:border-[var(--primary)] text-xs font-mono font-bold text-[var(--text-primary)] text-right focus:outline-none"
                 min="1"
                 max="180"
               />
-              <button
-                type="button"
-                onClick={() => handleDeadlineChange(settings.deadlineMinutes + 5)}
-                className="w-8 h-8 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] text-xs font-mono font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center transition-colors cursor-pointer"
-                title="Increase 5 minutes"
-              >
-                +5
-              </button>
+              <span className="text-xs text-[var(--text-secondary)] font-medium">minutes</span>
             </div>
           </div>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
-            Reverts if execution is delayed past deadline to protect against stale rates.
-          </p>
         </div>
 
-        {/* Section 3: Advanced Routing & Protection Toggles */}
-        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2.5">
-          <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--bg-subtle)]/40 hover:bg-[var(--bg-subtle)] transition-colors">
-            <div className="flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-[var(--primary)] mt-0.5" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">
-                  MEV & Private RPC Shield
-                </div>
-                <div className="text-[11px] text-[var(--text-tertiary)]">
-                  Routes directly to private builder nodes to eliminate sandwich attacks
-                </div>
-              </div>
-            </div>
+        {/* Section 3: Execution Routing Protocol */}
+        <div className="space-y-2 p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-[var(--text-primary)]">
+              Routing protocol
+            </span>
+            <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
+              {settings.routingProtocol === 'v4' ? 'v4' : 'v3'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => updateSettings({ routingProtocol: 'v3' })}
+              className={`py-2 px-3 rounded-xl text-center border text-xs font-semibold transition-all cursor-pointer ${
+                (settings.routingProtocol || 'v3') === 'v3'
+                  ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--primary)]'
+                  : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Uniswap V3
+            </button>
+
+            <button
+              type="button"
+              onClick={() => updateSettings({ routingProtocol: 'v4' })}
+              className={`py-2 px-3 rounded-xl text-center border text-xs font-semibold transition-all cursor-pointer ${
+                settings.routingProtocol === 'v4'
+                  ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--primary)]'
+                  : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Uniswap V4
+            </button>
+          </div>
+        </div>
+
+        {/* Section 4: Protection & Routing Toggles */}
+        <div className="space-y-2 p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[var(--text-primary)]">
+              MEV & Private RPC shield
+            </span>
             <button
               type="button"
               onClick={() => updateSettings({ mevProtection: !settings.mevProtection })}
-              className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                 settings.mevProtection
                   ? 'bg-[var(--primary)]'
                   : 'bg-[var(--bg-surface-elevated)] border border-[var(--border-app)]'
               }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
-                  settings.mevProtection ? 'left-5' : 'left-1'
+                className={`w-3.5 h-3.5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  settings.mevProtection ? 'left-5' : 'left-0.5'
                 }`}
               />
             </button>
           </div>
 
-          <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--bg-subtle)]/40 hover:bg-[var(--bg-subtle)] transition-colors">
-            <div className="flex items-start gap-2.5">
-              <Zap className="w-4 h-4 text-[var(--info)] mt-0.5" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">
-                  Saydex Split Auto-Router
-                </div>
-                <div className="text-[11px] text-[var(--text-tertiary)]">
-                  Splits trades across concentrated liquidity pools for optimal pricing
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+            <span className="text-xs font-semibold text-[var(--text-primary)]">
+              Split auto-router
+            </span>
             <button
               type="button"
               onClick={() => updateSettings({ autoRouter: !settings.autoRouter })}
-              className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                 settings.autoRouter
                   ? 'bg-[var(--primary)]'
                   : 'bg-[var(--bg-surface-elevated)] border border-[var(--border-app)]'
               }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
-                  settings.autoRouter ? 'left-5' : 'left-1'
+                className={`w-3.5 h-3.5 rounded-full bg-white transition-transform absolute top-0.5 ${
+                  settings.autoRouter ? 'left-5' : 'left-0.5'
                 }`}
               />
             </button>
-          </div>
-
-          <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--bg-subtle)]/40 hover:bg-[var(--bg-subtle)] transition-colors">
-            <div className="flex items-start gap-2.5">
-              <Activity className="w-4 h-4 text-emerald-400 mt-0.5" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">
-                  Developer & Advanced Mode
-                </div>
-                <div className="text-[11px] text-[var(--text-tertiary)]">
-                  Show raw transaction calldata hex, pool contracts, and execution hops
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => updateSettings({ advancedMode: !settings.advancedMode })}
-              className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
-                settings.advancedMode
-                  ? 'bg-[var(--primary)]'
-                  : 'bg-[var(--bg-surface-elevated)] border border-[var(--border-app)]'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
-                  settings.advancedMode ? 'left-5' : 'left-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Section 4: Official Uniswap Routing Protocol Selection */}
-          <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)]/70 border border-[var(--border-subtle)] space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-[var(--primary)]" />
-                <span className="text-xs font-bold text-[var(--text-primary)]">
-                  Execution Routing Protocol
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
-                {settings.routingProtocol === 'v4' ? 'Universal Router v2' : 'SwapRouter02'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => updateSettings({ routingProtocol: 'v3' })}
-                className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                  (settings.routingProtocol || 'v3') === 'v3'
-                    ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold">Uniswap V3</span>
-                  {(settings.routingProtocol || 'v3') === 'v3' && (
-                    <Check className="w-3.5 h-3.5 text-[var(--primary)]" />
-                  )}
-                </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] leading-tight">
-                  SwapRouter02 + QuoterV2 live on 18 networks
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => updateSettings({ routingProtocol: 'v4' })}
-                className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                  settings.routingProtocol === 'v4'
-                    ? 'bg-[var(--primary-subtle)] border-[var(--primary)] text-[var(--text-primary)]'
-                    : 'bg-[var(--bg-surface)] border-[var(--border-app)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                    Uniswap V4
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--primary-subtle)] text-[var(--primary)] border border-[var(--primary)]/30 font-mono font-bold">NEW</span>
-                  </span>
-                  {settings.routingProtocol === 'v4' && (
-                    <Check className="w-3.5 h-3.5 text-[var(--primary)]" />
-                  )}
-                </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] leading-tight">
-                  Universal Router (0x10) + Permit2 singleton
-                </div>
-              </button>
-            </div>
-            <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-              {settings.routingProtocol === 'v4'
-                ? 'Uniswap V4 uses Universal Router execute() with single-byte V4_SWAP (0x10), SWAP_EXACT_IN_SINGLE actions, and Permit2 transient delta settlement.'
-                : 'Uniswap V3 routes multi-hop trades with concentrated liquidity ticks and automated MEV slippage protection.'}
-            </p>
           </div>
         </div>
 

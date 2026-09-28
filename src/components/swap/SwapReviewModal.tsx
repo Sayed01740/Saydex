@@ -81,8 +81,8 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
 
   const handleConfirmSwap = async (forceSimArg: any = false) => {
     // Crucial: onClick={handleConfirmSwap} passes React SyntheticMouseEvent as first argument!
-    // We must strictly check for boolean true, otherwise it accidentally forces simulation!
-    const forceSimulation = forceSimArg === true;
+    // We must strictly check for boolean true, or if no real Web3 extension is connected.
+    const forceSimulation = forceSimArg === true || !isRealExtensionConnected;
     let txId = '';
     const targetChainId = quote.tokenIn.chainId || selectedChain.id;
 
@@ -117,55 +117,62 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
       const useV4 = settings.routingProtocol === 'v4' && isV4SupportedOnChain;
 
       if (useV4) {
-        // Prepare official Uniswap V4 Universal Router swap transaction on targetChainId
-        const v4Tx = await universalRouterV4Service.buildV4SwapTransaction({
-          chainId: targetChainId,
-          userAddress: address,
-          tokenIn: quote.tokenIn,
-          tokenOut: quote.tokenOut,
-          amountIn: quote.amountIn,
-          minAmountOut: quote.amountOutMin || quote.amountOut,
-          feeTier: quote.feeTier || 3000,
-          deadlineMinutes: settings.deadlineMinutes || 20,
-        });
-
-        // Handle Permit2 token approval if selling ERC-20
-        if (v4Tx.requiresPermit2Erc20Approval && v4Tx.erc20ApprovalTx && !forceSimulation) {
-          setApprovalStep('approving');
-          const approveResult = await sendTransaction({
-            to: v4Tx.erc20ApprovalTx.to,
-            value: v4Tx.erc20ApprovalTx.value,
-            data: v4Tx.erc20ApprovalTx.data,
+        try {
+          // Prepare official Uniswap V4 Universal Router swap transaction on targetChainId
+          const v4Tx = await universalRouterV4Service.buildV4SwapTransaction({
             chainId: targetChainId,
-            title: `Approve ${quote.tokenIn.symbol} for Permit2`,
-            forceSimulation: false,
+            userAddress: address,
+            tokenIn: quote.tokenIn,
+            tokenOut: quote.tokenOut,
+            amountIn: quote.amountIn,
+            minAmountOut: quote.amountOutMin || quote.amountOut,
+            feeTier: quote.feeTier || 3000,
+            deadlineMinutes: settings.deadlineMinutes || 20,
           });
 
-          if (approveResult.hash && !approveResult.hash.startsWith('0x_sim')) {
-            await uniswapV3Service.waitForReceipt(targetChainId, approveResult.hash, 45000);
-          }
-
-          // Permit2 router approval if needed
-          if (v4Tx.permit2ApproveTx) {
-            await sendTransaction({
-              to: v4Tx.permit2ApproveTx.to,
-              value: v4Tx.permit2ApproveTx.value,
-              data: v4Tx.permit2ApproveTx.data,
+          // Handle Permit2 token approval if selling ERC-20
+          if (v4Tx.requiresPermit2Erc20Approval && v4Tx.erc20ApprovalTx && !forceSimulation) {
+            setApprovalStep('approving');
+            const approveResult = await sendTransaction({
+              to: v4Tx.erc20ApprovalTx.to,
+              value: v4Tx.erc20ApprovalTx.value,
+              data: v4Tx.erc20ApprovalTx.data,
               chainId: targetChainId,
-              title: `Approve Universal Router via Permit2`,
-              forceSimulation: false,
+              title: `Approve ${quote.tokenIn.symbol} for Permit2`,
+              forceSimulation,
             });
-          }
-          setApprovalStep('approved');
-          await new Promise((resolve) => setTimeout(resolve, 800));
-        }
 
-        swapTo = v4Tx.to;
-        swapData = v4Tx.data;
-        swapValue = v4Tx.value;
-      } else {
-        // Prepare real Uniswap V3 swap transaction on targetChainId
-        const preparedTx = await uniswapV3Service.buildSwapTransaction({
+            if (approveResult.hash && !approveResult.hash.startsWith('0x_sim')) {
+              await uniswapV3Service.waitForReceipt(targetChainId, approveResult.hash, 45000);
+            }
+
+            // Permit2 router approval if needed
+            if (v4Tx.permit2ApproveTx) {
+              await sendTransaction({
+                to: v4Tx.permit2ApproveTx.to,
+                value: v4Tx.permit2ApproveTx.value,
+                data: v4Tx.permit2ApproveTx.data,
+                chainId: targetChainId,
+                title: `Approve Universal Router via Permit2`,
+                forceSimulation,
+              });
+            }
+            setApprovalStep('approved');
+            await new Promise((resolve) => setTimeout(resolve, 800));
+          }
+
+          swapTo = v4Tx.to;
+          swapData = v4Tx.data;
+          swapValue = v4Tx.value;
+        } catch (v4Err: any) {
+          walletLogger.warn('ROUTING_QUERY', `V4 routing failed (${v4Err.message}), auto-falling back to battle-tested Uniswap V3.`);
+        }
+      }
+
+      // If not V4 or V4 fell back: Execute via Uniswap V3 SwapRouter02
+      if (!swapTo) {
+        // Build and verify with live on-chain simulation
+        const { preparedTx } = await uniswapV3Service.buildAndVerifySwapTransaction({
           chainId: targetChainId,
           userAddress: address,
           tokenIn: quote.tokenIn,
@@ -174,6 +181,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
           minAmountOut: quote.amountOutMin || quote.amountOut,
           feeTier: quote.feeTier || 3000,
           deadlineMinutes: settings.deadlineMinutes || 20,
+          slippagePercent: settings.slippageTolerance || 1.0,
         });
 
         // Handle token approval if selling ERC-20
@@ -185,7 +193,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
             data: preparedTx.approvalTx.data,
             chainId: targetChainId,
             title: `Approve ${quote.tokenIn.symbol} for Uniswap Router`,
-            forceSimulation: false,
+            forceSimulation,
           });
 
           // Wait for approval confirmation on-chain before executing swap
@@ -205,14 +213,15 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
         swapValue = preparedTx.value;
       }
 
-      // Execute Swap transaction through connected wallet
+      // Execute Swap transaction through connected wallet with pre-verified parameters
+      // Notice: Do NOT pass hardcoded gas so MetaMask/Rabby estimates live gas natively
       const txResult = await sendTransaction({
         to: swapTo,
         value: swapValue,
         data: swapData,
         chainId: targetChainId,
         title: `Swap ${quote.amountIn} ${quote.tokenIn.symbol} -> ${quote.amountOut} ${quote.tokenOut.symbol}`,
-        forceSimulation: false,
+        forceSimulation,
       });
 
       setTxHash(txResult.hash);
@@ -424,64 +433,13 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
             </div>
           </div>
 
-          {/* Calldata & Command Stack Preview */}
-          <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[var(--primary)] flex items-center gap-1">
-                <span>
-                  {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
-                    ? 'Uniswap V4 Execution Pipeline'
-                    : 'Atomic Calldata Pipeline'}
-                </span>
-              </span>
-              <span className="font-mono text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
-                  ? 'Command: 0x10 V4_SWAP'
-                  : 'Single execute() call'}
-              </span>
-            </div>
-            {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id]) ? (
-              <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-emerald-500/30 text-emerald-500 font-bold">
-                  PERMIT2
-                </span>
-                <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--primary)]/30 text-[var(--primary)] font-bold">
-                  0x06 SWAP_EXACT_IN
-                </span>
-                <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-amber-500/30 text-amber-400 font-bold">
-                  0x0c SETTLE_ALL
-                </span>
-                <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-cyan-500/30 text-cyan-400 font-bold">
-                  0x0d TAKE_ALL
-                </span>
-              </div>
-            ) : (
-              <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-emerald-500 font-bold">
-                  0x02 PERMIT2
-                </span>
-                <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-indigo-400 font-bold">
-                  0x00 V3_SWAP
-                </span>
-                <span>→</span>
-                <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-app)] text-amber-400 font-bold">
-                  0x0b SWEEP
-                </span>
-              </div>
-            )}
-          </div>
-
           <Button
             variant="primary"
             size="lg"
             fullWidth
             onClick={() => handleConfirmSwap(false)}
           >
-            Confirm & Execute Swap
+            Confirm Swap
           </Button>
         </div>
       )}
