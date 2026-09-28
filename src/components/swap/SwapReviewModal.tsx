@@ -20,7 +20,7 @@ import { TokenIcon } from '../common/TokenIcon';
 import { useWallet } from '../../context/WalletContext';
 import { useProtocol } from '../../context/ProtocolContext';
 import { uniswapV3Service } from '../../services/uniswapV3Service';
-import { universalRouterV4Service } from '../../services/universalRouterV4Service';
+import { universalRouterV4Service, UNIVERSAL_ROUTER_ADDRESSES } from '../../services/universalRouterV4Service';
 import { walletLogger } from '../../utils/walletLogger';
 
 interface SwapReviewModalProps {
@@ -113,7 +113,10 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
       let swapData = '';
       let swapValue = '0x0';
 
-      if (settings.routingProtocol === 'v4') {
+      const isV4SupportedOnChain = Boolean(UNIVERSAL_ROUTER_ADDRESSES[targetChainId]);
+      const useV4 = settings.routingProtocol === 'v4' && isV4SupportedOnChain;
+
+      if (useV4) {
         // Prepare official Uniswap V4 Universal Router swap transaction on targetChainId
         const v4Tx = await universalRouterV4Service.buildV4SwapTransaction({
           chainId: targetChainId,
@@ -410,7 +413,13 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
               <span className="text-[var(--text-tertiary)]">Routing Engine</span>
               <span className="text-[var(--primary)] font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 (Universal Router)' : 'Uniswap V3 (SwapRouter02)'}</span>
+                <span>
+                  {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
+                    ? 'Uniswap V4 (Universal Router)'
+                    : settings.routingProtocol === 'v4'
+                    ? `Uniswap V3 (${selectedChain.shortName || selectedChain.name})`
+                    : 'Uniswap V3 (SwapRouter02)'}
+                </span>
               </span>
             </div>
           </div>
@@ -419,13 +428,19 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
           <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary)]/20 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-[var(--primary)] flex items-center gap-1">
-                <span>{settings.routingProtocol === 'v4' ? 'Uniswap V4 Execution Pipeline' : 'Atomic Calldata Pipeline'}</span>
+                <span>
+                  {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
+                    ? 'Uniswap V4 Execution Pipeline'
+                    : 'Atomic Calldata Pipeline'}
+                </span>
               </span>
               <span className="font-mono text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                {settings.routingProtocol === 'v4' ? 'Command: 0x10 V4_SWAP' : 'Single execute() call'}
+                {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
+                  ? 'Command: 0x10 V4_SWAP'
+                  : 'Single execute() call'}
               </span>
             </div>
-            {settings.routingProtocol === 'v4' ? (
+            {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id]) ? (
               <div className="font-mono text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap">
                 <span className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-emerald-500/30 text-emerald-500 font-bold">
                   PERMIT2

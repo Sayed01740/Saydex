@@ -1,6 +1,7 @@
 import { Token } from '../types';
 import { rpcProviderWrapper } from '../utils/rpcProviderWrapper';
 import { walletLogger } from '../utils/walletLogger';
+import { getChainById } from '../config/chains';
 
 /**
  * Universal Permit2 Singleton deployed on all EVM chains
@@ -245,9 +246,13 @@ export class UniversalRouterV4Service {
     hookAddress?: string;
     deadlineMinutes?: number;
   }): Promise<PreparedV4SwapTransaction> {
-    const routerAddress = UNIVERSAL_ROUTER_ADDRESSES[params.chainId] || UNIVERSAL_ROUTER_ADDRESSES[1];
-    const isInputNative = !params.tokenIn.address || params.tokenIn.address === '0x0000000000000000000000000000000000000000' || params.tokenIn.symbol === 'ETH';
-    const isOutputNative = !params.tokenOut.address || params.tokenOut.address === '0x0000000000000000000000000000000000000000' || params.tokenOut.symbol === 'ETH';
+    const routerAddress = UNIVERSAL_ROUTER_ADDRESSES[params.chainId];
+    if (!routerAddress) {
+      throw new Error(`Uniswap V4 Universal Router is not yet deployed on Chain #${params.chainId}. Please route via Uniswap V3 on this network.`);
+    }
+    const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
+    const isInputNative = !params.tokenIn.address || params.tokenIn.address === '0x0000000000000000000000000000000000000000' || params.tokenIn.symbol.toUpperCase() === 'ETH' || params.tokenIn.symbol.toUpperCase() === nativeSym;
+    const isOutputNative = !params.tokenOut.address || params.tokenOut.address === '0x0000000000000000000000000000000000000000' || params.tokenOut.symbol.toUpperCase() === 'ETH' || params.tokenOut.symbol.toUpperCase() === nativeSym;
 
     const decimalsIn = params.tokenIn.decimals || 18;
     const decimalsOut = params.tokenOut.decimals || 18;

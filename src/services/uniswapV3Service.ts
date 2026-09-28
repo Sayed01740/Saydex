@@ -3,6 +3,7 @@ import { getUniswapV3Deployment, UNISWAP_V3_DEPLOYMENTS } from '../config/uniswa
 import { Token } from '../types';
 import { walletLogger } from '../utils/walletLogger';
 import { uniswapApiService } from './uniswapApiService';
+import { getChainById } from '../config/chains';
 
 /**
  * Helper: pad hex string to 32 bytes (64 hex characters)
@@ -252,16 +253,20 @@ export class UniswapV3Service {
     const fee = params.feeTier || 3000;
     const deadline = Math.floor(Date.now() / 1000) + (params.deadlineMinutes || 20) * 60;
 
+    const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
+
     const isNativeIn =
       !params.tokenIn.address ||
       params.tokenIn.address === '0x0000000000000000000000000000000000000000' ||
       params.tokenIn.symbol.toUpperCase() === 'ETH' ||
+      params.tokenIn.symbol.toUpperCase() === nativeSym ||
       params.tokenIn.symbol.toUpperCase() === 'SEP';
 
     const isNativeOut =
       !params.tokenOut.address ||
       params.tokenOut.address === '0x0000000000000000000000000000000000000000' ||
       params.tokenOut.symbol.toUpperCase() === 'ETH' ||
+      params.tokenOut.symbol.toUpperCase() === nativeSym ||
       params.tokenOut.symbol.toUpperCase() === 'SEP';
 
     const decimalsIn = params.tokenIn.decimals || 18;
@@ -371,8 +376,9 @@ export class UniswapV3Service {
     const raw0 = BigInt(Math.floor(parseFloat(params.amount0Desired) * 10 ** (params.token0.decimals || 18)));
     const raw1 = BigInt(Math.floor(parseFloat(params.amount1Desired) * 10 ** (params.token1.decimals || 18)));
 
-    const isNative0 = !params.token0.address || params.token0.address === '0x0000000000000000000000000000000000000000' || params.token0.symbol === 'ETH';
-    const isNative1 = !params.token1.address || params.token1.address === '0x0000000000000000000000000000000000000000' || params.token1.symbol === 'ETH';
+    const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
+    const isNative0 = !params.token0.address || params.token0.address === '0x0000000000000000000000000000000000000000' || params.token0.symbol.toUpperCase() === 'ETH' || params.token0.symbol.toUpperCase() === nativeSym;
+    const isNative1 = !params.token1.address || params.token1.address === '0x0000000000000000000000000000000000000000' || params.token1.symbol.toUpperCase() === 'ETH' || params.token1.symbol.toUpperCase() === nativeSym;
 
     const addr0 = isNative0 ? deployment.wethAddress : params.token0.address;
     const addr1 = isNative1 ? deployment.wethAddress : params.token1.address;
