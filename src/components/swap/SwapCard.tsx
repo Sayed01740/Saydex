@@ -842,6 +842,10 @@ export const SwapCard: React.FC<SwapCardProps> = ({
               ? `Insufficient ${tokenIn.symbol} balance`
               : !amountIn || parseFloat(amountIn) <= 0
               ? 'Enter an amount'
+              : (tokenIn.symbol === 'ETH' || !tokenIn.address || tokenIn.address === '0x0000000000000000000000000000000000000000') && tokenOut.symbol === 'WETH'
+              ? 'Wrap'
+              : tokenIn.symbol === 'WETH' && (tokenOut.symbol === 'ETH' || !tokenOut.address || tokenOut.address === '0x0000000000000000000000000000000000000000')
+              ? 'Unwrap'
               : 'Swap'}
           </Button>
         )}

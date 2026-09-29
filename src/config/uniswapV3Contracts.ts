@@ -252,6 +252,19 @@ export const UNISWAP_V3_DEPLOYMENTS: Record<number, UniswapV3Deployment> = {
     defaultStablecoinSymbol: 'USDC',
     permit2: PERMIT2_ADDRESS,
   },
+  // GIWA Sepolia Testnet (91342)
+  91342: {
+    chainId: 91342,
+    chainName: 'GIWA Sepolia',
+    swapRouter02: '0xF0B95C36d907441c5936D4c14ff7610957A6d926',
+    quoterV2: '0x7788cb9e1Dba291623c51f10A2f3fd199676202f',
+    nonfungiblePositionManager: '0xf72BcA1af1F50C133Ea5211c60c479045A7e5106',
+    factory: '0xE9348e3e3c17D721575e294BE271BCD11028809e',
+    wethAddress: '0x4200000000000000000000000000000000000006',
+    defaultStablecoinAddress: '0x4200000000000000000000000000000000000006',
+    defaultStablecoinSymbol: 'WETH',
+    permit2: PERMIT2_ADDRESS,
+  },
 };
 
 export function getUniswapV3Deployment(chainId: number): UniswapV3Deployment | undefined {

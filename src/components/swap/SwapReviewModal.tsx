@@ -90,11 +90,22 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
       setErrorMessage('');
       setStatus('wallet_approval');
 
+      const isWrapTx = (quote.tokenIn.symbol === 'ETH' || !quote.tokenIn.address || quote.tokenIn.address === '0x0000000000000000000000000000000000000000') && quote.tokenOut.symbol === 'WETH';
+      const isUnwrapTx = quote.tokenIn.symbol === 'WETH' && (quote.tokenOut.symbol === 'ETH' || !quote.tokenOut.address || quote.tokenOut.address === '0x0000000000000000000000000000000000000000');
+
       // Initialize lifecycle tracking in ProtocolContext
       txId = startTransactionLifecycle({
         type: 'swap',
-        title: `Swap ${quote.amountIn} ${quote.tokenIn.symbol} -> ${quote.amountOut} ${quote.tokenOut.symbol}`,
-        description: `Rate: 1 ${quote.tokenIn.symbol} = ${quote.executionPrice.toFixed(4)} ${quote.tokenOut.symbol} via Uniswap V3`,
+        title: isWrapTx
+          ? `Wrap ${quote.amountIn} ETH -> WETH`
+          : isUnwrapTx
+          ? `Unwrap ${quote.amountIn} WETH -> ETH`
+          : `Swap ${quote.amountIn} ${quote.tokenIn.symbol} -> ${quote.amountOut} ${quote.tokenOut.symbol}`,
+        description: isWrapTx
+          ? `Wrap native ETH to Canonical WETH9 (1:1)`
+          : isUnwrapTx
+          ? `Unwrap Canonical WETH9 to native ETH (1:1)`
+          : `Rate: 1 ${quote.tokenIn.symbol} = ${quote.executionPrice.toFixed(4)} ${quote.tokenOut.symbol} via Uniswap V3`,
         explorerUrl: `${selectedChain.blockExplorerUrl}/tx/`,
         isRealWallet: !forceSimulation,
         tokenIn: { symbol: quote.tokenIn.symbol, amount: quote.amountIn, icon: quote.tokenIn.icon },
@@ -423,7 +434,11 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
               <span className="text-[var(--primary)] font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
-                  {settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
+                  {((quote.tokenIn.symbol === 'ETH' || !quote.tokenIn.address || quote.tokenIn.address === '0x0000000000000000000000000000000000000000') && quote.tokenOut.symbol === 'WETH')
+                    ? 'Canonical WETH Deposit (1:1)'
+                    : (quote.tokenIn.symbol === 'WETH' && (quote.tokenOut.symbol === 'ETH' || !quote.tokenOut.address || quote.tokenOut.address === '0x0000000000000000000000000000000000000000'))
+                    ? 'Canonical WETH Withdraw (1:1)'
+                    : settings.routingProtocol === 'v4' && Boolean(UNIVERSAL_ROUTER_ADDRESSES[quote.tokenIn.chainId || selectedChain.id])
                     ? 'Uniswap V4 (Universal Router)'
                     : settings.routingProtocol === 'v4'
                     ? `Uniswap V3 (${selectedChain.shortName || selectedChain.name})`
@@ -439,7 +454,11 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
             fullWidth
             onClick={() => handleConfirmSwap(false)}
           >
-            Confirm Swap
+            {((quote.tokenIn.symbol === 'ETH' || !quote.tokenIn.address || quote.tokenIn.address === '0x0000000000000000000000000000000000000000') && quote.tokenOut.symbol === 'WETH')
+              ? 'Confirm Wrap'
+              : (quote.tokenIn.symbol === 'WETH' && (quote.tokenOut.symbol === 'ETH' || !quote.tokenOut.address || quote.tokenOut.address === '0x0000000000000000000000000000000000000000'))
+              ? 'Confirm Unwrap'
+              : 'Confirm Swap'}
           </Button>
         </div>
       )}

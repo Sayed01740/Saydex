@@ -1,0 +1,23 @@
+{
+  "name": "saydex-contracts",
+  "version": "1.0.0",
+  "description": "Saydex Core DEX Contracts Deployment on GIWA Sepolia",
+  "scripts": {
+    "deploy:giwa": "hardhat run scripts/deploy.ts --network giwaSepolia",
+    "verify:giwa": "hardhat run scripts/verify.ts --network giwaSepolia",
+    "pool:giwa": "hardhat run scripts/initialize-pool.ts --network giwaSepolia"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.4",
+    "@uniswap/swap-router-contracts": "^1.3.1",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "hardhat": "^2.22.18",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

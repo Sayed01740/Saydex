@@ -1,0 +1,20 @@
+{
+  "network": "giwaSepolia",
+  "chainId": 91342,
+  "rpc": "https://sepolia-rpc.giwa.io",
+  "explorer": "https://sepolia-explorer.giwa.io",
+  "deployedAt": "2026-09-29T19:09:45.753Z",
+  "deployer": "0x3578df32Aa130881C2A660085D1c894e5549667B",
+  "contracts": {
+    "WETH9": "0x4200000000000000000000000000000000000006",
+    "UniswapV3Factory": "0xE9348e3e3c17D721575e294BE271BCD11028809e",
+    "NFTDescriptor": "0xBfF072A6207fd3f8A3f8A29C1baE7BbcCe2CBF1e",
+    "NonfungibleTokenPositionDescriptor": "0x03A929867a86E9634Ec0e974Fa687982D1d72a48",
+    "NonfungiblePositionManager": "0xf72BcA1af1F50C133Ea5211c60c479045A7e5106",
+    "SwapRouter02": "0xF0B95C36d907441c5936D4c14ff7610957A6d926",
+    "SwapRouter": "0x40De55997db2E2e381C6b8B167f9F1A882599ECC",
+    "QuoterV2": "0x7788cb9e1Dba291623c51f10A2f3fd199676202f",
+    "TickLens": "0x172E2402955c5de6eE6D47A41fD7a29334aa0b7e",
+    "Multicall3": "0xca11bde05977b3631167028862be2a173976ca11"
+  }
+}

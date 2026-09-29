@@ -1,0 +1,66 @@
+[
+  {
+    "name": "UniswapV3Factory",
+    "address": "0xE9348e3e3c17D721575e294BE271BCD11028809e",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "",
+    "url": "https://sepolia-explorer.giwa.io/address/0xE9348e3e3c17D721575e294BE271BCD11028809e?tab=contract"
+  },
+  {
+    "name": "NFTDescriptor",
+    "address": "0xBfF072A6207fd3f8A3f8A29C1baE7BbcCe2CBF1e",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "",
+    "url": "https://sepolia-explorer.giwa.io/address/0xBfF072A6207fd3f8A3f8A29C1baE7BbcCe2CBF1e?tab=contract"
+  },
+  {
+    "name": "NonfungibleTokenPositionDescriptor",
+    "address": "0x03A929867a86E9634Ec0e974Fa687982D1d72a48",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "00000000000000000000000042000000000000000000000000000000000000064554480000000000000000000000000000000000000000000000000000000000",
+    "url": "https://sepolia-explorer.giwa.io/address/0x03A929867a86E9634Ec0e974Fa687982D1d72a48?tab=contract"
+  },
+  {
+    "name": "NonfungiblePositionManager",
+    "address": "0xf72BcA1af1F50C133Ea5211c60c479045A7e5106",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "000000000000000000000000e9348e3e3c17d721575e294be271bcd11028809e000000000000000000000000420000000000000000000000000000000000000600000000000000000000000003a929867a86e9634ec0e974fa687982d1d72a48",
+    "url": "https://sepolia-explorer.giwa.io/address/0xf72BcA1af1F50C133Ea5211c60c479045A7e5106?tab=contract"
+  },
+  {
+    "name": "SwapRouter02",
+    "address": "0xF0B95C36d907441c5936D4c14ff7610957A6d926",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e9348e3e3c17d721575e294be271bcd11028809e000000000000000000000000f72bca1af1f50c133ea5211c60c479045a7e51060000000000000000000000004200000000000000000000000000000000000006",
+    "url": "https://sepolia-explorer.giwa.io/address/0xF0B95C36d907441c5936D4c14ff7610957A6d926?tab=contract"
+  },
+  {
+    "name": "SwapRouter",
+    "address": "0x40De55997db2E2e381C6b8B167f9F1A882599ECC",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "000000000000000000000000e9348e3e3c17d721575e294be271bcd11028809e0000000000000000000000004200000000000000000000000000000000000006",
+    "url": "https://sepolia-explorer.giwa.io/address/0x40De55997db2E2e381C6b8B167f9F1A882599ECC?tab=contract"
+  },
+  {
+    "name": "QuoterV2",
+    "address": "0x7788cb9e1Dba291623c51f10A2f3fd199676202f",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "000000000000000000000000e9348e3e3c17d721575e294be271bcd11028809e0000000000000000000000004200000000000000000000000000000000000006",
+    "url": "https://sepolia-explorer.giwa.io/address/0x7788cb9e1Dba291623c51f10A2f3fd199676202f?tab=contract"
+  },
+  {
+    "name": "TickLens",
+    "address": "0x172E2402955c5de6eE6D47A41fD7a29334aa0b7e",
+    "compiler": "v0.7.6+commit.7338295f",
+    "optimizer": "200 runs",
+    "constructorArguments": "",
+    "url": "https://sepolia-explorer.giwa.io/address/0x172E2402955c5de6eE6D47A41fD7a29334aa0b7e?tab=contract"
+  }
+]

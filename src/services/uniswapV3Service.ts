@@ -97,6 +97,56 @@ export class UniswapV3Service {
   }
 
   /**
+   * Check if a Uniswap V3 Pool exists on-chain via Factory.getPool(tokenA, tokenB, fee)
+   */
+  public async getPoolAddress(
+    chainId: number,
+    tokenA: string,
+    tokenB: string,
+    fee: number
+  ): Promise<string | null> {
+    const deployment = getUniswapV3Deployment(chainId);
+    if (!deployment?.factory) return null;
+
+    try {
+      // getPool(address,address,uint24) selector: 0x1698ee82
+      const data = `0x1698ee82${padAddress(tokenA)}${padAddress(tokenB)}${pad32Bytes(fee)}`;
+      const resultHex = await rpcProviderWrapper.call(chainId, {
+        to: deployment.factory,
+        data,
+      });
+
+      if (resultHex && resultHex.length >= 66) {
+        const poolAddr = '0x' + resultHex.slice(26, 66).toLowerCase();
+        if (poolAddr !== '0x0000000000000000000000000000000000000000') {
+          return poolAddr;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Find any pool across standard fee tiers (3000, 500, 10000, 100)
+   */
+  public async findAnyPool(
+    chainId: number,
+    tokenA: string,
+    tokenB: string
+  ): Promise<{ address: string; fee: number } | null> {
+    const tiers = [3000, 500, 10000, 100];
+    for (const tier of tiers) {
+      const pool = await this.getPoolAddress(chainId, tokenA, tokenB, tier);
+      if (pool) {
+        return { address: pool, fee: tier };
+      }
+    }
+    return null;
+  }
+
+  /**
    * Gasless On-Chain Quoting via QuoterV2 / QuoterV1
    */
   public async getOnChainQuote(
@@ -121,6 +171,42 @@ export class UniswapV3Service {
     const decimalsIn = tokenIn.decimals || 18;
     const decimalsOut = tokenOut.decimals || 18;
     const amountInRaw = BigInt(Math.floor(parsedAmount * 10 ** decimalsIn));
+
+    const nativeSym = getChainById(chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
+    const isNativeIn =
+      !tokenIn.address ||
+      tokenIn.address === '0x0000000000000000000000000000000000000000' ||
+      tokenIn.symbol.toUpperCase() === 'ETH' ||
+      tokenIn.symbol.toUpperCase() === nativeSym ||
+      tokenIn.symbol.toUpperCase() === 'SEP';
+
+    const isNativeOut =
+      !tokenOut.address ||
+      tokenOut.address === '0x0000000000000000000000000000000000000000' ||
+      tokenOut.symbol.toUpperCase() === 'ETH' ||
+      tokenOut.symbol.toUpperCase() === nativeSym ||
+      tokenOut.symbol.toUpperCase() === 'SEP';
+
+    const isWrap = isNativeIn && (
+      tokenOut.symbol.toUpperCase() === 'WETH' ||
+      (tokenOut.address && tokenOut.address.toLowerCase() === deployment?.wethAddress.toLowerCase())
+    );
+
+    const isUnwrap = (
+      tokenIn.symbol.toUpperCase() === 'WETH' ||
+      (tokenIn.address && tokenIn.address.toLowerCase() === deployment?.wethAddress.toLowerCase())
+    ) && isNativeOut;
+
+    // Instant 1:1 rate for Wrap (ETH -> WETH) & Unwrap (WETH -> ETH)
+    if (isWrap || isUnwrap) {
+      return {
+        amountOut: parsedAmount,
+        amountOutRaw: amountInRaw,
+        feeTier: 0,
+        gasEstimate: isWrap ? 45000 : 50000,
+        source: 'onchain_quoter',
+      };
+    }
 
     // Resolve address, wrapping native ETH to WETH for Uniswap quoter
     const addrIn = (!tokenIn.address || tokenIn.address === '0x0000000000000000000000000000000000000000')
@@ -290,6 +376,40 @@ export class UniswapV3Service {
       rawMinAmountOut = BigInt(Math.max(1, Math.floor(withSlippage * 10 ** decimalsOut)));
     }
 
+    // Direct Native Wrap (ETH -> WETH)
+    const isWrap = isNativeIn && (
+      params.tokenOut.symbol.toUpperCase() === 'WETH' ||
+      (params.tokenOut.address && params.tokenOut.address.toLowerCase() === deployment.wethAddress.toLowerCase())
+    );
+
+    // Direct Native Unwrap (WETH -> ETH)
+    const isUnwrap = (
+      params.tokenIn.symbol.toUpperCase() === 'WETH' ||
+      (params.tokenIn.address && params.tokenIn.address.toLowerCase() === deployment.wethAddress.toLowerCase())
+    ) && isNativeOut;
+
+    if (isWrap) {
+      return {
+        to: deployment.wethAddress,
+        data: '0xd0e30db0', // WETH9.deposit()
+        value: '0x' + rawAmountIn.toString(16),
+        chainId: params.chainId,
+        requiresApproval: false,
+        approvalTx: undefined,
+      };
+    }
+
+    if (isUnwrap) {
+      return {
+        to: deployment.wethAddress,
+        data: `0x2e1a7d4d${pad32Bytes(rawAmountIn)}`, // WETH9.withdraw(uint256)
+        value: '0x0',
+        chainId: params.chainId,
+        requiresApproval: false,
+        approvalTx: undefined,
+      };
+    }
+
     const tokenInAddress = isNativeIn ? deployment.wethAddress : params.tokenIn.address;
     const tokenOutAddress = isNativeOut ? deployment.wethAddress : params.tokenOut.address;
 
@@ -404,9 +524,46 @@ export class UniswapV3Service {
     deadlineMinutes?: number;
     slippagePercent?: number;
   }): Promise<{ preparedTx: PreparedSwapTransaction; estimatedGas: number }> {
+    const deployment = getUniswapV3Deployment(params.chainId);
     const slippagePct = params.slippagePercent !== undefined ? params.slippagePercent : 1.0;
     let effectiveFee = params.feeTier || (params.chainId === 11155111 || params.chainId === 421614 ? 500 : 3000);
     let effectiveMinAmountOut = params.minAmountOut;
+
+    const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
+    const isNativeIn =
+      !params.tokenIn.address ||
+      params.tokenIn.address === '0x0000000000000000000000000000000000000000' ||
+      params.tokenIn.symbol.toUpperCase() === 'ETH' ||
+      params.tokenIn.symbol.toUpperCase() === nativeSym;
+
+    const isNativeOut =
+      !params.tokenOut.address ||
+      params.tokenOut.address === '0x0000000000000000000000000000000000000000' ||
+      params.tokenOut.symbol.toUpperCase() === 'ETH' ||
+      params.tokenOut.symbol.toUpperCase() === nativeSym;
+
+    const isWrap = isNativeIn && (
+      params.tokenOut.symbol.toUpperCase() === 'WETH' ||
+      (deployment && params.tokenOut.address && params.tokenOut.address.toLowerCase() === deployment.wethAddress.toLowerCase())
+    );
+
+    const isUnwrap = (
+      params.tokenIn.symbol.toUpperCase() === 'WETH' ||
+      (deployment && params.tokenIn.address && params.tokenIn.address.toLowerCase() === deployment.wethAddress.toLowerCase())
+    ) && isNativeOut;
+
+    // Verify liquidity pool exists if this is an AMM swap (not Wrap/Unwrap) on a custom chain
+    if (!isWrap && !isUnwrap && deployment?.factory) {
+      const tokenInAddr = isNativeIn ? deployment.wethAddress : params.tokenIn.address;
+      const tokenOutAddr = isNativeOut ? deployment.wethAddress : params.tokenOut.address;
+      const existingPool = await this.findAnyPool(params.chainId, tokenInAddr, tokenOutAddr);
+      if (!existingPool) {
+        throw new Error(
+          `No Uniswap V3 liquidity pool exists for ${params.tokenIn.symbol} / ${params.tokenOut.symbol} on ${deployment.chainName || 'this network'}. Please initialize the pool and deposit liquidity first.`
+        );
+      }
+      effectiveFee = existingPool.fee;
+    }
 
     // 1. Fetch live on-chain quote right before building to ensure fee tier & pool reserves match exactly
     try {
