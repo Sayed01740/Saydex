@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Token,
   LiquidityPool,
@@ -83,6 +83,56 @@ const playAlertChime = () => {
 // Default initial price alerts (Clean slate for users to create their own custom alerts)
 const INITIAL_PRICE_ALERTS: PriceAlert[] = [];
 
+export type ActiveView = 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs';
+
+export function getViewFromPath(pathname: string): ActiveView {
+  const clean = pathname.toLowerCase().replace(/^\/+|\/+$/g, '').split('/')[0];
+  if (!clean || clean === 'swap' || clean === 'trade') return 'swap';
+  if (clean === 'explore') return 'explore';
+  if (clean === 'pools' || clean === 'pool') return 'pools';
+  if (clean === 'positions' || clean === 'position') return 'positions';
+  if (clean === 'portfolio' || clean === 'wallet') return 'portfolio';
+  if (clean === 'docs' || clean === 'documentation') return 'docs';
+  if (clean === 'launchpad') return 'launchpad';
+  if (clean === 'analytics') return 'analytics';
+  if (clean === 'fees') return 'fees';
+  if (clean === 'router') return 'router';
+  if (clean === 'design-system') return 'design-system';
+  if (clean === 'landing') return 'landing';
+  return 'swap';
+}
+
+export function getPathFromView(view: ActiveView): string {
+  switch (view) {
+    case 'swap':
+      return '/trade';
+    case 'explore':
+      return '/explore';
+    case 'pools':
+      return '/pools';
+    case 'positions':
+      return '/positions';
+    case 'portfolio':
+      return '/portfolio';
+    case 'docs':
+      return '/docs';
+    case 'launchpad':
+      return '/launchpad';
+    case 'analytics':
+      return '/analytics';
+    case 'fees':
+      return '/fees';
+    case 'router':
+      return '/router';
+    case 'design-system':
+      return '/design-system';
+    case 'landing':
+      return '/';
+    default:
+      return '/trade';
+  }
+}
+
 interface ProtocolContextType {
   tokens: Token[];
   pools: LiquidityPool[];
@@ -93,8 +143,8 @@ interface ProtocolContextType {
   settings: UserSettings;
   toasts: ToastMessage[];
   priceAlerts: PriceAlert[];
-  activeView: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs';
-  setActiveView: (view: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs') => void;
+  activeView: ActiveView;
+  setActiveView: (view: ActiveView) => void;
   tokenJars: Record<number, TokenJarState>;
   feeAdapters: FeeSourceAdapter[];
   firepitAuctions: Record<number, FirepitAuction>;
@@ -292,7 +342,38 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [permit2Allowances, setPermit2Allowances] = useState<Permit2Allowance[]>(INITIAL_PERMIT2_ALLOWANCES);
   const [permit2Signatures, setPermit2Signatures] = useState<Permit2EIP712Signature[]>(INITIAL_PERMIT2_SIGNATURES);
   const [universalRouterExecutions, setUniversalRouterExecutions] = useState<UniversalRouterExecutionResult[]>(INITIAL_UNIVERSAL_ROUTER_EXECUTIONS);
-  const [activeView, setActiveView] = useState<'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs'>('swap');
+  
+  // URL-synchronized active view state with HTML5 History API
+  const [activeView, setActiveViewInternal] = useState<ActiveView>(() => {
+    if (typeof window !== 'undefined') {
+      return getViewFromPath(window.location.pathname);
+    }
+    return 'swap';
+  });
+
+  const setActiveView = useCallback((newView: ActiveView) => {
+    setActiveViewInternal(newView);
+    if (typeof window !== 'undefined') {
+      const targetPath = getPathFromView(newView);
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ view: newView }, '', targetPath);
+      }
+    }
+  }, []);
+
+  // Listen to browser Back / Forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const viewFromUrl = getViewFromPath(window.location.pathname);
+        setActiveViewInternal(viewFromUrl);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const alertsRef = useRef<PriceAlert[]>(priceAlerts);
   alertsRef.current = priceAlerts;
