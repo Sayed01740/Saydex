@@ -13,6 +13,9 @@ const tokSAYDEX = UNISWAP_TOKENS.find((t) => t.symbol === 'SAYDEX') || UNISWAP_T
 const tokUSDT = UNISWAP_TOKENS.find((t) => t.symbol === 'USDT') || UNISWAP_TOKENS[5];
 const tokLINK = UNISWAP_TOKENS.find((t) => t.symbol === 'LINK') || UNISWAP_TOKENS[8];
 const tokUNI = UNISWAP_TOKENS.find((t) => t.symbol === 'UNI') || UNISWAP_TOKENS[3];
+const tokWETH_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol === 'WETH') || tokETH;
+const tokVTK_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol === 'VTK') || tokUSDC;
+const tokSAYDEX_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol === 'SAYDEX') || tokSAYDEX;
 
 export const MOCK_POOLS: LiquidityPool[] = [
   {
@@ -151,6 +154,50 @@ export const MOCK_POOLS: LiquidityPool[] = [
       { price: 0.0034, depth: 100 },
       { price: 0.0038, depth: 70 },
       { price: 0.0044, depth: 25 },
+    ],
+  },
+  {
+    id: 'weth-vtk-giwa-030',
+    chainId: 91342,
+    token0: tokWETH_GIWA,
+    token1: tokVTK_GIWA,
+    feeTier: 3000,
+    feePercent: 0.30,
+    tvlUSD: 350000,
+    volume24hUSD: 125000,
+    fees24hUSD: 375,
+    apr: 38.6,
+    currentPrice: 1616.43,
+    priceRangeMin: 1400.0,
+    priceRangeMax: 1900.0,
+    liquidityDistribution: [
+      { price: 1300, depth: 18 },
+      { price: 1450, depth: 45 },
+      { price: 1616, depth: 100 },
+      { price: 1750, depth: 60 },
+      { price: 1950, depth: 22 },
+    ],
+  },
+  {
+    id: 'saydex-weth-giwa-030',
+    chainId: 91342,
+    token0: tokSAYDEX_GIWA,
+    token1: tokWETH_GIWA,
+    feeTier: 3000,
+    feePercent: 0.30,
+    tvlUSD: 180000,
+    volume24hUSD: 62000,
+    fees24hUSD: 186,
+    apr: 52.4,
+    currentPrice: 0.00035,
+    priceRangeMin: 0.00028,
+    priceRangeMax: 0.00045,
+    liquidityDistribution: [
+      { price: 0.00025, depth: 20 },
+      { price: 0.00030, depth: 60 },
+      { price: 0.00035, depth: 100 },
+      { price: 0.00040, depth: 75 },
+      { price: 0.00048, depth: 25 },
     ],
   },
 ];

@@ -662,6 +662,16 @@ export const DocsView: React.FC = () => {
                           <td className="p-3 text-[var(--text-tertiary)]">https://binance.llamarpc.com</td>
                           <td className="p-3">~3.0s</td>
                         </tr>
+                        <tr className="bg-cyan-500/5">
+                          <td className="p-3 font-semibold font-sans text-cyan-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                            <span>GIWA Sepolia (Upbit L2)</span>
+                          </td>
+                          <td className="p-3 text-cyan-300 font-bold">91342</td>
+                          <td className="p-3 font-sans">ETH</td>
+                          <td className="p-3 text-cyan-300">https://sepolia-rpc-flashblocks.giwa.io</td>
+                          <td className="p-3 text-cyan-400 font-bold">~1.0s (Flashblocks)</td>
+                        </tr>
                         <tr>
                           <td className="p-3 font-semibold font-sans">Sepolia Testnet</td>
                           <td className="p-3">11155111</td>
@@ -896,72 +906,162 @@ export const DocsView: React.FC = () => {
                     SAYDEX interacts with battle-tested CREATE2 deterministic contract deployments identical across Ethereum, Arbitrum, Base, Optimism, Polygon PoS, and BSC:
                   </p>
 
-                  <div className="space-y-4">
-                    {[
-                      {
-                        name: 'Uniswap V3 Factory',
-                        role: 'Deploys pools, tracks state, sets default fee tier protocols',
-                        address: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
-                        id: 'v3-factory',
-                      },
-                      {
-                        name: 'SwapRouter02',
-                        role: 'Standard peripheral router executing exactInputSingle and multi-hop paths',
-                        address: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
-                        id: 'swap-router-02',
-                      },
-                      {
-                        name: 'Universal Router (V4 Pipeline)',
-                        role: 'Command-stream multi-protocol executor integrated with Permit2',
-                        address: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
-                        id: 'universal-router',
-                      },
-                      {
-                        name: 'Permit2 Canonical',
-                        role: 'Signature-based ERC-20 token allowance manager (EIP-712)',
-                        address: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
-                        id: 'permit2',
-                      },
-                      {
-                        name: 'NonfungiblePositionManager',
-                        role: 'Wraps Uniswap V3 liquidity positions in transferable ERC-721 tokens',
-                        address: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
-                        id: 'pos-mgr',
-                      },
-                      {
-                        name: 'QuoterV2',
-                        role: 'Stateless on-chain contract for exact pre-execution quote calculation',
-                        address: '0x61fFE014bA17989E743c5F6cB21bF9697530B21e',
-                        id: 'quoter-v2',
-                      },
-                    ].map((c) => (
-                      <div
-                        key={c.id}
-                        className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <strong className="text-sm text-[var(--text-primary)] font-mono">{c.name}</strong>
-                          <span className="text-[10px] text-emerald-400 font-mono font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            Verified
-                          </span>
-                        </div>
-                        <p className="text-xs text-[var(--text-secondary)]">{c.role}</p>
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] font-mono text-xs">
-                          <span className="truncate text-[var(--text-primary)]">{c.address}</span>
-                          <button
-                            onClick={() => handleCopy(c.address, c.id)}
-                            className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 ml-2"
-                            title="Copy address"
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--text-primary)] font-mono uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                        <span>GIWA Sepolia Live Deployments (Chain ID: 91342)</span>
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)] mb-4">
+                        Core DEX and periphery smart contracts deployed and verified on GIWA Sepolia (Powered by Dunamu / Upbit):
+                      </p>
+                      <div className="grid grid-cols-1 gap-3">
+                        {[
+                          {
+                            name: 'UniswapV3Factory',
+                            role: 'Deploys pools and tracks state on GIWA Sepolia',
+                            address: '0xE9348e3e3c17D721575e294BE271BCD11028809e',
+                            id: 'giwa-factory',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0xE9348e3e3c17D721575e294BE271BCD11028809e?tab=contract',
+                          },
+                          {
+                            name: 'SwapRouter02',
+                            role: 'Multi-hop swap routing and token payment settlement',
+                            address: '0xF0B95C36d907441c5936D4c14ff7610957A6d926',
+                            id: 'giwa-router02',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0xF0B95C36d907441c5936D4c14ff7610957A6d926?tab=contract',
+                          },
+                          {
+                            name: 'NonfungiblePositionManager',
+                            role: 'Wraps concentrated liquidity positions into ERC-721 NFTs',
+                            address: '0xf72BcA1af1F50C133Ea5211c60c479045A7e5106',
+                            id: 'giwa-pos-mgr',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0xf72BcA1af1F50C133Ea5211c60c479045A7e5106?tab=contract',
+                          },
+                          {
+                            name: 'QuoterV2',
+                            role: 'Stateless on-chain quote calculation and tick traversal',
+                            address: '0x7788cb9e1Dba291623c51f10A2f3fd199676202f',
+                            id: 'giwa-quoter-v2',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0x7788cb9e1Dba291623c51f10A2f3fd199676202f?tab=contract',
+                          },
+                          {
+                            name: 'TickLens',
+                            role: 'Inspects liquidity distribution and tick bitmaps on-chain',
+                            address: '0x172E2402955c5de6eE6D47A41fD7a29334aa0b7e',
+                            id: 'giwa-tick-lens',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0x172E2402955c5de6eE6D47A41fD7a29334aa0b7e?tab=contract',
+                          },
+                          {
+                            name: 'WETH9 (Canonical GIWA)',
+                            role: 'Pre-installed canonical Wrapped Ether ERC-20 contract',
+                            address: '0x4200000000000000000000000000000000000006',
+                            id: 'giwa-weth',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0x4200000000000000000000000000000000000006',
+                          },
+                          {
+                            name: 'Permit2 (Pre-installed)',
+                            role: 'Canonical signature-based token permissions manager',
+                            address: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
+                            id: 'giwa-permit2',
+                            explorer: 'https://sepolia-explorer.giwa.io/address/0x000000000022D473030F116dDEE9F6B43aC78BA3',
+                          },
+                        ].map((c) => (
+                          <div
+                            key={c.id}
+                            className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-cyan-500/20 space-y-1.5"
                           >
-                            {copiedKey === c.id ? (
-                              <Check className="w-3.5 h-3.5 text-[var(--success)]" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
+                            <div className="flex items-center justify-between">
+                              <strong className="text-xs text-[var(--text-primary)] font-mono">{c.name}</strong>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] text-cyan-400 font-mono font-semibold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                                  Verified on GIWAScan
+                                </span>
+                                <a
+                                  href={c.explorer}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[var(--text-tertiary)] hover:text-cyan-400 p-1"
+                                  title="View on Explorer"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-[var(--text-secondary)]">{c.role}</p>
+                            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] font-mono text-xs">
+                              <span className="truncate text-cyan-300">{c.address}</span>
+                              <button
+                                onClick={() => handleCopy(c.address, c.id)}
+                                className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 ml-2"
+                                title="Copy address"
+                              >
+                                {copiedKey === c.id ? (
+                                  <Check className="w-3.5 h-3.5 text-[var(--success)]" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="pt-4 border-t border-[var(--border-subtle)]">
+                      <h3 className="text-sm font-bold text-[var(--text-primary)] font-mono uppercase tracking-wider mb-2">
+                        Universal Multi-Chain Deployments (Ethereum, Arbitrum, Base, Optimism)
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          {
+                            name: 'Uniswap V3 Factory',
+                            role: 'Deploys pools, tracks state, sets default fee tier protocols',
+                            address: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
+                            id: 'v3-factory',
+                          },
+                          {
+                            name: 'SwapRouter02',
+                            role: 'Standard peripheral router executing exactInputSingle and multi-hop paths',
+                            address: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
+                            id: 'swap-router-02',
+                          },
+                          {
+                            name: 'Universal Router (V4 Pipeline)',
+                            role: 'Command-stream multi-protocol executor integrated with Permit2',
+                            address: '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD',
+                            id: 'universal-router',
+                          },
+                        ].map((c) => (
+                          <div
+                            key={c.id}
+                            className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-app)] space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <strong className="text-xs text-[var(--text-primary)] font-mono">{c.name}</strong>
+                              <span className="text-[9px] text-emerald-400 font-mono font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                Verified
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[var(--text-secondary)]">{c.role}</p>
+                            <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] font-mono text-xs">
+                              <span className="truncate text-[var(--text-primary)]">{c.address}</span>
+                              <button
+                                onClick={() => handleCopy(c.address, c.id)}
+                                className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 ml-2"
+                                title="Copy address"
+                              >
+                                {copiedKey === c.id ? (
+                                  <Check className="w-3.5 h-3.5 text-[var(--success)]" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

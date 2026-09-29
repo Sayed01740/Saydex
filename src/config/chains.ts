@@ -631,6 +631,41 @@ export const unichain = defineChain({
   testnet: true,
 });
 
+export const giwaSepolia = defineChain({
+  id: 91342,
+  name: 'GIWA Sepolia',
+  shortName: 'GIWA',
+  icon: '/giwa_logo.svg',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrl: 'https://sepolia-rpc.giwa.io',
+  rpcUrls: {
+    default: {
+      http: [
+        'https://sepolia-rpc.giwa.io',
+        'https://sepolia-rpc-flashblocks.giwa.io',
+      ],
+    },
+    public: {
+      http: [
+        'https://sepolia-rpc.giwa.io',
+        'https://sepolia-rpc-flashblocks.giwa.io',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://sepolia-explorer.giwa.io',
+  blockExplorers: {
+    default: { name: 'GIWAScan', url: 'https://sepolia-explorer.giwa.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.001,
+  isSupported: true,
+  testnet: true,
+});
+
 export const ALL_CHAINS: Chain[] = [
   mainnet,
   arbitrum,
@@ -650,6 +685,7 @@ export const ALL_CHAINS: Chain[] = [
   arbitrumSepolia,
   optimismSepolia,
   unichain,
+  giwaSepolia,
 ];
 
 export const STORAGE_KEY_CUSTOM_CHAINS = 'saydex_custom_chains_v1';
