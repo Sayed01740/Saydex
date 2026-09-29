@@ -8,6 +8,7 @@ import { SwapTerminalView } from './components/swap/SwapTerminalView';
 import { ExploreView } from './components/explore/ExploreView';
 import { PoolsView } from './components/pools/PoolsView';
 import { PortfolioView } from './components/portfolio/PortfolioView';
+import { DocsView } from './components/docs/DocsView';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -24,6 +25,8 @@ export default function App() {
         return <PoolsView />;
       case 'portfolio':
         return <PortfolioView />;
+      case 'docs':
+        return <DocsView />;
       default:
         return <SwapTerminalView />;
     }

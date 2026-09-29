@@ -1,7 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Activity } from 'lucide-react';
+import { ShieldCheck, BookOpen } from 'lucide-react';
+import { useProtocol } from '../../context/ProtocolContext';
 
 export const Footer: React.FC = () => {
+  const { setActiveView } = useProtocol();
 
   return (
     <footer className="w-full border-t border-[var(--border-app)] bg-[var(--bg-app)] text-xs text-[var(--text-tertiary)] py-8 mt-auto">
@@ -23,6 +25,14 @@ export const Footer: React.FC = () => {
 
         {/* Links & Audits */}
         <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+          <button
+            onClick={() => setActiveView('docs')}
+            className="flex items-center gap-1.5 text-[var(--primary)] hover:underline cursor-pointer font-medium"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Documentation</span>
+          </button>
+          <span className="text-[var(--border-strong)]">•</span>
           <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
             SAYDEX Protocol v3 • Audited Architecture
           </span>

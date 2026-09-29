@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProtocol } from '../../context/ProtocolContext';
-import { ArrowLeftRight, Compass, Droplets, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Compass, Droplets, Wallet, BookOpen } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const { activeView, setActiveView } = useProtocol();
@@ -10,6 +10,7 @@ export const MobileNav: React.FC = () => {
     { id: 'explore', label: 'Explore', icon: Compass },
     { id: 'pools', label: 'Pools', icon: Droplets },
     { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+    { id: 'docs', label: 'Docs', icon: BookOpen },
   ] as const;
 
   return (

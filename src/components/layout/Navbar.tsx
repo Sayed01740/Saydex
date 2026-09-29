@@ -81,6 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
     { id: 'explore', label: 'Explore' },
     { id: 'pools', label: 'Pools' },
     { id: 'portfolio', label: 'Portfolio' },
+    { id: 'docs', label: 'Docs' },
   ] as const;
 
   return (

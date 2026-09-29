@@ -93,8 +93,8 @@ interface ProtocolContextType {
   settings: UserSettings;
   toasts: ToastMessage[];
   priceAlerts: PriceAlert[];
-  activeView: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system';
-  setActiveView: (view: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system') => void;
+  activeView: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs';
+  setActiveView: (view: 'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs') => void;
   tokenJars: Record<number, TokenJarState>;
   feeAdapters: FeeSourceAdapter[];
   firepitAuctions: Record<number, FirepitAuction>;
@@ -292,7 +292,7 @@ export function ProtocolProvider({ children }: { children: React.ReactNode }) {
   const [permit2Allowances, setPermit2Allowances] = useState<Permit2Allowance[]>(INITIAL_PERMIT2_ALLOWANCES);
   const [permit2Signatures, setPermit2Signatures] = useState<Permit2EIP712Signature[]>(INITIAL_PERMIT2_SIGNATURES);
   const [universalRouterExecutions, setUniversalRouterExecutions] = useState<UniversalRouterExecutionResult[]>(INITIAL_UNIVERSAL_ROUTER_EXECUTIONS);
-  const [activeView, setActiveView] = useState<'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system'>('swap');
+  const [activeView, setActiveView] = useState<'landing' | 'swap' | 'explore' | 'pools' | 'positions' | 'portfolio' | 'launchpad' | 'analytics' | 'fees' | 'router' | 'design-system' | 'docs'>('swap');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const alertsRef = useRef<PriceAlert[]>(priceAlerts);
   alertsRef.current = priceAlerts;
