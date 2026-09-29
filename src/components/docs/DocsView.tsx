@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useProtocol } from '../../context/ProtocolContext';
 import { useWallet } from '../../context/WalletContext';
+import { BrandLogo } from '../common/BrandLogo';
 import {
   BookOpen,
   ArrowRight,
@@ -194,18 +195,25 @@ export const DocsView: React.FC = () => {
         /* PORTAL OVERVIEW (Docusaurus / AchSwap style) */
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-16">
           {/* Hero Section */}
-          <div className="text-center space-y-5 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/20 text-xs font-semibold text-[var(--primary)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-              Technical Documentation
+          <div className="text-center space-y-6 max-w-3xl mx-auto">
+            {/* Saydex Official Brand Logo */}
+            <div className="flex justify-center">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-surface-elevated)] border border-[var(--border-strong)] shadow-sm inline-flex items-center justify-center hover:border-[var(--primary)]/40 transition-colors">
+                <BrandLogo size="xl" showText={true} />
+              </div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[var(--text-primary)]">
-              Protocol Reference
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/25 text-xs font-mono font-semibold text-[var(--primary)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+              SAYDEX Official Documentation
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              Build & Trade on Saydex Protocol
             </h1>
 
-            <p className="text-base sm:text-lg text-[var(--text-secondary)] max-w-2xl mx-auto leading-relaxed">
-              In-depth architecture, smart contract interfaces, concentrated liquidity invariants, and Universal Router execution mechanics across EVM chains.
+            <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl mx-auto leading-relaxed">
+              Complete architectural guide, smart contract specifications, concentrated liquidity mathematics, and Universal Router execution mechanics across EVM chains.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -390,12 +398,17 @@ export const DocsView: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
           {/* Left Sidebar */}
           <aside className="w-full lg:w-72 shrink-0 space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <BrandLogo size="sm" showText={true} />
+              <span className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider">Docs v3.2</span>
+            </div>
+
             <button
               onClick={() => setActiveDoc('home')}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-app)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
             >
               <Home className="w-4 h-4 text-[var(--primary)]" />
-              <span>Specification Overview</span>
+              <span>Docs Overview</span>
             </button>
 
             {/* Filter Search */}
