@@ -2,6 +2,8 @@
 
 This directory contains the official DefiLlama integration adapters for **Saydex Protocol** across all supported Layer 2 networks.
 
+> 🚀 **Live PR Submitted to DefiLlama:** [DefiLlama-Adapters PR #21358](https://github.com/DefiLlama/DefiLlama-Adapters/pull/21358)
+
 ---
 
 ## 📁 Adapter Files Overview

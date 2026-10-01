@@ -33,3 +33,5 @@ Thumbs.db
 .gemini/
 .agents/
 .system_generated/
+DefiLlama-Adapters/
+.defillama-temp/
