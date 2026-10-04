@@ -40,6 +40,8 @@ import { tokenSecurityService } from '../../services/tokenSecurityService';
 import { audioFeedback } from '../../utils/audioFeedback';
 import { TokenSecurityBadge } from './TokenSecurityBadge';
 import { gasService, LiveGasData } from '../../services/gasService';
+import { stableFXService } from '../../services/stableFXService';
+import { getStableFXDeployment } from '../../config/stableFXContracts';
 
 interface SwapCardProps {
   onToggleChart?: () => void;
@@ -291,7 +293,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     }
   };
 
-  // Debounced live on-chain quoting effect against QuoterV2
+  // Debounced live on-chain quoting effect against QuoterV2 / Circle StableFX
   useEffect(() => {
     let isCancelled = false;
     const parsedAmount = parseFloat(amountIn) || 0;
@@ -302,6 +304,29 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     }
 
     setIsQuoting(true);
+
+    // Fast-path: Check Circle StableFX native RFQ engine for Arc stablecoin pairs
+    if (stableFXService.isSupported(selectedChain.id, tokenIn, tokenOut)) {
+      try {
+        const fxResult = stableFXService.getQuote(selectedChain.id, tokenIn, tokenOut, amountIn);
+        if (!isCancelled) {
+          setOnChainQuoteResult({
+            amountOut: fxResult.amountOut,
+            amountOutRaw: fxResult.amountOutRaw,
+            executionPrice: fxResult.executionPrice,
+            gasEstimate: fxResult.gasEstimate,
+            feeTier: 0,
+            source: 'onchain_quoter',
+          });
+          setIsQuoting(false);
+        }
+      } catch (err) {
+        console.warn('StableFX quoting error:', err);
+        if (!isCancelled) setIsQuoting(false);
+      }
+      return;
+    }
+
     const timer = setTimeout(async () => {
       try {
         const result = await uniswapV3Service.getOnChainQuote(
@@ -367,12 +392,16 @@ export const SwapCard: React.FC<SwapCardProps> = ({
     const mathRate = outPrice > 0 ? inPrice / outPrice : inPrice;
     const mathOut = parsedAmount * mathRate;
 
+    // Check if pair is handled by Circle StableFX
+    const isStableFX = stableFXService.isSupported(selectedChain.id, tokenIn, tokenOut);
+    const fxDeployment = getStableFXDeployment(selectedChain.id);
+
     // Use live on-chain quote if available and valid
     const hasOnChain = Boolean(onChainQuoteResult && onChainQuoteResult.amountOut > 0);
     const calculatedOut = hasOnChain ? onChainQuoteResult!.amountOut : mathOut;
     const rate = parsedAmount > 0 ? calculatedOut / parsedAmount : mathRate;
 
-    const slippageMultiplier = (100 - settings.slippageTolerance) / 100;
+    const slippageMultiplier = isStableFX ? 1.0 : (100 - settings.slippageTolerance) / 100;
     const minOut = calculatedOut * slippageMultiplier;
 
     // Use calculated trade routes
@@ -397,26 +426,39 @@ export const SwapCard: React.FC<SwapCardProps> = ({
       amountOut: formatOut(calculatedOut),
       amountOutMin: formatOut(minOut),
       executionPrice: rate,
-      priceImpact: selectedRoute ? selectedRoute.priceImpact : 0.01,
-      networkFeeUSD: gasData.gasCostUSD,
-      feeTier,
-      quoteSource: onChainQuoteResult?.source || 'fallback_math',
-      gasEstimate: onChainQuoteResult?.gasEstimate || gasData.estimatedGasUnits,
-      routeHops: selectedRoute ? selectedRoute.routeHops : [
-        {
-          protocol: 'Uniswap V3',
-          poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
-          percentage: 100,
-          fromToken: tokenIn?.symbol || 'ETH',
-          toToken: tokenOut?.symbol || 'USDC',
-          feeTier: feeTierDisplay,
-        },
-      ],
+      priceImpact: isStableFX ? 0 : (selectedRoute ? selectedRoute.priceImpact : 0.01),
+      networkFeeUSD: isStableFX ? Math.min(gasData.gasCostUSD, 0.005) : gasData.gasCostUSD,
+      feeTier: isStableFX ? 0 : feeTier,
+      quoteSource: isStableFX ? 'onchain_quoter' : (onChainQuoteResult?.source || 'fallback_math'),
+      gasEstimate: isStableFX ? 65000 : (onChainQuoteResult?.gasEstimate || gasData.estimatedGasUnits),
+      routeHops: isStableFX
+        ? [
+            {
+              protocol: 'Circle StableFX (Native)',
+              poolAddress: fxDeployment?.fxEscrow || '0xd68256f4D69C6BbEcB873D8588AE0Dc6B8E22E10',
+              percentage: 100,
+              fromToken: tokenIn?.symbol || 'USDC',
+              toToken: tokenOut?.symbol || 'EURC',
+              feeTier: '0.00% (Native RFQ)',
+            },
+          ]
+        : (selectedRoute
+        ? selectedRoute.routeHops
+        : [
+            {
+              protocol: 'Uniswap V3',
+              poolAddress: '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640',
+              percentage: 100,
+              fromToken: tokenIn?.symbol || 'ETH',
+              toToken: tokenOut?.symbol || 'USDC',
+              feeTier: feeTierDisplay,
+            },
+          ]),
       calldataHex: `0x5ae401dc000000000000000000000000${(tokenIn?.address || '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2').replace('0x', '')}000000000000000000000000${(tokenOut?.address || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48').replace('0x', '')}0000000000000000000000000000000000000000000000000de0b6b3a7640000`,
       guaranteedUntil: Date.now() + 30000,
       mevProtected: settings.mevProtection,
     };
-  }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult, gasData]);
+  }, [tokenIn, tokenOut, amountIn, settings, onChainQuoteResult, gasData, selectedChain.id]);
 
   // Synchronize live quote to parent container (for chart and external viewers)
   useEffect(() => {

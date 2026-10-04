@@ -11,11 +11,19 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
   const [isExpanded, setIsExpanded] = useState(false);
   const { settings } = useProtocol();
 
+  const isStableFX = quote.routeHops.some(
+    (h) => h.protocol?.toLowerCase().includes('stablefx')
+  );
+
   const isMultiHop = quote.routeHops.some(
     (h) => (h.intermediateTokens && h.intermediateTokens.length > 0) || (h.hopSteps && h.hopSteps.length > 1)
   );
 
-  const protocolName = settings.routingProtocol === 'v4' ? 'Uniswap V4' : 'Uniswap V3';
+  const protocolName = isStableFX
+    ? 'Circle StableFX (Native)'
+    : settings.routingProtocol === 'v4'
+    ? 'Uniswap V4'
+    : 'Uniswap V3';
 
   return (
     <div className="bg-[var(--bg-subtle)] border border-[var(--border-app)] rounded-xl p-3 text-xs transition-all">
@@ -25,7 +33,7 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
         className="flex items-center justify-between cursor-pointer select-none"
       >
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded-md bg-[var(--primary-subtle)] text-[var(--primary)]">
+          <div className={`p-1 rounded-md ${isStableFX ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--primary-subtle)] text-[var(--primary)]'}`}>
             <GitBranch className="w-3.5 h-3.5" />
           </div>
           <div>
@@ -33,8 +41,12 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
               <span className="font-semibold text-[var(--text-primary)]">
                 {protocolName} Route
               </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/20">
-                {isMultiHop ? 'Multi-Hop' : 'Direct'}
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+                isStableFX
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-[var(--primary-subtle)] text-[var(--primary)] border-[var(--primary)]/20'
+              }`}>
+                {isStableFX ? 'Atomic PvP • 0% Impact' : isMultiHop ? 'Multi-Hop' : 'Direct'}
               </span>
             </div>
           </div>
@@ -42,7 +54,7 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
 
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
-            ~${quote.networkFeeUSD.toFixed(2)} Gas
+            ~${quote.networkFeeUSD < 0.005 ? '<0.01' : quote.networkFeeUSD.toFixed(2)} Gas
           </span>
           {isExpanded ? (
             <ChevronUp className="w-4 h-4 text-[var(--text-tertiary)]" />
@@ -55,6 +67,13 @@ export const RoutingVisualizer: React.FC<RoutingVisualizerProps> = ({ quote }) =
       {/* Expanded Route Graph & Details */}
       {isExpanded && (
         <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] space-y-3">
+          {isStableFX && (
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>Circle Native StableFX: 0% slippage & atomic RFQ escrow on Arc Network.</span>
+            </div>
+          )}
+
           {/* Visual Route Splitting Diagram */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[11px] font-medium text-[var(--text-secondary)]">
