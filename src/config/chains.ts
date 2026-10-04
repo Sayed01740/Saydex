@@ -670,7 +670,7 @@ export const arcMainnet = defineChain({
   id: 5042,
   name: 'Arc Mainnet',
   shortName: 'Arc',
-  icon: '/arc_logo.svg',
+  icon: '/arc_logo.png',
   nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
   rpcUrl: 'https://rpc.mainnet.arc.io',
   rpcUrls: {
@@ -705,7 +705,7 @@ export const arcTestnet = defineChain({
   id: 5042002,
   name: 'Arc Testnet',
   shortName: 'Arc Testnet',
-  icon: '/arc_logo.svg',
+  icon: '/arc_logo.png',
   nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
   rpcUrl: 'https://rpc.testnet.arc.network',
   rpcUrls: {
