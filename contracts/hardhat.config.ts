@@ -30,10 +30,22 @@ const config: HardhatUserConfig = {
       chainId: 91342,
       accounts: accounts,
     },
+    arcMainnet: {
+      url: process.env.ARC_MAINNET_RPC_URL || "https://rpc.mainnet.arc.io",
+      chainId: 5042,
+      accounts: accounts,
+    },
+    arcTestnet: {
+      url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
+      chainId: 5042002,
+      accounts: accounts,
+    },
   },
   etherscan: {
     apiKey: {
       giwaSepolia: process.env.ETHERSCAN_API_KEY || "giwa",
+      arcMainnet: process.env.ARC_EXPLORER_API_KEY || "arc",
+      arcTestnet: process.env.ARC_EXPLORER_API_KEY || "arc",
     },
     customChains: [
       {
@@ -42,6 +54,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://sepolia-explorer.giwa.io/api",
           browserURL: "https://sepolia-explorer.giwa.io",
+        },
+      },
+      {
+        network: "arcMainnet",
+        chainId: 5042,
+        urls: {
+          apiURL: "https://explorer.arc.io/api",
+          browserURL: "https://explorer.arc.io",
+        },
+      },
+      {
+        network: "arcTestnet",
+        chainId: 5042002,
+        urls: {
+          apiURL: "https://testnet.arcscan.app/api",
+          browserURL: "https://testnet.arcscan.app",
         },
       },
     ],

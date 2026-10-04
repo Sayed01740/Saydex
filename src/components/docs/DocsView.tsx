@@ -672,6 +672,26 @@ export const DocsView: React.FC = () => {
                           <td className="p-3 text-cyan-300">https://sepolia-rpc-flashblocks.giwa.io</td>
                           <td className="p-3 text-cyan-400 font-bold">~1.0s (Flashblocks)</td>
                         </tr>
+                        <tr className="bg-blue-500/5">
+                          <td className="p-3 font-semibold font-sans text-blue-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-400" />
+                            <span>Arc Mainnet (Circle L2)</span>
+                          </td>
+                          <td className="p-3 text-blue-300 font-bold">5042</td>
+                          <td className="p-3 font-sans">USDC (Native)</td>
+                          <td className="p-3 text-blue-300">https://rpc.mainnet.arc.io</td>
+                          <td className="p-3 text-blue-400 font-bold">~1.0s</td>
+                        </tr>
+                        <tr className="bg-blue-500/5">
+                          <td className="p-3 font-semibold font-sans text-blue-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-400/60" />
+                            <span>Arc Testnet</span>
+                          </td>
+                          <td className="p-3 text-blue-300 font-bold">5042002</td>
+                          <td className="p-3 font-sans">USDC (Native)</td>
+                          <td className="p-3 text-blue-300">https://rpc.testnet.arc.network</td>
+                          <td className="p-3 text-blue-400 font-bold">~1.0s</td>
+                        </tr>
                         <tr>
                           <td className="p-3 font-semibold font-sans">Sepolia Testnet</td>
                           <td className="p-3">11155111</td>

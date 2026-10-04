@@ -666,6 +666,76 @@ export const giwaSepolia = defineChain({
   testnet: true,
 });
 
+export const arcMainnet = defineChain({
+  id: 5042,
+  name: 'Arc Mainnet',
+  shortName: 'Arc',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+  nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
+  rpcUrl: 'https://rpc.mainnet.arc.io',
+  rpcUrls: {
+    default: {
+      http: [
+        'https://rpc.mainnet.arc.io',
+        'https://rpc.arc.network',
+      ],
+    },
+    public: {
+      http: [
+        'https://rpc.mainnet.arc.io',
+        'https://rpc.arc.network',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://explorer.arc.io',
+  blockExplorers: {
+    default: { name: 'ArcScan', url: 'https://explorer.arc.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.05,
+  isSupported: true,
+  testnet: false,
+});
+
+export const arcTestnet = defineChain({
+  id: 5042002,
+  name: 'Arc Testnet',
+  shortName: 'Arc Testnet',
+  icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+  nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
+  rpcUrl: 'https://rpc.testnet.arc.network',
+  rpcUrls: {
+    default: {
+      http: [
+        'https://rpc.testnet.arc.network',
+        'https://rpc.testnet.arc.io',
+      ],
+    },
+    public: {
+      http: [
+        'https://rpc.testnet.arc.network',
+        'https://rpc.testnet.arc.io',
+      ],
+    },
+  },
+  blockExplorerUrl: 'https://testnet.arcscan.app',
+  blockExplorers: {
+    default: { name: 'ArcTestScan', url: 'https://testnet.arcscan.app' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  gasPriceGwei: 0.005,
+  isSupported: true,
+  testnet: true,
+});
+
 export const ALL_CHAINS: Chain[] = [
   mainnet,
   arbitrum,
@@ -680,12 +750,14 @@ export const ALL_CHAINS: Chain[] = [
   zksync,
   worldchain,
   unichainMainnet,
+  arcMainnet,
   sepolia,
   baseSepolia,
   arbitrumSepolia,
   optimismSepolia,
   unichain,
   giwaSepolia,
+  arcTestnet,
 ];
 
 export const STORAGE_KEY_CUSTOM_CHAINS = 'saydex_custom_chains_v1';

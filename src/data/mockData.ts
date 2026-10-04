@@ -17,6 +17,15 @@ const tokWETH_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol 
 const tokVTK_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol === 'VTK') || tokUSDC;
 const tokSAYDEX_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbol === 'SAYDEX') || tokSAYDEX;
 
+const tokUSDC_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'USDC') || tokUSDC;
+const tokSAYDEX_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'SAYDEX') || tokSAYDEX;
+const tokETH_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'ETH') || tokETH;
+const tokEURC_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'EURC') || tokUSDC;
+
+const tokUSDC_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'USDC') || tokUSDC;
+const tokSAYDEX_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'SAYDEX') || tokSAYDEX;
+const tokTETH_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'tETH') || tokETH;
+
 export const MOCK_POOLS: LiquidityPool[] = [
   {
     id: 'eth-usdc-005',
@@ -198,6 +207,118 @@ export const MOCK_POOLS: LiquidityPool[] = [
       { price: 0.00035, depth: 100 },
       { price: 0.00040, depth: 75 },
       { price: 0.00048, depth: 25 },
+    ],
+  },
+  // Arc Mainnet (5042)
+  {
+    id: 'usdc-saydex-arc-mainnet-030',
+    chainId: 5042,
+    token0: tokUSDC_ARC_MAINNET,
+    token1: tokSAYDEX_ARC_MAINNET,
+    feeTier: 3000,
+    feePercent: 0.30,
+    tvlUSD: 6200000,
+    volume24hUSD: 3400000,
+    fees24hUSD: 10200,
+    apr: 44.5,
+    currentPrice: 1.25,
+    priceRangeMin: 1.05,
+    priceRangeMax: 1.55,
+    liquidityDistribution: [
+      { price: 1.0, depth: 20 },
+      { price: 1.15, depth: 60 },
+      { price: 1.25, depth: 100 },
+      { price: 1.35, depth: 75 },
+      { price: 1.5, depth: 30 },
+    ],
+  },
+  {
+    id: 'eth-usdc-arc-mainnet-005',
+    chainId: 5042,
+    token0: tokETH_ARC_MAINNET,
+    token1: tokUSDC_ARC_MAINNET,
+    feeTier: 500,
+    feePercent: 0.05,
+    tvlUSD: 14800000,
+    volume24hUSD: 9200000,
+    fees24hUSD: 4600,
+    apr: 21.3,
+    currentPrice: 2450.0,
+    priceRangeMin: 2200.0,
+    priceRangeMax: 2750.0,
+    liquidityDistribution: [
+      { price: 2100, depth: 15 },
+      { price: 2300, depth: 55 },
+      { price: 2450, depth: 100 },
+      { price: 2600, depth: 68 },
+      { price: 2800, depth: 25 },
+    ],
+  },
+  {
+    id: 'eurc-usdc-arc-mainnet-001',
+    chainId: 5042,
+    token0: tokEURC_ARC_MAINNET,
+    token1: tokUSDC_ARC_MAINNET,
+    feeTier: 100,
+    feePercent: 0.01,
+    tvlUSD: 3800000,
+    volume24hUSD: 1800000,
+    fees24hUSD: 180,
+    apr: 8.4,
+    currentPrice: 1.08,
+    priceRangeMin: 1.06,
+    priceRangeMax: 1.10,
+    liquidityDistribution: [
+      { price: 1.05, depth: 10 },
+      { price: 1.07, depth: 70 },
+      { price: 1.08, depth: 100 },
+      { price: 1.09, depth: 75 },
+      { price: 1.11, depth: 15 },
+    ],
+  },
+  // Arc Testnet (5042002)
+  {
+    id: 'usdc-saydex-arc-testnet-030',
+    chainId: 5042002,
+    token0: tokUSDC_ARC_TESTNET,
+    token1: tokSAYDEX_ARC_TESTNET,
+    feeTier: 3000,
+    feePercent: 0.30,
+    tvlUSD: 450000,
+    volume24hUSD: 180000,
+    fees24hUSD: 540,
+    apr: 56.2,
+    currentPrice: 1.25,
+    priceRangeMin: 1.0,
+    priceRangeMax: 1.6,
+    liquidityDistribution: [
+      { price: 0.95, depth: 15 },
+      { price: 1.1, depth: 50 },
+      { price: 1.25, depth: 100 },
+      { price: 1.4, depth: 65 },
+      { price: 1.65, depth: 20 },
+    ],
+  },
+  {
+    id: 'teth-usdc-arc-testnet-005',
+    chainId: 5042002,
+    token0: tokTETH_ARC_TESTNET,
+    token1: tokUSDC_ARC_TESTNET,
+    feeTier: 500,
+    feePercent: 0.05,
+    tvlUSD: 620000,
+    volume24hUSD: 240000,
+    fees24hUSD: 120,
+    apr: 28.5,
+    currentPrice: 2450.0,
+    priceRangeMin: 2150.0,
+    priceRangeMax: 2800.0,
+    liquidityDistribution: [
+      { price: 2100, depth: 20 },
+      { price: 2350, depth: 60 },
+      { price: 2450, depth: 100 },
+      { price: 2600, depth: 70 },
+      { price: 2850, depth: 18 },
     ],
   },
 ];

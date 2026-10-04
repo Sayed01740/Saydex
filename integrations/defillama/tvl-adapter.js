@@ -34,6 +34,11 @@ const config = {
     factory: '0x792EdAdE80af5fC680d96a2eD80A44247D1AF6Fd',
     fromBlock: 200000,
   },
+  // Arc L2 (Circle / Arc Network)
+  arc: {
+    factory: '0xc481038c013fe96f38ce7a2dc417b2b1b78b16a4',
+    fromBlock: 1,
+  },
 };
 
 module.exports = {
