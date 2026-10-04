@@ -19,12 +19,13 @@ const tokSAYDEX_GIWA = UNISWAP_TOKENS.find((t) => t.chainId === 91342 && t.symbo
 
 const tokUSDC_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'USDC') || tokUSDC;
 const tokSAYDEX_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'SAYDEX') || tokSAYDEX;
-const tokETH_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'ETH') || tokETH;
 const tokEURC_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'EURC') || tokUSDC;
+const tokUSYC_ARC_MAINNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042 && t.symbol === 'USYC') || tokUSDC;
 
 const tokUSDC_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'USDC') || tokUSDC;
 const tokSAYDEX_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'SAYDEX') || tokSAYDEX;
-const tokTETH_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'tETH') || tokETH;
+const tokEURC_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'EURC') || tokUSDC;
+const tokUSYC_ARC_TESTNET = UNISWAP_TOKENS.find((t) => t.chainId === 5042002 && t.symbol === 'USYC') || tokUSDC;
 
 export const MOCK_POOLS: LiquidityPool[] = [
   {
@@ -233,37 +234,15 @@ export const MOCK_POOLS: LiquidityPool[] = [
     ],
   },
   {
-    id: 'eth-usdc-arc-mainnet-005',
-    chainId: 5042,
-    token0: tokETH_ARC_MAINNET,
-    token1: tokUSDC_ARC_MAINNET,
-    feeTier: 500,
-    feePercent: 0.05,
-    tvlUSD: 14800000,
-    volume24hUSD: 9200000,
-    fees24hUSD: 4600,
-    apr: 21.3,
-    currentPrice: 2450.0,
-    priceRangeMin: 2200.0,
-    priceRangeMax: 2750.0,
-    liquidityDistribution: [
-      { price: 2100, depth: 15 },
-      { price: 2300, depth: 55 },
-      { price: 2450, depth: 100 },
-      { price: 2600, depth: 68 },
-      { price: 2800, depth: 25 },
-    ],
-  },
-  {
     id: 'eurc-usdc-arc-mainnet-001',
     chainId: 5042,
     token0: tokEURC_ARC_MAINNET,
     token1: tokUSDC_ARC_MAINNET,
     feeTier: 100,
     feePercent: 0.01,
-    tvlUSD: 3800000,
-    volume24hUSD: 1800000,
-    fees24hUSD: 180,
+    tvlUSD: 4800000,
+    volume24hUSD: 2200000,
+    fees24hUSD: 220,
     apr: 8.4,
     currentPrice: 1.08,
     priceRangeMin: 1.06,
@@ -276,6 +255,28 @@ export const MOCK_POOLS: LiquidityPool[] = [
       { price: 1.11, depth: 15 },
     ],
   },
+  {
+    id: 'usyc-usdc-arc-mainnet-001',
+    chainId: 5042,
+    token0: tokUSYC_ARC_MAINNET,
+    token1: tokUSDC_ARC_MAINNET,
+    feeTier: 100,
+    feePercent: 0.01,
+    tvlUSD: 8500000,
+    volume24hUSD: 4100000,
+    fees24hUSD: 410,
+    apr: 9.8,
+    currentPrice: 1.05,
+    priceRangeMin: 1.03,
+    priceRangeMax: 1.07,
+    liquidityDistribution: [
+      { price: 1.02, depth: 10 },
+      { price: 1.04, depth: 70 },
+      { price: 1.05, depth: 100 },
+      { price: 1.06, depth: 75 },
+      { price: 1.08, depth: 15 },
+    ],
+  },
   // Arc Testnet (5042002)
   {
     id: 'usdc-saydex-arc-testnet-030',
@@ -284,9 +285,9 @@ export const MOCK_POOLS: LiquidityPool[] = [
     token1: tokSAYDEX_ARC_TESTNET,
     feeTier: 3000,
     feePercent: 0.30,
-    tvlUSD: 450000,
-    volume24hUSD: 180000,
-    fees24hUSD: 540,
+    tvlUSD: 550000,
+    volume24hUSD: 240000,
+    fees24hUSD: 720,
     apr: 56.2,
     currentPrice: 1.25,
     priceRangeMin: 1.0,
@@ -300,25 +301,47 @@ export const MOCK_POOLS: LiquidityPool[] = [
     ],
   },
   {
-    id: 'teth-usdc-arc-testnet-005',
+    id: 'eurc-usdc-arc-testnet-001',
     chainId: 5042002,
-    token0: tokTETH_ARC_TESTNET,
+    token0: tokEURC_ARC_TESTNET,
     token1: tokUSDC_ARC_TESTNET,
-    feeTier: 500,
-    feePercent: 0.05,
-    tvlUSD: 620000,
-    volume24hUSD: 240000,
-    fees24hUSD: 120,
-    apr: 28.5,
-    currentPrice: 2450.0,
-    priceRangeMin: 2150.0,
-    priceRangeMax: 2800.0,
+    feeTier: 100,
+    feePercent: 0.01,
+    tvlUSD: 420000,
+    volume24hUSD: 180000,
+    fees24hUSD: 18,
+    apr: 12.5,
+    currentPrice: 1.08,
+    priceRangeMin: 1.05,
+    priceRangeMax: 1.11,
     liquidityDistribution: [
-      { price: 2100, depth: 20 },
-      { price: 2350, depth: 60 },
-      { price: 2450, depth: 100 },
-      { price: 2600, depth: 70 },
-      { price: 2850, depth: 18 },
+      { price: 1.04, depth: 15 },
+      { price: 1.06, depth: 60 },
+      { price: 1.08, depth: 100 },
+      { price: 1.10, depth: 70 },
+      { price: 1.12, depth: 20 },
+    ],
+  },
+  {
+    id: 'usyc-usdc-arc-testnet-001',
+    chainId: 5042002,
+    token0: tokUSYC_ARC_TESTNET,
+    token1: tokUSDC_ARC_TESTNET,
+    feeTier: 100,
+    feePercent: 0.01,
+    tvlUSD: 380000,
+    volume24hUSD: 140000,
+    fees24hUSD: 14,
+    apr: 10.2,
+    currentPrice: 1.05,
+    priceRangeMin: 1.02,
+    priceRangeMax: 1.08,
+    liquidityDistribution: [
+      { price: 1.02, depth: 10 },
+      { price: 1.04, depth: 65 },
+      { price: 1.05, depth: 100 },
+      { price: 1.06, depth: 70 },
+      { price: 1.08, depth: 15 },
     ],
   },
 ];

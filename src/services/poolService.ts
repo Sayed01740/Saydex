@@ -94,15 +94,15 @@ const BASE_POOLS_BY_CHAIN: Record<number, Array<{
   // Arc Mainnet (5042)
   5042: [
     { token0Symbol: 'USDC', token1Symbol: 'SAYDEX', feeTier: 3000, baseTvl: 6200000, baseVol: 3400000 },
-    { token0Symbol: 'ETH', token1Symbol: 'USDC', feeTier: 500, baseTvl: 14800000, baseVol: 9200000 },
-    { token0Symbol: 'EURC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 3800000, baseVol: 1800000 },
-    { token0Symbol: 'WUSDC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 5500000, baseVol: 2400000 },
+    { token0Symbol: 'EURC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 4800000, baseVol: 2200000 },
+    { token0Symbol: 'USYC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 8500000, baseVol: 4100000 },
+    { token0Symbol: 'EURC', token1Symbol: 'SAYDEX', feeTier: 3000, baseTvl: 3200000, baseVol: 1500000 },
   ],
   // Arc Testnet (5042002)
   5042002: [
-    { token0Symbol: 'USDC', token1Symbol: 'SAYDEX', feeTier: 3000, baseTvl: 450000, baseVol: 180000 },
-    { token0Symbol: 'tETH', token1Symbol: 'USDC', feeTier: 500, baseTvl: 620000, baseVol: 240000 },
-    { token0Symbol: 'WUSDC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 310000, baseVol: 110000 },
+    { token0Symbol: 'USDC', token1Symbol: 'SAYDEX', feeTier: 3000, baseTvl: 550000, baseVol: 240000 },
+    { token0Symbol: 'EURC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 420000, baseVol: 180000 },
+    { token0Symbol: 'USYC', token1Symbol: 'USDC', feeTier: 100, baseTvl: 380000, baseVol: 140000 },
   ],
 };
 

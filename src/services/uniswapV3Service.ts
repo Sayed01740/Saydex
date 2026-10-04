@@ -187,12 +187,14 @@ export class UniswapV3Service {
       tokenOut.symbol.toUpperCase() === nativeSym ||
       tokenOut.symbol.toUpperCase() === 'SEP';
 
-    const isWrap = isNativeIn && (
+    const isArc = chainId === 5042 || chainId === 5042002;
+
+    const isWrap = !isArc && isNativeIn && (
       tokenOut.symbol.toUpperCase() === 'WETH' ||
       (tokenOut.address && tokenOut.address.toLowerCase() === deployment?.wethAddress.toLowerCase())
     );
 
-    const isUnwrap = (
+    const isUnwrap = !isArc && (
       tokenIn.symbol.toUpperCase() === 'WETH' ||
       (tokenIn.address && tokenIn.address.toLowerCase() === deployment?.wethAddress.toLowerCase())
     ) && isNativeOut;
@@ -376,14 +378,16 @@ export class UniswapV3Service {
       rawMinAmountOut = BigInt(Math.max(1, Math.floor(withSlippage * 10 ** decimalsOut)));
     }
 
-    // Direct Native Wrap (ETH -> WETH)
-    const isWrap = isNativeIn && (
+    const isArc = params.chainId === 5042 || params.chainId === 5042002;
+
+    // Direct Native Wrap (ETH -> WETH) - Disabled on Arc since USDC is native and dual-interfaced
+    const isWrap = !isArc && isNativeIn && (
       params.tokenOut.symbol.toUpperCase() === 'WETH' ||
       (params.tokenOut.address && params.tokenOut.address.toLowerCase() === deployment.wethAddress.toLowerCase())
     );
 
-    // Direct Native Unwrap (WETH -> ETH)
-    const isUnwrap = (
+    // Direct Native Unwrap (WETH -> ETH) - Disabled on Arc
+    const isUnwrap = !isArc && (
       params.tokenIn.symbol.toUpperCase() === 'WETH' ||
       (params.tokenIn.address && params.tokenIn.address.toLowerCase() === deployment.wethAddress.toLowerCase())
     ) && isNativeOut;
@@ -413,11 +417,23 @@ export class UniswapV3Service {
     const tokenInAddress = isNativeIn ? deployment.wethAddress : params.tokenIn.address;
     const tokenOutAddress = isNativeOut ? deployment.wethAddress : params.tokenOut.address;
 
-    // Check token allowance if not paying in native ETH
+    // Check token allowance if not paying in native ETH (On Arc, native USDC uses the 0x3600... system contract)
     let requiresApproval = false;
     let approvalTx = undefined;
 
-    if (!isNativeIn) {
+    if (isArc) {
+      const tokenToCheck = isNativeIn ? deployment.wethAddress : params.tokenIn.address;
+      const currentAllowance = await this.checkAllowance(
+        params.chainId,
+        tokenToCheck,
+        params.userAddress,
+        routerAddress
+      );
+      if (currentAllowance < rawAmountIn) {
+        requiresApproval = true;
+        approvalTx = this.buildApproveTransaction(tokenToCheck, routerAddress);
+      }
+    } else if (!isNativeIn) {
       const currentAllowance = await this.checkAllowance(
         params.chainId,
         params.tokenIn.address,
@@ -433,14 +449,18 @@ export class UniswapV3Service {
     // exactInputSingle params:
     // (address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)
     // selector: 0x04e45aaf
-    const recipient = isNativeOut ? routerAddress : params.userAddress;
+    const recipient = (isNativeOut && !isArc) ? routerAddress : params.userAddress;
     const exactInputSingleParams = `${padAddress(tokenInAddress)}${padAddress(tokenOutAddress)}${pad32Bytes(fee)}${padAddress(recipient)}${pad32Bytes(rawAmountIn)}${pad32Bytes(rawMinAmountOut)}${pad32Bytes(0)}`;
     const exactInputSingleCall = `0x04e45aaf${exactInputSingleParams}`;
 
     let finalData = exactInputSingleCall;
     let finalValue = '0x0';
 
-    if (isNativeIn) {
+    if (isArc) {
+      // On Arc, all swaps execute through the ERC-20 interface directly without wrapping
+      finalData = exactInputSingleCall;
+      finalValue = '0x0';
+    } else if (isNativeIn) {
       // ETH -> Token: Bundle exactInputSingle with refundETH() (selector: 0x12210e8a)
       const refundETHCall = '0x12210e8a';
       finalData = this.encodeMulticall([exactInputSingleCall, refundETHCall]);

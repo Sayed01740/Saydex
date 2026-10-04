@@ -265,7 +265,7 @@ export async function fetchAllMultiChainBalances(
 
   // 3. Process Token balances efficiently
   // Curated major token symbols to query actively on real chains
-  const MAJOR_SYMBOLS = new Set(['USDC', 'USDT', 'WETH', 'WBTC', 'UNI', 'DAI', 'LINK', 'AAVE', 'AERO', 'ARB', 'OP', 'POL', 'BNB', 'AVAX', 'CAKE', 'DEGEN', 'SAYDEX']);
+  const MAJOR_SYMBOLS = new Set(['USDC', 'USDT', 'WETH', 'WBTC', 'UNI', 'DAI', 'LINK', 'AAVE', 'AERO', 'ARB', 'OP', 'POL', 'BNB', 'AVAX', 'CAKE', 'DEGEN', 'SAYDEX', 'EURC', 'USYC']);
 
   // Query tokens belonging to the active chain
   const tokensToQuery = tokens.filter((t) => t.chainId === activeChainId);
@@ -299,6 +299,8 @@ export async function fetchAllMultiChainBalances(
     ].filter((u, i, arr) => u && arr.indexOf(u) === i);
 
     let bal: number | null = null;
+    const isArc = token.chainId === 5042 || token.chainId === 5042002;
+    const isArcSystemUsdc = isArc && token.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
 
     // Native token representation
     if (!token.address || token.address === '0x0000000000000000000000000000000000000000') {
@@ -327,6 +329,16 @@ export async function fetchAllMultiChainBalances(
 
       if (bal === null) {
         bal = await fetchTokenBalanceRpc(rpcEndpoints, token.address, cleanAddress, token.decimals, signal, token.chainId);
+      }
+
+      // On Arc, the 0x3600... system contract shares the exact balance of native USDC
+      if (isArcSystemUsdc) {
+        const nativeBal = chainSummaries[token.chainId]?.nativeBalance ?? 0;
+        if ((bal === null || bal === 0) && nativeBal > 0) {
+          bal = nativeBal;
+        } else if (bal !== null && bal > 0 && nativeBal === 0) {
+          chainSummaries[token.chainId].nativeBalance = bal;
+        }
       }
     }
 

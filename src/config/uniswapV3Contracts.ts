@@ -273,8 +273,8 @@ export const UNISWAP_V3_DEPLOYMENTS: Record<number, UniswapV3Deployment> = {
     quoterV2: '0x61fFE014bA17989E743c5F6cB21bF9697530B21e',
     nonfungiblePositionManager: '0x6049c9a0e26405C0985f9E3685C87d0aE917f82B',
     factory: '0xc481038c013fe96f38ce7a2dc417b2b1b78b16a4',
-    wethAddress: '0x4200000000000000000000000000000000000006',
-    defaultStablecoinAddress: '0x0000000000000000000000000000000000000000', // Native USDC
+    wethAddress: '0x3600000000000000000000000000000000000000', // Arc ERC-20 USDC System Contract
+    defaultStablecoinAddress: '0x3600000000000000000000000000000000000000',
     defaultStablecoinSymbol: 'USDC',
     permit2: PERMIT2_ADDRESS,
   },
@@ -286,8 +286,8 @@ export const UNISWAP_V3_DEPLOYMENTS: Record<number, UniswapV3Deployment> = {
     quoterV2: '0x7788cb9e1Dba291623c51f10A2f3fd199676202f',
     nonfungiblePositionManager: '0xf72BcA1af1F50C133Ea5211c60c479045A7e5106',
     factory: '0xE9348e3e3c17D721575e294BE271BCD11028809e',
-    wethAddress: '0x4200000000000000000000000000000000000006',
-    defaultStablecoinAddress: '0x0000000000000000000000000000000000000000', // Native USDC
+    wethAddress: '0x3600000000000000000000000000000000000000', // Arc ERC-20 USDC System Contract
+    defaultStablecoinAddress: '0x3600000000000000000000000000000000000000',
     defaultStablecoinSymbol: 'USDC',
     permit2: PERMIT2_ADDRESS,
   },
