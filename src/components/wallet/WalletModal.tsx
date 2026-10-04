@@ -6,6 +6,7 @@ import { ALL_CHAINS, getAllChains } from '../../config/chains';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { TokenIcon } from '../common/TokenIcon';
+import { ChainIcon } from '../common/ChainIcon';
 import { WalletIcon } from './WalletIcon';
 import {
   Copy,
@@ -544,9 +545,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => 
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-[var(--bg-subtle)] border border-[var(--border-app)] flex items-center justify-center text-[10px] font-bold text-[var(--primary)]">
-                        {chain.shortName.charAt(0)}
-                      </div>
+                      <ChainIcon chain={chain} size="md" />
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-xs text-[var(--text-primary)]">

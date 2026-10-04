@@ -4,6 +4,7 @@ import { useWallet } from '../../context/WalletContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ALL_CHAINS } from '../../config/chains';
 import { TokenIcon } from './TokenIcon';
+import { ChainIcon } from './ChainIcon';
 import { audioFeedback } from '../../utils/audioFeedback';
 import {
   Search,
@@ -128,7 +129,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
           category: 'Networks',
           title: `Switch to ${c.name}`,
           subtitle: `Chain ID: ${c.id} • ${c.nativeCurrency.symbol}`,
-          icon: <div className="w-4 h-4 rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] text-[9px] font-bold flex items-center justify-center">{c.shortName.charAt(0)}</div>,
+          icon: <ChainIcon chain={c} size="xs" />,
           onSelect: () => {
             audioFeedback.playClick();
             switchChain(c.id);

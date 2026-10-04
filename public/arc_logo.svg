@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="64" cy="64" r="64" fill="#0C1017"/>
+  <defs>
+    <linearGradient id="arc_grad" x1="20" y1="20" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.5" stop-color="#0284C7"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="arc_accent" x1="30" y1="90" x2="98" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer Glow Arc -->
+  <path d="M 28 64 A 36 36 0 1 1 100 64 A 36 36 0 0 1 64 100" stroke="url(#arc_grad)" stroke-width="9" stroke-linecap="round"/>
+  <!-- Inner Dynamic Accent Arc -->
+  <path d="M 46 64 A 18 18 0 0 1 82 64" stroke="url(#arc_accent)" stroke-width="7" stroke-linecap="round"/>
+  <!-- Central Pulse Dot -->
+  <circle cx="64" cy="64" r="4.5" fill="#38BDF8"/>
+</svg>

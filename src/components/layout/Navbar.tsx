@@ -8,6 +8,7 @@ import { WalletModal } from '../wallet/WalletModal';
 import { WalletIcon } from '../wallet/WalletIcon';
 import { ChainsModal } from '../chains/ChainsModal';
 import { SwapSettingsModal } from '../swap/SwapSettingsModal';
+import { ChainIcon } from '../common/ChainIcon';
 import { getAllChains } from '../../config/chains';
 import { Chain, ChainId } from '../../types';
 import {
@@ -141,9 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                 title={`Selected Network: ${selectedChain.name}${selectedChain.testnet ? ' (Testnet)' : ''}`}
               >
                 <div className="relative">
-                  <div className="w-4 h-4 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary)]/40 flex items-center justify-center text-[9px] font-mono font-bold text-[var(--primary)] shrink-0">
-                    {selectedChain.shortName.charAt(0)}
-                  </div>
+                  <ChainIcon chain={selectedChain} size="xs" />
                   {selectedChain.testnet && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[var(--bg-surface)] animate-pulse" />
                   )}
@@ -205,9 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSettings }) => {
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className="w-4 h-4 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-app)] flex items-center justify-center text-[9px] font-mono font-bold">
-                              {chain.shortName.charAt(0)}
-                            </div>
+                            <ChainIcon chain={chain} size="xs" />
                             <span className="truncate">{chain.name}</span>
                             {chain.isCustom && (
                               <span className="px-1 py-0.2 rounded text-[8px] bg-purple-500/20 text-purple-300 border border-purple-500/40">

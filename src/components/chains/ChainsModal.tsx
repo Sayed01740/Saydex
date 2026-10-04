@@ -11,6 +11,7 @@ import { rpcProviderWrapper } from '../../utils/rpcProviderWrapper';
 import { Chain, ChainId } from '../../types';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
+import { ChainIcon } from '../common/ChainIcon';
 import {
   Globe,
   Check,
@@ -454,15 +455,7 @@ export const ChainsModal: React.FC<ChainsModalProps> = ({ isOpen, onClose }) => 
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full border flex items-center justify-center p-1 font-mono font-bold text-xs ${
-                          chain.isCustom
-                            ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                            : 'bg-[var(--bg-surface-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {chain.shortName.slice(0, 2).toUpperCase()}
-                      </div>
+                      <ChainIcon chain={chain} size="lg" />
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-semibold text-xs text-[var(--text-primary)]">
