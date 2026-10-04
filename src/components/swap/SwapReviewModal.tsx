@@ -193,6 +193,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
           feeTier: quote.feeTier || 3000,
           deadlineMinutes: settings.deadlineMinutes || 20,
           slippagePercent: settings.slippageTolerance || 1.0,
+          forceSimulation,
         });
 
         // Handle token approval if selling ERC-20
@@ -681,6 +682,38 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
           </div>
 
           <div className="space-y-2 pt-2">
+            {errorMessage.toLowerCase().includes('no uniswap v3 liquidity pool exists') && (
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-left space-y-2 mb-2">
+                <div className="flex items-center gap-2 text-blue-400 font-bold text-xs">
+                  <PlusCircle className="w-4 h-4 shrink-0" />
+                  <span>Pool Not Initialized on Arc Testnet</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  Arc Testnet is a newly launched network. Before swapping live, liquidity must be deposited into this pair, or you can simulate the trade in Test Mode:
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      window.location.hash = '#pools';
+                    }}
+                    className="flex-1 py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Go to Pools & Deposit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmSwap(true)}
+                    className="flex-1 py-2 px-2.5 rounded-lg bg-[var(--bg-subtle)] border border-blue-500/40 text-blue-300 font-bold text-xs hover:bg-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Simulate Trade</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {(errorMessage.toLowerCase().includes('drpc') || errorMessage.toLowerCase().includes('paid plan')) && (
               <button
                 type="button"

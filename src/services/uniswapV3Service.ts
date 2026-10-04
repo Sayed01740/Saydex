@@ -543,11 +543,21 @@ export class UniswapV3Service {
     feeTier?: number;
     deadlineMinutes?: number;
     slippagePercent?: number;
+    forceSimulation?: boolean;
   }): Promise<{ preparedTx: PreparedSwapTransaction; estimatedGas: number }> {
     const deployment = getUniswapV3Deployment(params.chainId);
     const slippagePct = params.slippagePercent !== undefined ? params.slippagePercent : 1.0;
     let effectiveFee = params.feeTier || (params.chainId === 11155111 || params.chainId === 421614 ? 500 : 3000);
     let effectiveMinAmountOut = params.minAmountOut;
+
+    if (params.forceSimulation) {
+      const preparedTx = await this.buildSwapTransaction({
+        ...params,
+        feeTier: effectiveFee,
+        minAmountOut: effectiveMinAmountOut,
+      });
+      return { preparedTx, estimatedGas: 125000 };
+    }
 
     const nativeSym = getChainById(params.chainId)?.nativeCurrency?.symbol?.toUpperCase() || 'ETH';
     const isNativeIn =
