@@ -307,23 +307,25 @@ export const SwapCard: React.FC<SwapCardProps> = ({
 
     // Fast-path: Check Circle StableFX native RFQ engine for Arc stablecoin pairs
     if (stableFXService.isSupported(selectedChain.id, tokenIn, tokenOut)) {
-      try {
-        const fxResult = stableFXService.getQuote(selectedChain.id, tokenIn, tokenOut, amountIn);
-        if (!isCancelled) {
-          setOnChainQuoteResult({
-            amountOut: fxResult.amountOut,
-            amountOutRaw: fxResult.amountOutRaw,
-            executionPrice: fxResult.executionPrice,
-            gasEstimate: fxResult.gasEstimate,
-            feeTier: 0,
-            source: 'onchain_quoter',
-          });
-          setIsQuoting(false);
+      (async () => {
+        try {
+          const fxResult = await stableFXService.getOnChainQuote(selectedChain.id, tokenIn, tokenOut, amountIn);
+          if (!isCancelled) {
+            setOnChainQuoteResult({
+              amountOut: fxResult.amountOut,
+              amountOutRaw: fxResult.amountOutRaw,
+              executionPrice: fxResult.executionPrice,
+              gasEstimate: fxResult.gasEstimate,
+              feeTier: 0,
+              source: 'onchain_quoter',
+            });
+            setIsQuoting(false);
+          }
+        } catch (err) {
+          console.warn('StableFX quoting error:', err);
+          if (!isCancelled) setIsQuoting(false);
         }
-      } catch (err) {
-        console.warn('StableFX quoting error:', err);
-        if (!isCancelled) setIsQuoting(false);
-      }
+      })();
       return;
     }
 
@@ -435,11 +437,11 @@ export const SwapCard: React.FC<SwapCardProps> = ({
         ? [
             {
               protocol: 'Circle StableFX (Native)',
-              poolAddress: fxDeployment?.fxEscrow || '0xd68256f4D69C6BbEcB873D8588AE0Dc6B8E22E10',
+              poolAddress: fxDeployment?.routerAddress || '0x73742278c31a76dBb0D2587d03ef92E6E2141023',
               percentage: 100,
               fromToken: tokenIn?.symbol || 'USDC',
               toToken: tokenOut?.symbol || 'EURC',
-              feeTier: '0.00% (Native RFQ)',
+              feeTier: '0.00% (Native Pool)',
             },
           ]
         : (selectedRoute

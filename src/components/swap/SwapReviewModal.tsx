@@ -153,7 +153,7 @@ export const SwapReviewModal: React.FC<SwapReviewModalProps> = ({
               value: fxTx.approvalTx.value,
               data: fxTx.approvalTx.data,
               chainId: targetChainId,
-              title: `Approve ${quote.tokenIn.symbol} for Circle StableFX Escrow`,
+              title: `Approve ${quote.tokenIn.symbol} for Arc Native Router`,
               forceSimulation,
             });
 

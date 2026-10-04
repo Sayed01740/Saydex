@@ -6,6 +6,7 @@
 export interface StableFXDeployment {
   chainId: number;
   chainName: string;
+  routerAddress: string;
   fxEscrow: string;
   permit2: string;
   supportedTokens: string[];
@@ -17,6 +18,7 @@ export const STABLEFX_DEPLOYMENTS: Record<number, StableFXDeployment> = {
   5042: {
     chainId: 5042,
     chainName: 'Arc Mainnet',
+    routerAddress: '0x73742278c31a76dBb0D2587d03ef92E6E2141023',
     fxEscrow: '0xe2E5F173576B513d994073CCbDaCBE027d43DFe6',
     permit2: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
     supportedTokens: ['USDC', 'EURC', 'USYC'],
@@ -26,6 +28,7 @@ export const STABLEFX_DEPLOYMENTS: Record<number, StableFXDeployment> = {
   5042002: {
     chainId: 5042002,
     chainName: 'Arc Testnet',
+    routerAddress: '0x73742278c31a76dBb0D2587d03ef92E6E2141023',
     fxEscrow: '0xd68256f4D69C6BbEcB873D8588AE0Dc6B8E22E10',
     permit2: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
     supportedTokens: ['USDC', 'EURC', 'USYC'],
