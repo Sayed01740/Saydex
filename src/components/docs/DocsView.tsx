@@ -209,7 +209,7 @@ export const DocsView: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[var(--text-primary)]">
-              Build & Trade on Saydex Protocol
+              Swap & Earn on Saydex Protocol
             </h1>
 
             <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-2xl mx-auto leading-relaxed">
